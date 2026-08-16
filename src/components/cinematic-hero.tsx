@@ -129,13 +129,15 @@ function StageCard({
     clamp(end - 0.07),
     clamp(Math.min(end + 0.02, 1)),
   ];
-  const opacity = useTransform(progress, range, [0, 1, 1, index === stages.length - 1 ? 1 : 0]);
-  const y = useTransform(progress, [range[0]!, range[3]!], [70, -70]);
+  const isFirst = index === 0;
+  const isLast = index === stages.length - 1;
+  const opacity = useTransform(progress, range, [isFirst ? 1 : 0, 1, 1, isLast ? 1 : 0]);
+  const y = useTransform(progress, [range[0]!, range[3]!], [isFirst ? 0 : 70, -70]);
   const blur = useTransform(progress, range, [
-    "blur(10px)",
+    isFirst ? "blur(0px)" : "blur(10px)",
     "blur(0px)",
     "blur(0px)",
-    index === stages.length - 1 ? "blur(0px)" : "blur(10px)",
+    isLast ? "blur(0px)" : "blur(10px)",
   ]);
 
   return (
