@@ -122,13 +122,21 @@ function StageCard({
   const span = 1 / stages.length;
   const start = index * span;
   const end = start + span;
-  const opacity = useTransform(
-    progress,
-    [start - 0.06, start + 0.05, end - 0.07, end + 0.02],
-    [0, 1, 1, 0],
-  );
-  const y = useTransform(progress, [start - 0.06, end + 0.02], [70, -70]);
-  const blur = useTransform(opacity, [0, 1], ["blur(10px)", "blur(0px)"]);
+  const clamp = (v: number) => Math.min(1, Math.max(0, v));
+  const range = [
+    clamp(start - 0.06),
+    clamp(start + 0.05),
+    clamp(end - 0.07),
+    clamp(Math.min(end + 0.02, 1)),
+  ];
+  const opacity = useTransform(progress, range, [0, 1, 1, index === stages.length - 1 ? 1 : 0]);
+  const y = useTransform(progress, [range[0]!, range[3]!], [70, -70]);
+  const blur = useTransform(progress, range, [
+    "blur(10px)",
+    "blur(0px)",
+    "blur(0px)",
+    index === stages.length - 1 ? "blur(0px)" : "blur(10px)",
+  ]);
 
   return (
     <motion.article
