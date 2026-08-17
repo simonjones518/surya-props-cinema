@@ -74,6 +74,8 @@ function ClientPortal() {
 
   const [payFor, setPayFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
+  const [banner, setBanner] = useState("all");
+  const [search, setSearch] = useState("");
 
   const signOut = useMutation({
     mutationFn: () => portal.signOut(),
@@ -92,8 +94,18 @@ function ClientPortal() {
     );
   }
 
-  const active = (quotes.data ?? []).filter((q) => q.status !== "settled" && q.status !== "rejected");
-  const settled = (quotes.data ?? []).filter((q) => q.status === "settled");
+  const all = quotes.data ?? [];
+  const banners = [...new Set(all.map((q) => q.production_house).filter(Boolean))].sort();
+  const term = search.trim().toLowerCase();
+  const matches = all.filter(
+    (q) =>
+      (banner === "all" || q.production_house === banner) &&
+      (term === "" ||
+        q.movie_name.toLowerCase().includes(term) ||
+        q.quote_code.toLowerCase().includes(term)),
+  );
+  const active = matches.filter((q) => q.status !== "settled" && q.status !== "rejected");
+  const settled = matches.filter((q) => q.status === "settled");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -126,6 +138,13 @@ function ClientPortal() {
         </TabsList>
 
         <TabsContent value="shoots" className="mt-6 space-y-4">
+          <ProjectFilters
+            banners={banners}
+            banner={banner}
+            onBanner={setBanner}
+            search={search}
+            onSearch={setSearch}
+          />
           {quotes.isLoading ? (
             <Skeleton className="h-36 rounded-xl" />
           ) : active.length === 0 ? (
@@ -248,6 +267,72 @@ function EmptyState() {
   );
 }
 
+/** Multi-project filters: by production banner and by movie / quote code. */
+function ProjectFilters({
+  banners,
+  banner,
+  onBanner,
+  search,
+  onSearch,
+}: {
+  banners: string[];
+  banner: string;
+  onBanner: (v: string) => void;
+  search: string;
+  onSearch: (v: string) => void;
+}) {
+  if (banners.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-end gap-3 rounded-xl border border-primary/20 bg-card p-3">
+      <div className="flex flex-wrap gap-2">
+        <FilterChip active={banner === "all"} onClick={() => onBanner("all")}>
+          All Banners
+        </FilterChip>
+        {banners.map((b) => (
+          <FilterChip key={b} active={banner === b} onClick={() => onBanner(b)}>
+            {b}
+          </FilterChip>
+        ))}
+      </div>
+      <div className="ml-auto min-w-56 flex-1 space-y-1.5">
+        <Label htmlFor="proj-search" className="text-[10px] uppercase tracking-wider">
+          Filter by movie / quote
+        </Label>
+        <Input
+          id="proj-search"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Movie title or SCP-Q-…"
+        />
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? "border-primary/60 bg-primary/15 text-primary"
+          : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function QuoteCard({
   quote,
   onPay,
@@ -264,6 +349,12 @@ function QuoteCard({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-xl tracking-wide">{quote.quote_code}</p>
+          <p className="text-sm font-semibold text-primary">
+            {quote.movie_name || "Untitled project"}
+            {quote.production_house && (
+              <span className="text-muted-foreground"> · {quote.production_house}</span>
+            )}
+          </p>
           <p className="text-xs text-muted-foreground">
             {quote.shoot_location || "Location TBC"} · {quote.shoot_start_date} →{" "}
             {quote.actual_return_date ?? quote.estimated_return_date} · {days} day
@@ -481,6 +572,16 @@ function ProfileForm() {
           value={form.contact_person ?? ""}
           onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
           maxLength={120}
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="p-desig">Designation</Label>
+        <Input
+          id="p-desig"
+          value={form.designation ?? ""}
+          onChange={(e) => setForm({ ...form, designation: e.target.value })}
+          maxLength={120}
+          placeholder="Art Director / Line Producer"
         />
       </div>
       <div className="space-y-1.5">

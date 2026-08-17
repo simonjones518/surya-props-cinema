@@ -48,8 +48,16 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
         <section className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
+            <Field label="Movie / Project" value={quote.movie_name || "—"} />
             <Field label="Production House" value={quote.production_house} />
-            <Field label="Contact Person" value={quote.contact_person} />
+            <Field
+              label="Attn"
+              value={
+                quote.client_designation
+                  ? `${quote.contact_person} — ${quote.client_designation}`
+                  : quote.contact_person
+              }
+            />
             <Field label="Phone" value={quote.phone} />
           </div>
           <div>

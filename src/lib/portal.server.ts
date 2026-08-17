@@ -3,6 +3,7 @@ import { useSession } from "@tanstack/react-start/server";
 import { suryaAuth, suryaDb } from "./surya-supabase.server";
 import type {
   ClientProfile,
+  ProductionHouse,
   QuoteItem,
   QuotePayment,
   QuoteRequest,
@@ -64,6 +65,7 @@ export async function clientSignUp(input: {
   production_house: string;
   contact_person: string;
   phone: string;
+  designation?: string;
 }) {
   const email = clean(input.email, 200).toLowerCase();
   const password = String(input.password ?? "");
@@ -93,6 +95,7 @@ export async function clientSignUp(input: {
     production_house: clean(input.production_house, 160) || contact,
     contact_person: contact,
     phone,
+    designation: clean(input.designation ?? "", 120),
   });
 
   const s = await session();
@@ -134,6 +137,7 @@ export async function getProfile(): Promise<ClientProfile> {
     production_house: (data?.["production_house"] as string) ?? "",
     contact_person: (data?.["contact_person"] as string) ?? "",
     phone: (data?.["phone"] as string) ?? "",
+    designation: (data?.["designation"] as string) ?? "",
     address: (data?.["address"] as string) ?? "",
   };
 }
@@ -146,10 +150,41 @@ export async function saveProfile(input: Partial<ClientProfile>) {
     production_house: clean(input.production_house, 160),
     contact_person: clean(input.contact_person, 120),
     phone: clean(input.phone, 24),
+    designation: clean(input.designation, 120),
     address: clean(input.address, 400),
   });
   if (error) throw new Error(error.message);
   return { ok: true as const };
+}
+
+/* ---------- production houses (shared, client-extensible banner list) ---------- */
+
+export async function listProductionHouses(): Promise<ProductionHouse[]> {
+  const { data, error } = await suryaDb
+    .from("production_houses")
+    .select("id, name")
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: any) => ({ id: Number(r.id), name: r.name as string }));
+}
+
+/** Select-or-create: returns the banner row, inserting it globally when new. */
+async function resolveProductionHouse(name: string, userId: string) {
+  const clean_name = clean(name, 160);
+  if (!clean_name) throw new Error("Select or add the production house for this shoot.");
+  const { data: existing } = await suryaDb
+    .from("production_houses")
+    .select("id, name")
+    .ilike("name", clean_name)
+    .maybeSingle();
+  if (existing) return { id: Number(existing["id"]), name: existing["name"] as string };
+  const { data, error } = await suryaDb
+    .from("production_houses")
+    .insert({ name: clean_name, created_by: userId })
+    .select("id, name")
+    .maybeSingle();
+  if (error || !data) throw new Error(error?.message ?? "Could not add the production house.");
+  return { id: Number(data["id"]), name: data["name"] as string };
 }
 
 /* ---------- mapping ---------- */
@@ -167,6 +202,10 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     quote_code: row["quote_code"],
     user_id: row["user_id"],
     production_house: row["production_house"] ?? "",
+    production_house_id:
+      row["production_house_id"] == null ? null : Number(row["production_house_id"]),
+    movie_name: row["movie_name"] ?? "",
+    client_designation: row["client_designation"] ?? "",
     contact_person: row["contact_person"] ?? "",
     phone: row["phone"] ?? "",
     shoot_location: row["shoot_location"] ?? "",
@@ -202,6 +241,9 @@ export async function createQuoteRequest(draft: QuoteRequestDraft) {
   }
 
   const profile = await getProfile();
+  const banner = await resolveProductionHouse(draft.production_house, me.userId);
+  const movie_name = clean(draft.movie_name, 160);
+  if (!movie_name) throw new Error("Movie / project name is required.");
   const [{ data: props, error }, { data: godowns }, { data: racks }] = await Promise.all([
     suryaDb
       .from("props")
@@ -234,7 +276,10 @@ export async function createQuoteRequest(draft: QuoteRequestDraft) {
   const { error: insErr } = await suryaDb.from("quote_requests").insert({
     quote_code,
     user_id: me.userId,
-    production_house: profile.production_house,
+    production_house: banner.name,
+    production_house_id: banner.id,
+    movie_name,
+    client_designation: profile.designation,
     contact_person: profile.contact_person,
     phone: profile.phone,
     shoot_location: clean(draft.shoot_location, 240),

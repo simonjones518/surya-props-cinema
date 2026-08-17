@@ -9,6 +9,7 @@ import {
   fetchMyPayments,
   fetchMyProfile,
   fetchMyQuotes,
+  fetchProductionHouses,
   priceQuoteFn,
   recordReturnFn,
   rejectQuoteFn,
@@ -18,6 +19,7 @@ import {
 } from "./portal.functions";
 import type {
   ClientProfile,
+  ProductionHouse,
   QuotePayment,
   QuoteRequest,
   QuoteRequestDraft,
@@ -40,10 +42,12 @@ export const portal = {
     production_house: string;
     contact_person: string;
     phone: string;
+    designation?: string;
   }) => clientSignUpFn({ data }),
   signOut: () => clientSignOutFn(),
 
   getProfile: () => fetchMyProfile() as Promise<ClientProfile>,
+  getProductionHouses: () => fetchProductionHouses() as Promise<ProductionHouse[]>,
   saveProfile: (data: Partial<ClientProfile>) => saveMyProfileFn({ data }),
   getMyQuotes: () => fetchMyQuotes() as Promise<QuoteRequest[]>,
   getMyPayments: () => fetchMyPayments() as Promise<QuotePayment[]>,
@@ -78,6 +82,7 @@ export const portal = {
 export const portalKeys = {
   session: ["client-session"] as const,
   profile: ["client-profile"] as const,
+  productionHouses: ["production-houses"] as const,
   myQuotes: ["client-quotes"] as const,
   myPayments: ["client-payments"] as const,
   allQuotes: ["admin-quotes"] as const,
