@@ -66,11 +66,14 @@ function ClientPortal() {
     queryKey: portalKeys.myQuotes,
     queryFn: portal.getMyQuotes,
     enabled: Boolean(session.data),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
   });
   const payments = useQuery({
     queryKey: portalKeys.myPayments,
     queryFn: portal.getMyPayments,
     enabled: Boolean(session.data),
+    refetchInterval: 30000,
   });
 
   const [payFor, setPayFor] = useState<QuoteRequest | null>(null);
