@@ -4,6 +4,7 @@ import { ArrowDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import heroWide from "@/assets/hero-wide.jpg";
 import heroWideVideo from "@/assets/hero-wide.mp4.asset.json";
+import heroPortraitVideo from "@/assets/hero-portrait.mp4.asset.json";
 import heroPortrait from "@/assets/hero-portrait.jpg";
 import armory from "@/assets/stage-armory.jpg";
 import camera from "@/assets/stage-camera.jpg";
@@ -13,7 +14,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 /** Optional scroll-scrubbed background videos (16:9 desktop / 9:16 mobile). */
 const VIDEO_WIDE =
   (import.meta.env['VITE_HERO_VIDEO_WIDE'] as string | undefined) ?? heroWideVideo.url;
-const VIDEO_PORTRAIT = import.meta.env['VITE_HERO_VIDEO_PORTRAIT'] as string | undefined;
+const VIDEO_PORTRAIT =
+  (import.meta.env['VITE_HERO_VIDEO_PORTRAIT'] as string | undefined) ?? heroPortraitVideo.url;
 
 const stages = [
   {
