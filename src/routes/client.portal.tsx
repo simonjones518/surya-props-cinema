@@ -92,8 +92,18 @@ function ClientPortal() {
     );
   }
 
-  const active = (quotes.data ?? []).filter((q) => q.status !== "settled" && q.status !== "rejected");
-  const settled = (quotes.data ?? []).filter((q) => q.status === "settled");
+  const all = quotes.data ?? [];
+  const banners = [...new Set(all.map((q) => q.production_house).filter(Boolean))].sort();
+  const term = search.trim().toLowerCase();
+  const matches = all.filter(
+    (q) =>
+      (banner === "all" || q.production_house === banner) &&
+      (term === "" ||
+        q.movie_name.toLowerCase().includes(term) ||
+        q.quote_code.toLowerCase().includes(term)),
+  );
+  const active = matches.filter((q) => q.status !== "settled" && q.status !== "rejected");
+  const settled = matches.filter((q) => q.status === "settled");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -126,6 +136,13 @@ function ClientPortal() {
         </TabsList>
 
         <TabsContent value="shoots" className="mt-6 space-y-4">
+          <ProjectFilters
+            banners={banners}
+            banner={banner}
+            onBanner={setBanner}
+            search={search}
+            onSearch={setSearch}
+          />
           {quotes.isLoading ? (
             <Skeleton className="h-36 rounded-xl" />
           ) : active.length === 0 ? (
@@ -264,6 +281,12 @@ function QuoteCard({
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-xl tracking-wide">{quote.quote_code}</p>
+          <p className="text-sm font-semibold text-primary">
+            {quote.movie_name || "Untitled project"}
+            {quote.production_house && (
+              <span className="text-muted-foreground"> · {quote.production_house}</span>
+            )}
+          </p>
           <p className="text-xs text-muted-foreground">
             {quote.shoot_location || "Location TBC"} · {quote.shoot_start_date} →{" "}
             {quote.actual_return_date ?? quote.estimated_return_date} · {days} day
