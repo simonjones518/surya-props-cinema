@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
 import { useWishlist } from "@/lib/wishlist";
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -46,6 +47,7 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
       toast.success("Quote request sent to the production desk", {
         description: `Reference ${res.quote_code} · track it in your portal`,
       });
+      openWhatsApp(newQuoteRequestMessage(res));
       clear();
       setNotes("");
       setMovie("");
