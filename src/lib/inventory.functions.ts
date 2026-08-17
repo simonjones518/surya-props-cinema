@@ -4,8 +4,10 @@ import type {
   ClientDraft,
   InvoiceDraft,
   Prop,
+  PropRequestDraft,
   PropStatus,
   RentalStatus,
+  RequestStatus,
 } from "./types";
 
 const db = () => import("./inventory.server");
