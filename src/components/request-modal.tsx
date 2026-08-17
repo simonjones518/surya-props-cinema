@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,12 +15,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
-import { prettyDate, shootDays } from "@/lib/format";
-import { openWhatsApp } from "@/lib/whatsapp";
+import { ProductionHouseSelect } from "@/components/production-house-select";
+import { portal, portalKeys } from "@/lib/portal-api";
+import { shootDays } from "@/lib/format";
+import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
 import type { Prop } from "@/lib/types";
 
-/** Customer request for a specific catalog prop. */
+const today = () => new Date().toISOString().slice(0, 10);
+
+/**
+ * Single-prop rental request. Writes a real `quote_requested` record into the
+ * client's portal lifecycle first, then hands off to WhatsApp.
+ */
 export function RequestModal({
   prop,
   open,
@@ -29,57 +36,55 @@ export function RequestModal({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const qc = useQueryClient();
+  const session = useQuery({ queryKey: portalKeys.session, queryFn: portal.session });
   const [productionHouse, setProductionHouse] = useState("");
-  const [contactPerson, setContactPerson] = useState("");
-  const [phone, setPhone] = useState("");
-  const [start, setStart] = useState("");
-  const [wrap, setWrap] = useState("");
+  const [movie, setMovie] = useState("");
+  const [start, setStart] = useState(today);
+  const [wrap, setWrap] = useState(today);
   const [shootLocation, setShootLocation] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
 
   const days = shootDays(start, wrap);
+  const signedIn = Boolean(session.data);
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => {
       if (!prop) throw new Error("No prop selected");
-      return api.createPropRequest({
-        request_type: "Catalog",
-        prop_id: prop.id,
-        prop_title: `${prop.title} (${prop.serial_number})`,
+      return portal.requestQuote({
         production_house: productionHouse,
-        contact_person: contactPerson,
-        phone,
+        movie_name: movie,
         shoot_location: shootLocation,
-        shoot_start_date: start || null,
-        shoot_wrap_date: wrap || null,
-        quantity,
-        notes,
+        shoot_start_date: start,
+        estimated_return_date: wrap,
+        client_notes: notes,
+        items: [{ prop_id: prop.id, quantity }],
       });
     },
     onSuccess: (res) => {
-      const lines = [
-        `*Surya Cine Special Props — Prop Request*`,
-        `Request: ${res.request_code}`,
-        `Prop: ${prop?.title} (${prop?.serial_number}) ×${quantity}`,
-        prop?.description_specs ? `Specs: ${prop.description_specs}` : "",
-        productionHouse ? `Production house: ${productionHouse}` : "",
-        `Contact: ${contactPerson} — ${phone}`,
-        shootLocation ? `Shoot location: ${shootLocation}` : "",
-        start && wrap ? `Shoot: ${prettyDate(start)} → ${prettyDate(wrap)} (${days} day(s))` : "",
-        notes ? `Notes: ${notes}` : "",
-      ].filter(Boolean);
-      openWhatsApp(lines.join("\n"));
-      toast.success(`Request ${res.request_code} sent`, {
-        description: "Saved to our production desk — continue on WhatsApp to confirm.",
+      toast.success(`Quote request ${res.quote_code} sent`, {
+        description: "Track its status in your client portal — quotation follows shortly.",
       });
+      openWhatsApp(newQuoteRequestMessage(res));
+      void qc.invalidateQueries({ queryKey: portalKeys.myQuotes });
+      void qc.invalidateQueries({ queryKey: portalKeys.productionHouses });
       onOpenChange(false);
       setNotes("");
+      setMovie("");
     },
     onError: (e: Error) => toast.error("Request failed", { description: e.message }),
   });
 
-  const valid = Boolean(prop && contactPerson.trim() && phone.trim());
+  const valid = Boolean(
+    prop &&
+      signedIn &&
+      productionHouse.trim() &&
+      movie.trim() &&
+      shootLocation.trim() &&
+      start &&
+      wrap,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,13 +100,14 @@ export function RequestModal({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Production House">
-            <Input value={productionHouse} onChange={(e) => setProductionHouse(e.target.value)} placeholder="Vetri Cinemas" />
+            <ProductionHouseSelect
+              id="rq-banner"
+              value={productionHouse}
+              onChange={setProductionHouse}
+            />
           </Field>
-          <Field label="Your Name">
-            <Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="Line producer" />
-          </Field>
-          <Field label="WhatsApp / Phone">
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98400 00000" />
+          <Field label="Movie / Project Name">
+            <Input value={movie} onChange={(e) => setMovie(e.target.value)} placeholder="Vetri Kodi Kattu" maxLength={160} />
           </Field>
           <Field label="Quantity">
             <Input
@@ -115,7 +121,7 @@ export function RequestModal({
           <Field label="Shoot Start">
             <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
           </Field>
-          <Field label="Wrap Date">
+          <Field label="Estimated Return Date">
             <Input type="date" value={wrap} min={start || undefined} onChange={(e) => setWrap(e.target.value)} />
           </Field>
           <div className="sm:col-span-2">
@@ -149,13 +155,22 @@ export function RequestModal({
           </div>
         )}
 
+        {!signedIn && (
+          <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-muted-foreground">
+            <Link to="/auth" className="font-semibold text-primary underline">
+              Sign in or create a production account
+            </Link>{" "}
+            to submit this request and track the quotation in your portal.
+          </p>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button disabled={!valid || isPending} onClick={() => mutate()}>
             <MessageCircle className="size-4" />
-            {isPending ? "Sending…" : "Send Quote Request on WhatsApp"}
+            {isPending ? "Sending…" : "Submit Quote Request"}
           </Button>
         </DialogFooter>
       </DialogContent>
