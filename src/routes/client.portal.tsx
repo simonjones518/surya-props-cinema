@@ -74,6 +74,8 @@ function ClientPortal() {
 
   const [payFor, setPayFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
+  const [banner, setBanner] = useState("all");
+  const [search, setSearch] = useState("");
 
   const signOut = useMutation({
     mutationFn: () => portal.signOut(),
