@@ -43,6 +43,7 @@ function AdminLoginPage() {
       const res = await login({ data: { username, password } });
       if (res.ok) {
         toast.success("Welcome back, Surya");
+        await router.invalidate();
         await router.navigate({ to: "/admin", replace: true });
       } else {
         toast.error("Invalid credentials");
