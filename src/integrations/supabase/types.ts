@@ -219,6 +219,74 @@ export type Database = {
           },
         ]
       }
+      prop_requests: {
+        Row: {
+          contact_person: string
+          created_at: string
+          custom_description: string
+          id: number
+          notes: string | null
+          phone: string
+          production_house: string
+          prop_id: number | null
+          prop_title: string
+          quantity: number
+          reference_image_urls: string[]
+          request_code: string
+          request_type: string
+          shoot_start_date: string | null
+          shoot_wrap_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_person?: string
+          created_at?: string
+          custom_description?: string
+          id?: number
+          notes?: string | null
+          phone?: string
+          production_house?: string
+          prop_id?: number | null
+          prop_title?: string
+          quantity?: number
+          reference_image_urls?: string[]
+          request_code: string
+          request_type?: string
+          shoot_start_date?: string | null
+          shoot_wrap_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_person?: string
+          created_at?: string
+          custom_description?: string
+          id?: number
+          notes?: string | null
+          phone?: string
+          production_house?: string
+          prop_id?: number | null
+          prop_title?: string
+          quantity?: number
+          reference_image_urls?: string[]
+          request_code?: string
+          request_type?: string
+          shoot_start_date?: string | null
+          shoot_wrap_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prop_requests_prop_id_fkey"
+            columns: ["prop_id"]
+            isOneToOne: false
+            referencedRelation: "props"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       props: {
         Row: {
           category_id: number | null
