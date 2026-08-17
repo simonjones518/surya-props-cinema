@@ -10,6 +10,8 @@ import type {
   InvoiceDraft,
   KpiAnalytics,
   Prop,
+  PropRequest,
+  PropRequestDraft,
   PropStatus,
   RentalBooking,
   RentalStatus,
