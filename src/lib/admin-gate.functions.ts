@@ -9,7 +9,9 @@ function sessionConfig() {
     password: process.env["SESSION_SECRET"]!,
     name: "surya-admin",
     maxAge: 60 * 60 * 8,
-    cookie: { httpOnly: true, secure: true, sameSite: "lax" as const, path: "/" },
+    // "none" is required so the session cookie survives inside the Lovable
+    // preview iframe (third-party context); Secure is mandatory with None.
+    cookie: { httpOnly: true, secure: true, sameSite: "none" as const, path: "/" },
   };
 }
 
