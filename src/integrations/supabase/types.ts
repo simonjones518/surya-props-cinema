@@ -14,7 +14,282 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          advance_paid: number
+          balance_due: number
+          booking_code: string
+          client_id: number | null
+          created_at: string
+          deposit_status: string
+          id: number
+          items: Json
+          notes: string | null
+          production_house: string
+          rental_status: string
+          security_deposit: number
+          start_date: string
+          total_rent: number
+          updated_at: string
+          wrap_date: string
+        }
+        Insert: {
+          advance_paid?: number
+          balance_due?: number
+          booking_code: string
+          client_id?: number | null
+          created_at?: string
+          deposit_status?: string
+          id?: number
+          items?: Json
+          notes?: string | null
+          production_house?: string
+          rental_status?: string
+          security_deposit?: number
+          start_date: string
+          total_rent?: number
+          updated_at?: string
+          wrap_date: string
+        }
+        Update: {
+          advance_paid?: number
+          balance_due?: number
+          booking_code?: string
+          client_id?: number | null
+          created_at?: string
+          deposit_status?: string
+          id?: number
+          items?: Json
+          notes?: string | null
+          production_house?: string
+          rental_status?: string
+          security_deposit?: number
+          start_date?: string
+          total_rent?: number
+          updated_at?: string
+          wrap_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      categories: {
+        Row: {
+          created_at: string
+          icon: string
+          id: number
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: number
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: number
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      clients: {
+        Row: {
+          address: string | null
+          contact_person: string
+          created_at: string
+          email: string
+          gst_number: string | null
+          id: number
+          phone: string
+          production_house: string
+        }
+        Insert: {
+          address?: string | null
+          contact_person?: string
+          created_at?: string
+          email?: string
+          gst_number?: string | null
+          id?: number
+          phone?: string
+          production_house: string
+        }
+        Update: {
+          address?: string | null
+          contact_person?: string
+          created_at?: string
+          email?: string
+          gst_number?: string | null
+          id?: number
+          phone?: string
+          production_house?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          advance_received: number
+          balance_payable: number
+          client_id: number | null
+          client_name: string
+          client_phone: string
+          created_at: string
+          discount: number
+          doc_type: string
+          gst_amount: number
+          gst_percent: number
+          id: number
+          invoice_number: string
+          items: Json
+          notes: string | null
+          payment_status: string
+          production_house: string
+          security_deposit: number
+          shoot_location: string | null
+          shoot_start_date: string
+          shoot_wrap_date: string
+          subtotal: number
+          transport_charges: number
+        }
+        Insert: {
+          advance_received?: number
+          balance_payable?: number
+          client_id?: number | null
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          discount?: number
+          doc_type?: string
+          gst_amount?: number
+          gst_percent?: number
+          id?: number
+          invoice_number: string
+          items?: Json
+          notes?: string | null
+          payment_status?: string
+          production_house?: string
+          security_deposit?: number
+          shoot_location?: string | null
+          shoot_start_date: string
+          shoot_wrap_date: string
+          subtotal?: number
+          transport_charges?: number
+        }
+        Update: {
+          advance_received?: number
+          balance_payable?: number
+          client_id?: number | null
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          discount?: number
+          doc_type?: string
+          gst_amount?: number
+          gst_percent?: number
+          id?: number
+          invoice_number?: string
+          items?: Json
+          notes?: string | null
+          payment_status?: string
+          production_house?: string
+          security_deposit?: number
+          shoot_location?: string | null
+          shoot_start_date?: string
+          shoot_wrap_date?: string
+          subtotal?: number
+          transport_charges?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      props: {
+        Row: {
+          category_id: number | null
+          category_slug: string
+          condition_rating: string
+          created_at: string
+          daily_rate: number
+          description: string
+          genre_tags: string[]
+          id: number
+          image_urls: string[]
+          qr_code_id: string
+          replacement_value: number
+          security_deposit: number
+          serial_number: string
+          status: string
+          title: string
+          updated_at: string
+          video_preview_url: string | null
+          weekly_rate: number
+        }
+        Insert: {
+          category_id?: number | null
+          category_slug: string
+          condition_rating?: string
+          created_at?: string
+          daily_rate?: number
+          description?: string
+          genre_tags?: string[]
+          id?: number
+          image_urls?: string[]
+          qr_code_id?: string
+          replacement_value?: number
+          security_deposit?: number
+          serial_number: string
+          status?: string
+          title: string
+          updated_at?: string
+          video_preview_url?: string | null
+          weekly_rate?: number
+        }
+        Update: {
+          category_id?: number | null
+          category_slug?: string
+          condition_rating?: string
+          created_at?: string
+          daily_rate?: number
+          description?: string
+          genre_tags?: string[]
+          id?: number
+          image_urls?: string[]
+          qr_code_id?: string
+          replacement_value?: number
+          security_deposit?: number
+          serial_number?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          video_preview_url?: string | null
+          weekly_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "props_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
