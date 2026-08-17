@@ -7,15 +7,19 @@ import type {
   InvoiceDraft,
   KpiAnalytics,
   Prop,
+  PropRequest,
+  PropRequestDraft,
   PropStatus,
   RentalBooking,
   RentalStatus,
+  RequestStatus,
 } from "./types";
 import {
   createBookingFn,
   createClientFn,
   createInvoiceFn,
   createPropFn,
+  createPropRequestFn,
   deletePropFn,
   fetchBookings,
   fetchCategories,
@@ -23,12 +27,22 @@ import {
   fetchInvoices,
   fetchKpi,
   fetchProps,
+  fetchPropRequests,
   refundDepositFn,
   updateBookingStatusFn,
   updatePropFn,
   updatePropStatusFn,
+  updateRequestStatusFn,
   uploadPropImageFn,
+  uploadRequestImageFn,
 } from "./inventory.functions";
+
+async function toBase64(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]!);
+  return btoa(binary);
+}
 
 /**
  * Data layer — live against the project database (Lovable Cloud).
@@ -52,16 +66,24 @@ export const api = {
   updatePropStatus: (id: number, status: PropStatus) => updatePropStatusFn({ data: { id, status } }),
   createClient: (client: ClientDraft) => createClientFn({ data: client }) as Promise<Client>,
   createInvoice: (draft: InvoiceDraft) => createInvoiceFn({ data: draft }),
+  getPropRequests: () => fetchPropRequests() as Promise<PropRequest[]>,
+  createPropRequest: (draft: PropRequestDraft) => createPropRequestFn({ data: draft }),
+  updateRequestStatus: (id: number, status: RequestStatus) =>
+    updateRequestStatusFn({ data: { id, status } }),
+  uploadRequestImage: async (file: File) =>
+    uploadRequestImageFn({
+      data: {
+        fileName: file.name,
+        contentType: file.type || "image/jpeg",
+        base64: await toBase64(file),
+      },
+    }),
   uploadPropImage: async (file: File) => {
-    const buffer = await file.arrayBuffer();
-    let binary = "";
-    const bytes = new Uint8Array(buffer);
-    for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]!);
     return uploadPropImageFn({
       data: {
         fileName: file.name,
         contentType: file.type || "image/jpeg",
-        base64: btoa(binary),
+        base64: await toBase64(file),
       },
     });
   },
@@ -74,4 +96,5 @@ export const queryKeys = {
   kpi: ["kpi"] as const,
   clients: ["clients"] as const,
   invoices: ["invoices"] as const,
+  requests: ["prop-requests"] as const,
 };
