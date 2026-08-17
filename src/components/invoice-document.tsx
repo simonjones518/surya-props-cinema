@@ -1,5 +1,6 @@
 import { Printer, QrCode, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { inr, addDays, prettyDate } from "@/lib/format";
 import type { Invoice } from "@/lib/types";
 
@@ -46,9 +47,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
       >
         <header className="flex flex-wrap items-start justify-between gap-6 border-b border-primary/30 pb-6">
           <div>
-            <h2 className="font-display text-3xl tracking-wide text-gradient-gold print:text-black">
-              {COMPANY.name}
-            </h2>
+            <BrandLogo className="h-16" />
             <p className="mt-1 text-xs uppercase tracking-[0.28em] text-primary print:text-black">
               {COMPANY.tagline}
             </p>

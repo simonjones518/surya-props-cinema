@@ -1,5 +1,6 @@
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
 import type { RentalOrder } from "@/lib/types";
 
@@ -33,7 +34,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
       </div>
 
       <header className="mt-6 border-b-2 border-black pb-4">
-        <h2 className="text-3xl font-black uppercase tracking-wide">{BUSINESS.name}</h2>
+        <BrandLogo className="h-16" />
         <p className="text-sm text-neutral-700">{BUSINESS.address}</p>
         <p className="text-sm text-neutral-700">Contact: {BUSINESS.phone}</p>
         <p className="mt-3 text-lg font-bold uppercase">

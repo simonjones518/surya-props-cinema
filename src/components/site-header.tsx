@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Clapperboard, LogIn, ShoppingBag } from "lucide-react";
+import { LogIn, ShoppingBag } from "lucide-react";
 import { useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 import { QuoteCart } from "@/components/quote-cart";
 import { portal, portalKeys } from "@/lib/portal-api";
 import { useWishlist } from "@/lib/wishlist";
@@ -30,18 +31,8 @@ export function SiteHeader() {
   return (
     <header className="glass-panel sticky top-0 z-50 border-b border-border print:hidden">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-3">
-          <span className="grid size-9 place-items-center rounded-md border border-primary/40 bg-primary/10 text-primary">
-            <Clapperboard className="size-5" />
-          </span>
-          <span className="leading-none">
-            <span className="block font-display text-lg tracking-widest text-gradient-gold">
-              SURYA CINE
-            </span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.32em] text-muted-foreground">
-              Special Props
-            </span>
-          </span>
+        <Link to="/" className="flex items-center gap-3" aria-label="Surya Cine Special Props — home">
+          <BrandLogo className="h-9 sm:h-11" />
         </Link>
 
         <nav className="flex items-center gap-1 text-sm" aria-label="Main">
