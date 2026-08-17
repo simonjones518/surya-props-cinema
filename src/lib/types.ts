@@ -275,6 +275,8 @@ export type QuoteStatus =
   | "quote_requested"
   | "quote_sent"
   | "advance_submitted"
+  | "payment_received"
+  | "dispatched"
   | "on_set"
   | "settled"
   | "rejected";

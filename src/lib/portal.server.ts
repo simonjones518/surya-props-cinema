@@ -449,7 +449,7 @@ export async function priceQuote(input: {
   return { ok: true as const };
 }
 
-/** Admin verifies the advance → props go on-set and inventory is locked. */
+/** Stage 3b — admin confirms the advance actually landed (UPI reference / proof). */
 export async function verifyAdvance(id: number) {
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
@@ -463,7 +463,7 @@ export async function verifyAdvance(id: number) {
   const { error: upErr } = await suryaDb
     .from("quote_requests")
     .update({
-      status: "on_set",
+      status: "payment_received",
       advance_paid: advance,
       balance_due: num(quote["estimated_total"]) + num(quote["security_deposit"]) - advance,
     })
@@ -475,6 +475,28 @@ export async function verifyAdvance(id: number) {
     .update({ status: "verified" })
     .eq("quote_id", Number(id))
     .eq("kind", "advance");
+
+  return { ok: true as const };
+}
+
+/** Stage 3c — props physically dispatched: rent starts, inventory locks. */
+export async function dispatchQuote(id: number) {
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("*")
+    .eq("id", Number(id))
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (!["payment_received", "on_set"].includes(quote["status"])) {
+    throw new Error("Confirm the advance payment before dispatching the props.");
+  }
+
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({ status: "dispatched" })
+    .eq("id", Number(id));
+  if (upErr) throw new Error(upErr.message);
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
   if (propIds.length > 0) {

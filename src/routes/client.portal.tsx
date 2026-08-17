@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
+import { QuoteTimeline } from "@/components/quote-timeline";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
 import type { ClientProfile, QuoteRequest } from "@/lib/types";
@@ -363,6 +364,8 @@ function QuoteCard({
         </div>
         <StatusPill quote={quote} />
       </header>
+
+      <QuoteTimeline quote={quote} side="client" />
 
       <ul className="mt-4 divide-y divide-border/60 text-sm">
         {quote.items.map((item) => (
