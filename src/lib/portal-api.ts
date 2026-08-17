@@ -18,7 +18,6 @@ import {
   uploadPaymentProofFn,
   verifyAdvanceFn,
 } from "./portal.functions";
-import type { QuoteWhatsAppSummary } from "./whatsapp";
 import type {
   ClientProfile,
   ProductionHouse,
@@ -54,7 +53,7 @@ export const portal = {
   getMyQuotes: () => fetchMyQuotes() as Promise<QuoteRequest[]>,
   getMyPayments: () => fetchMyPayments() as Promise<QuotePayment[]>,
   requestQuote: (data: QuoteRequestDraft) =>
-    createQuoteRequestFn({ data }) as Promise<QuoteWhatsAppSummary>,
+    createQuoteRequestFn({ data }) as Promise<QuoteRequest>,
   acceptQuote: (data: { id: number; payment_reference: string; payment_proof_path?: string | null }) =>
     acceptQuoteFn({ data }),
   rejectQuote: (id: number) => rejectQuoteFn({ data: { id } }),

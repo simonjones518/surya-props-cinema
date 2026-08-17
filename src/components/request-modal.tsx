@@ -19,7 +19,7 @@ import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
 import { shootDays } from "@/lib/format";
 import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
-import type { Prop } from "@/lib/types";
+import type { Prop, QuoteRequest } from "@/lib/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -63,6 +63,10 @@ export function RequestModal({
       });
     },
     onSuccess: (res) => {
+      qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => {
+        const withoutSaved = (current ?? []).filter((quote) => quote.id !== res.id);
+        return [res, ...withoutSaved];
+      });
       toast.success(`Quote request ${res.quote_code} sent`, {
         description: "Track its status in your client portal — quotation follows shortly.",
       });

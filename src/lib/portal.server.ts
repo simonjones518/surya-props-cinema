@@ -273,36 +273,34 @@ export async function createQuoteRequest(draft: QuoteRequestDraft) {
   if (items.length === 0) throw new Error("None of the selected props are available.");
 
   const quote_code = `SCP-Q-${Date.now().toString().slice(-6)}`;
-  const { error: insErr } = await suryaDb.from("quote_requests").insert({
-    quote_code,
-    user_id: me.userId,
-    production_house: banner.name,
-    production_house_id: banner.id,
-    movie_name,
-    client_designation: profile.designation,
-    contact_person: profile.contact_person,
-    phone: profile.phone,
-    shoot_location: clean(draft.shoot_location, 240),
-    shoot_start_date: draft.shoot_start_date,
-    estimated_return_date: draft.estimated_return_date,
-    estimated_days: days(draft.shoot_start_date, draft.estimated_return_date),
-    items: items as unknown as any,
-    client_notes: draft.client_notes ? clean(draft.client_notes, 1000) : null,
-    status: "quote_requested",
-  });
-  if (insErr) throw new Error(insErr.message);
-  return {
-    quote_code,
-    production_house: banner.name,
-    movie_name,
-    contact_person: profile.contact_person,
-    phone: profile.phone,
-    shoot_location: clean(draft.shoot_location, 240),
-    shoot_start_date: draft.shoot_start_date,
-    estimated_return_date: draft.estimated_return_date,
-    estimated_days: days(draft.shoot_start_date, draft.estimated_return_date),
-    items: items.map((i) => ({ prop_name: i.prop_name, quantity: i.quantity })),
-  };
+  const { data: saved, error: insErr } = await suryaDb
+    .from("quote_requests")
+    .insert({
+      quote_code,
+      user_id: me.userId,
+      production_house: banner.name,
+      production_house_id: banner.id,
+      movie_name,
+      client_designation: profile.designation,
+      contact_person: profile.contact_person,
+      phone: profile.phone,
+      shoot_location: clean(draft.shoot_location, 240),
+      shoot_start_date: draft.shoot_start_date,
+      estimated_return_date: draft.estimated_return_date,
+      estimated_days: days(draft.shoot_start_date, draft.estimated_return_date),
+      items: items as unknown as any,
+      client_notes: draft.client_notes ? clean(draft.client_notes, 1000) : null,
+      status: "quote_requested",
+    })
+    .select("*")
+    .single();
+  if (insErr || !saved) {
+    throw new Error(insErr?.message ?? "The quote request could not be saved.");
+  }
+
+  // Return the persisted lifecycle record, not a detached summary. The client
+  // can render this exact row immediately while WhatsApp uses the same data.
+  return mapQuote(saved as Record<string, any>);
 }
 
 export async function listMyQuotes(): Promise<QuoteRequest[]> {
