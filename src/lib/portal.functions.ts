@@ -109,3 +109,17 @@ export const recordReturnFn = createServerFn({ method: "POST" })
     await (await admin()).assertAdmin();
     return (await db()).recordReturn(data);
   });
+
+export const dispatchQuoteFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).dispatchQuote(data.id);
+  });
+
+const _unusedRecordReturn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; actual_return_date: string }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).recordReturn(data);
+  });

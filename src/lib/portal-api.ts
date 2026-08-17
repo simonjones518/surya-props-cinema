@@ -5,6 +5,7 @@ import {
   clientSignOutFn,
   clientSignUpFn,
   createQuoteRequestFn,
+  dispatchQuoteFn,
   fetchAllQuotes,
   fetchMyPayments,
   fetchMyProfile,
@@ -75,6 +76,7 @@ export const portal = {
     admin_notes?: string;
   }) => priceQuoteFn({ data }),
   verifyAdvance: (id: number) => verifyAdvanceFn({ data: { id } }),
+  dispatchQuote: (id: number) => dispatchQuoteFn({ data: { id } }),
   recordReturn: (id: number, actual_return_date: string) =>
     recordReturnFn({ data: { id, actual_return_date } }),
 };
@@ -92,7 +94,9 @@ export const QUOTE_LABEL: Record<QuoteStatus, string> = {
   quote_requested: "Quote Under Review",
   quote_sent: "Quote Ready — Action Needed",
   advance_submitted: "Advance Under Verification",
-  on_set: "On-Set Live",
+  payment_received: "Payment Received",
+  dispatched: "Dispatched — On Rent",
+  on_set: "Dispatched — On Rent",
   settled: "Returned & Settled",
   rejected: "Declined",
 };
@@ -101,6 +105,8 @@ export const QUOTE_TONE: Record<QuoteStatus, string> = {
   quote_requested: "border-muted-foreground/40 bg-secondary text-muted-foreground",
   quote_sent: "border-primary/60 bg-primary/15 text-primary",
   advance_submitted: "border-accent/60 bg-accent/15 text-accent",
+  payment_received: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
+  dispatched: "border-accent/60 bg-accent/15 text-accent",
   on_set: "border-accent/60 bg-accent/15 text-accent",
   settled: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
   rejected: "border-destructive/50 bg-destructive/10 text-destructive",
