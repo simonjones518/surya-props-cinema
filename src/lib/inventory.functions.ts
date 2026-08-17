@@ -125,3 +125,31 @@ export const createInvoiceFn = createServerFn({ method: "POST" })
 export const createBookingFn = createServerFn({ method: "POST" })
   .inputValidator((data: BookingDraft) => data)
   .handler(async ({ data }) => (await db()).createBooking(data));
+
+/* ---------- public: customer prop requests ---------- */
+
+export const createPropRequestFn = createServerFn({ method: "POST" })
+  .inputValidator((data: PropRequestDraft) => data)
+  .handler(async ({ data }) => (await db()).createPropRequest(data));
+
+export const uploadRequestImageFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { fileName: string; contentType: string; base64: string }) => data)
+  .handler(async ({ data }) =>
+    (await db()).uploadRequestImage(data.fileName, data.contentType, data.base64),
+  );
+
+/* ---------- admin: prop requests ---------- */
+
+export const fetchPropRequests = createServerFn({ method: "GET" }).handler(async () => {
+  const m = await db();
+  await m.assertAdmin();
+  return m.listPropRequests();
+});
+
+export const updateRequestStatusFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; status: RequestStatus }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.updateRequestStatus(data.id, data.status);
+  });
