@@ -267,6 +267,72 @@ function EmptyState() {
   );
 }
 
+/** Multi-project filters: by production banner and by movie / quote code. */
+function ProjectFilters({
+  banners,
+  banner,
+  onBanner,
+  search,
+  onSearch,
+}: {
+  banners: string[];
+  banner: string;
+  onBanner: (v: string) => void;
+  search: string;
+  onSearch: (v: string) => void;
+}) {
+  if (banners.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-end gap-3 rounded-xl border border-primary/20 bg-card p-3">
+      <div className="flex flex-wrap gap-2">
+        <FilterChip active={banner === "all"} onClick={() => onBanner("all")}>
+          All Banners
+        </FilterChip>
+        {banners.map((b) => (
+          <FilterChip key={b} active={banner === b} onClick={() => onBanner(b)}>
+            {b}
+          </FilterChip>
+        ))}
+      </div>
+      <div className="ml-auto min-w-56 flex-1 space-y-1.5">
+        <Label htmlFor="proj-search" className="text-[10px] uppercase tracking-wider">
+          Filter by movie / quote
+        </Label>
+        <Input
+          id="proj-search"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Movie title or SCP-Q-…"
+        />
+      </div>
+    </div>
+  );
+}
+
+function FilterChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+        active
+          ? "border-primary/60 bg-primary/15 text-primary"
+          : "border-border text-muted-foreground hover:border-primary/40 hover:text-primary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function QuoteCard({
   quote,
   onPay,
@@ -276,7 +342,6 @@ function QuoteCard({
   onPay: () => void;
   onView: (kind: QuoteDocKind) => void;
 }) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const priced = quote.status !== "quote_requested";
   const days = quote.actual_days_used ?? quote.estimated_days;
   return (
