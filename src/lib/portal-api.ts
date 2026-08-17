@@ -52,7 +52,8 @@ export const portal = {
   saveProfile: (data: Partial<ClientProfile>) => saveMyProfileFn({ data }),
   getMyQuotes: () => fetchMyQuotes() as Promise<QuoteRequest[]>,
   getMyPayments: () => fetchMyPayments() as Promise<QuotePayment[]>,
-  requestQuote: (data: QuoteRequestDraft) => createQuoteRequestFn({ data }),
+  requestQuote: (data: QuoteRequestDraft) =>
+    createQuoteRequestFn({ data }) as Promise<QuoteWhatsAppSummary>,
   acceptQuote: (data: { id: number; payment_reference: string; payment_proof_path?: string | null }) =>
     acceptQuoteFn({ data }),
   rejectQuote: (id: number) => rejectQuoteFn({ data: { id } }),
