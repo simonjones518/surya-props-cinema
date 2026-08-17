@@ -40,6 +40,7 @@ import { InvoiceDocument } from "@/components/invoice-document";
 import { RentalOrderModal } from "@/components/rental-order-modal";
 import { RentalOrderDocument } from "@/components/rental-order-document";
 import { GodownMatrix } from "@/components/godown-matrix";
+import { QuoteApprovals } from "@/components/quote-approvals";
 import { inr, inrCompact, prettyDate } from "@/lib/format";
 import type { Invoice, Prop, RentalBooking, RentalOrder, RentalStatus } from "@/lib/types";
 import { adminLogout, requireAdmin } from "@/lib/admin-gate.functions";
@@ -81,8 +82,8 @@ function AdminPage() {
   const [settleId, setSettleId] = useState<number | null>(null);
   const [returnDate, setReturnDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState<
-    "pipeline" | "orders" | "warehouse" | "requests" | "inventory" | "billing"
-  >("orders");
+    "pipeline" | "orders" | "quotes" | "warehouse" | "requests" | "inventory" | "billing"
+  >("quotes");
   const kpi = useQuery({ queryKey: queryKeys.kpi, queryFn: api.getKpi });
   const bookings = useQuery({ queryKey: queryKeys.bookings, queryFn: api.getBookings });
   const categories = useQuery({ queryKey: queryKeys.categories, queryFn: api.getCategories });
@@ -228,6 +229,7 @@ function AdminPage() {
 
       <nav aria-label="Dashboard sections" className="mt-10 flex flex-wrap gap-2 print:hidden">
         {([
+          ["quotes", "Quote Approvals"],
           ["orders", "Rental Orders & Settlement"],
           ["warehouse", "Warehouse Matrix"],
           ["pipeline", "Rental Pipeline"],
@@ -250,6 +252,8 @@ function AdminPage() {
           </button>
         ))}
       </nav>
+
+      {tab === "quotes" && <QuoteApprovals />}
 
       {tab === "orders" && (
         <section className="mt-6 print:hidden" aria-label="Rental orders and settlement">

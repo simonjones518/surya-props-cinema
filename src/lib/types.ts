@@ -268,3 +268,82 @@ export interface PropRequestDraft {
   quantity?: number;
   notes?: string | null;
 }
+
+/* ---------- client portal: quote lifecycle ---------- */
+
+export type QuoteStatus =
+  | "quote_requested"
+  | "quote_sent"
+  | "advance_submitted"
+  | "on_set"
+  | "settled"
+  | "rejected";
+
+export interface QuoteItem {
+  prop_id: number;
+  prop_name: string;
+  /** Snapshot of technical specs / dimensions at request time. */
+  prop_specs: string;
+  serial_number: string;
+  godown_name: string;
+  rack_name: string;
+  quantity: number;
+  /** Set by the admin during review; 0 until priced. */
+  daily_rate: number;
+  line_total: number;
+}
+
+export interface ClientProfile {
+  user_id: string;
+  email: string;
+  production_house: string;
+  contact_person: string;
+  phone: string;
+  address: string;
+}
+
+export interface QuotePayment {
+  id: number;
+  quote_id: number;
+  kind: "advance" | "security_deposit" | "settlement";
+  amount: number;
+  reference: string;
+  status: "pending" | "verified";
+  created_at: string;
+}
+
+export interface QuoteRequest {
+  id: number;
+  quote_code: string;
+  user_id: string;
+  production_house: string;
+  contact_person: string;
+  phone: string;
+  shoot_location: string;
+  shoot_start_date: string;
+  estimated_return_date: string;
+  estimated_days: number;
+  actual_return_date: string | null;
+  actual_days_used: number | null;
+  items: QuoteItem[];
+  estimated_total: number;
+  security_deposit: number;
+  advance_required: number;
+  advance_paid: number;
+  final_total: number;
+  balance_due: number;
+  status: QuoteStatus;
+  payment_reference: string | null;
+  payment_proof_url: string | null;
+  admin_notes: string | null;
+  client_notes: string | null;
+  created_at: string;
+}
+
+export interface QuoteRequestDraft {
+  shoot_location: string;
+  shoot_start_date: string;
+  estimated_return_date: string;
+  client_notes?: string;
+  items: { prop_id: number; quantity: number }[];
+}

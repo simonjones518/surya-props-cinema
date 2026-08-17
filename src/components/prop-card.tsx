@@ -1,10 +1,13 @@
-import { MapPin, QrCode } from "lucide-react";
+import { Check, MapPin, Plus, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConditionBadge, StockBadge } from "@/components/status-badge";
+import { useWishlist } from "@/lib/wishlist";
 import type { Prop } from "@/lib/types";
 
 export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) => void }) {
   const rentable = prop.status === "In-Stock";
+  const { add, lines } = useWishlist();
+  const inList = lines.some((l) => l.prop_id === prop.id);
   return (
     <article className="group overflow-hidden rounded-xl border border-primary/20 bg-card transition-all hover:border-primary/60 hover:glow-gold">
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -53,9 +56,22 @@ export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) =>
             {[prop.godown_name, prop.rack_name].filter(Boolean).join(" · ")}
           </p>
         )}
-        <Button className="w-full" disabled={!rentable} onClick={() => onRent(prop)}>
-          {rentable ? "Request Rental Quote" : `Unavailable — ${prop.status}`}
-        </Button>
+        <div className="grid gap-2">
+          <Button className="w-full" disabled={!rentable} onClick={() => onRent(prop)}>
+            {rentable ? "Request Rental Quote" : `Unavailable — ${prop.status}`}
+          </Button>
+          {rentable && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => add(prop.id, prop.title)}
+              aria-label={`Add ${prop.title} to shoot wishlist`}
+            >
+              {inList ? <Check className="size-4" /> : <Plus className="size-4" />}
+              {inList ? "Added to Wishlist" : "Add to Shoot Wishlist"}
+            </Button>
+          )}
+        </div>
       </div>
     </article>
   );
