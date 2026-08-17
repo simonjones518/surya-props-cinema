@@ -276,6 +276,7 @@ function QuoteCard({
   onPay: () => void;
   onView: (kind: QuoteDocKind) => void;
 }) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const priced = quote.status !== "quote_requested";
   const days = quote.actual_days_used ?? quote.estimated_days;
   return (
