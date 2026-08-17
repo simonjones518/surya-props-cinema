@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { useSession } from "@tanstack/react-start/server";
-import { redirect } from "@tanstack/react-router";
 import { createHash, timingSafeEqual } from "node:crypto";
 
 type AdminSession = { unlocked?: boolean };
@@ -42,8 +41,7 @@ export const adminLogout = createServerFn({ method: "POST" }).handler(async () =
 
 export const requireAdmin = createServerFn({ method: "GET" }).handler(async () => {
   const session = await useSession<AdminSession>(sessionConfig());
-  if (!session.data.unlocked) throw redirect({ to: "/admin-login" });
-  return { unlocked: true as const };
+  return { unlocked: !!session.data.unlocked };
 });
 
 export const adminStatus = createServerFn({ method: "GET" }).handler(async () => {
