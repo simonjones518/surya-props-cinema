@@ -200,6 +200,10 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     quote_code: row["quote_code"],
     user_id: row["user_id"],
     production_house: row["production_house"] ?? "",
+    production_house_id:
+      row["production_house_id"] == null ? null : Number(row["production_house_id"]),
+    movie_name: row["movie_name"] ?? "",
+    client_designation: row["client_designation"] ?? "",
     contact_person: row["contact_person"] ?? "",
     phone: row["phone"] ?? "",
     shoot_location: row["shoot_location"] ?? "",
@@ -235,6 +239,9 @@ export async function createQuoteRequest(draft: QuoteRequestDraft) {
   }
 
   const profile = await getProfile();
+  const banner = await resolveProductionHouse(draft.production_house, me.userId);
+  const movie_name = clean(draft.movie_name, 160);
+  if (!movie_name) throw new Error("Movie / project name is required.");
   const [{ data: props, error }, { data: godowns }, { data: racks }] = await Promise.all([
     suryaDb
       .from("props")
@@ -267,7 +274,10 @@ export async function createQuoteRequest(draft: QuoteRequestDraft) {
   const { error: insErr } = await suryaDb.from("quote_requests").insert({
     quote_code,
     user_id: me.userId,
-    production_house: profile.production_house,
+    production_house: banner.name,
+    production_house_id: banner.id,
+    movie_name,
+    client_designation: profile.designation,
     contact_person: profile.contact_person,
     phone: profile.phone,
     shoot_location: clean(draft.shoot_location, 240),
