@@ -35,6 +35,7 @@ import { DepositBadge, RentalStatusBadge } from "@/components/status-badge";
 import { StockModal } from "@/components/stock-modal";
 import { PosCart } from "@/components/pos-cart";
 import { InventoryTable } from "@/components/inventory-table";
+import { RequestsTable } from "@/components/requests-table";
 import { InvoiceDocument } from "@/components/invoice-document";
 import { inr, inrCompact, prettyDate } from "@/lib/format";
 import type { Invoice, Prop, RentalBooking, RentalStatus } from "@/lib/types";
@@ -72,7 +73,7 @@ function AdminPage() {
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState("");
   const [viewDoc, setViewDoc] = useState<Invoice | null>(null);
-  const [tab, setTab] = useState<"pipeline" | "inventory" | "billing">("pipeline");
+  const [tab, setTab] = useState<"pipeline" | "requests" | "inventory" | "billing">("pipeline");
   const kpi = useQuery({ queryKey: queryKeys.kpi, queryFn: api.getKpi });
   const bookings = useQuery({ queryKey: queryKeys.bookings, queryFn: api.getBookings });
   const categories = useQuery({ queryKey: queryKeys.categories, queryFn: api.getCategories });
@@ -201,6 +202,7 @@ function AdminPage() {
       <nav aria-label="Dashboard sections" className="mt-10 flex flex-wrap gap-2 print:hidden">
         {([
           ["pipeline", "Rental Pipeline"],
+          ["requests", "Customer Requests"],
           ["inventory", "Inventory & Stock"],
           ["billing", "Invoices & Quotations"],
         ] as const).map(([key, label]) => (
@@ -292,6 +294,12 @@ function AdminPage() {
           {bookings.isLoading && <div className="p-6"><Skeleton className="h-40 w-full" /></div>}
         </div>
       </section>
+      )}
+
+      {tab === "requests" && (
+        <section className="mt-6 print:hidden" aria-label="Customer prop requests">
+          <RequestsTable />
+        </section>
       )}
 
       {tab === "inventory" && (
