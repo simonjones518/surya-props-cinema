@@ -18,6 +18,7 @@ import {
   uploadPaymentProofFn,
   verifyAdvanceFn,
 } from "./portal.functions";
+import type { QuoteWhatsAppSummary } from "./whatsapp";
 import type {
   ClientProfile,
   ProductionHouse,
