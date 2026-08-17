@@ -227,3 +227,20 @@
 @utility glow-gold {
   box-shadow: var(--shadow-gold);
 }
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+  #print-area {
+    box-shadow: none !important;
+  }
+  #print-area .text-gradient-gold {
+    background: none !important;
+    color: #000 !important;
+  }
+  @page {
+    margin: 12mm;
+  }
+}
