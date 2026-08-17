@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { motion, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
 import { ArrowDown } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -48,16 +48,26 @@ export function CinematicHero() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const isMobile = useIsMobile();
+  const [ready, setReady] = useState(false);
   const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end end"] });
 
-  const bgScale = useTransform(scrollYProgress, [0, 1], [1.15, 1.02]);
-  const bgOpacity = useTransform(scrollYProgress, [0, 0.15, 0.9, 1], [1, 0.75, 0.6, 0.35]);
+  const bgScale = useTransform(scrollYProgress, [0, 1], isMobile ? [1.08, 1] : [1.15, 1.02]);
+  const bgOpacity = useTransform(
+    scrollYProgress,
+    [0, 0.15, 0.9, 1],
+    isMobile ? [1, 1, 0.95, 0.8] : [1, 0.75, 0.6, 0.35],
+  );
+  const bgRotate = useTransform(scrollYProgress, [0, 1], isMobile ? [0, -1.5] : [0, 0]);
+  const bgY = useTransform(scrollYProgress, [0, 1], isMobile ? ["-2%", "2%"] : ["0%", "0%"]);
   const railWidth = useTransform(scrollYProgress, [0, 1], ["0%", "100%"]);
 
   useMotionValueEvent(scrollYProgress, "change", (p) => {
     const video = videoRef.current;
-    if (!video || !video.duration || Number.isNaN(video.duration)) return;
-    video.currentTime = Math.min(video.duration - 0.05, p * video.duration);
+    if (!video) return;
+    const d = video.duration;
+    if (!d || Number.isNaN(d) || !Number.isFinite(d)) return;
+    if (!video.paused) video.pause();
+    video.currentTime = Math.min(d - 0.05, Math.max(0, p) * d);
   });
 
   const videoSrc = isMobile ? VIDEO_PORTRAIT : VIDEO_WIDE;
@@ -66,7 +76,10 @@ export function CinematicHero() {
   return (
     <div ref={containerRef} className="relative h-[500vh] w-full">
       <div className="sticky top-0 h-screen w-full overflow-hidden">
-        <motion.div style={{ scale: bgScale, opacity: bgOpacity }} className="absolute inset-0">
+        <motion.div
+          style={{ scale: bgScale, opacity: bgOpacity, rotate: bgRotate, y: bgY }}
+          className="absolute inset-0"
+        >
           {videoSrc ? (
             <video
               ref={videoRef}
@@ -75,6 +88,11 @@ export function CinematicHero() {
               muted
               playsInline
               preload="auto"
+              onLoadedMetadata={(e) => {
+                e.currentTarget.pause();
+                e.currentTarget.currentTime = 0.01;
+                setReady(true);
+              }}
               className="size-full object-cover"
             />
           ) : (
@@ -88,14 +106,21 @@ export function CinematicHero() {
           )}
         </motion.div>
 
-        {/* Mobile-first glassmorphism scrim, cinematic vignette on desktop */}
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-md md:bg-transparent md:backdrop-blur-none" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/55 to-background/25" />
+        {/* Light scrim so the footage stays clearly visible on mobile */}
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] md:bg-transparent md:backdrop-blur-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/85 via-background/25 to-background/10 md:from-background md:via-background/55 md:to-background/25" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-background to-transparent" />
+        {!ready && videoSrc ? <span className="sr-only">Loading hero footage</span> : null}
 
         <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col justify-center px-5 sm:px-8">
           {stages.map((stage, i) => (
-            <StageCard key={stage.kicker} stage={stage} index={i} progress={scrollYProgress} />
+            <StageCard
+              key={stage.kicker}
+              stage={stage}
+              index={i}
+              progress={scrollYProgress}
+              isMobile={isMobile}
+            />
           ))}
         </div>
 
@@ -118,10 +143,12 @@ function StageCard({
   stage,
   index,
   progress,
+  isMobile,
 }: {
   stage: (typeof stages)[number];
   index: number;
   progress: ReturnType<typeof useScroll>["scrollYProgress"];
+  isMobile: boolean;
 }) {
   const span = 1 / stages.length;
   const start = index * span;
@@ -136,20 +163,26 @@ function StageCard({
   const isFirst = index === 0;
   const isLast = index === stages.length - 1;
   const opacity = useTransform(progress, range, [isFirst ? 1 : 0, 1, 1, isLast ? 1 : 0]);
-  const y = useTransform(progress, [range[0]!, range[3]!], [isFirst ? 0 : 70, -70]);
+  const y = useTransform(
+    progress,
+    [range[0]!, range[3]!],
+    isMobile ? [isFirst ? 0 : 110, -110] : [isFirst ? 0 : 70, -70],
+  );
+  const scale = useTransform(progress, range, isMobile ? [0.92, 1, 1, 0.92] : [1, 1, 1, 1]);
+  const rotate = useTransform(progress, range, isMobile ? [4, 0, 0, -4] : [0, 0, 0, 0]);
   const blur = useTransform(progress, range, [
-    isFirst ? "blur(0px)" : "blur(10px)",
+    isFirst ? "blur(0px)" : "blur(8px)",
     "blur(0px)",
     "blur(0px)",
-    isLast ? "blur(0px)" : "blur(10px)",
+    isLast ? "blur(0px)" : "blur(8px)",
   ]);
 
   return (
     <motion.article
-      style={{ opacity, y, filter: blur }}
+      style={{ opacity, y, scale, rotate, filter: blur }}
       className="absolute left-5 right-5 max-w-2xl sm:left-8 sm:right-8"
     >
-      <div className="glass-panel shadow-cine rounded-xl border border-primary/25 p-6 sm:p-9">
+      <div className="glass-panel shadow-cine rounded-xl border border-primary/25 p-5 sm:p-9">
         <p className="text-[11px] font-bold uppercase tracking-[0.38em] text-primary">{stage.kicker}</p>
         {index === 0 ? (
           <h1 className="mt-3 text-4xl leading-[0.95] sm:text-6xl lg:text-7xl">
