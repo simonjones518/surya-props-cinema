@@ -18,11 +18,17 @@ import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { QuoteTimeline } from "@/components/quote-timeline";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
+import { openWhatsAppTo, quotationReadyMessage } from "@/lib/whatsapp";
 import type { QuoteRequest } from "@/lib/types";
 
 /** Admin: review client quote requests, price them, verify advances, record returns. */
 export function QuoteApprovals() {
-  const quotes = useQuery({ queryKey: portalKeys.allQuotes, queryFn: portal.getAllQuotes });
+  const quotes = useQuery({
+    queryKey: portalKeys.allQuotes,
+    queryFn: portal.getAllQuotes,
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
   const [priceFor, setPriceFor] = useState<QuoteRequest | null>(null);
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
@@ -275,6 +281,18 @@ function PricingDialog({
       }),
     onSuccess: () => {
       toast.success("Quotation approved and sent to the client portal");
+      if (quote) {
+        openWhatsAppTo(
+          quote.phone,
+          quotationReadyMessage({
+            quote_code: quote.quote_code,
+            movie_name: quote.movie_name || "your project",
+            contact_person: quote.contact_person,
+            estimated_total: subtotal,
+            advance_required: advance,
+          }),
+        );
+      }
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
       onOpenChange(false);
     },
