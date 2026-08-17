@@ -18,6 +18,7 @@ export const clientSignUpFn = createServerFn({ method: "POST" })
       production_house: string;
       contact_person: string;
       phone: string;
+      designation?: string;
     }) => data,
   )
   .handler(async ({ data }) => (await db()).clientSignUp(data));
@@ -34,6 +35,10 @@ export const clientSignOutFn = createServerFn({ method: "POST" }).handler(async 
 
 export const fetchMyProfile = createServerFn({ method: "GET" }).handler(async () =>
   (await db()).getProfile(),
+);
+
+export const fetchProductionHouses = createServerFn({ method: "GET" }).handler(async () =>
+  (await db()).listProductionHouses(),
 );
 
 export const saveMyProfileFn = createServerFn({ method: "POST" })
