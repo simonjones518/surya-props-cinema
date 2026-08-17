@@ -575,6 +575,16 @@ function ProfileForm() {
         />
       </div>
       <div className="space-y-1.5">
+        <Label htmlFor="p-desig">Designation</Label>
+        <Input
+          id="p-desig"
+          value={form.designation ?? ""}
+          onChange={(e) => setForm({ ...form, designation: e.target.value })}
+          maxLength={120}
+          placeholder="Art Director / Line Producer"
+        />
+      </div>
+      <div className="space-y-1.5">
         <Label htmlFor="p-phone">Phone</Label>
         <Input
           id="p-phone"
