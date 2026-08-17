@@ -70,3 +70,43 @@ INSERT IGNORE INTO categories (id, name, slug, icon) VALUES
   (3, 'Vintage Vehicles', 'vehicles', 'Car'),
   (4, 'Period & Hero Gadgets', 'gadgets', 'Laptop'),
   (5, 'Lighting & Grip', 'lighting', 'Lightbulb');
+
+-- Invoices & Quotations Table
+CREATE TABLE IF NOT EXISTS invoices (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_number VARCHAR(50) UNIQUE NOT NULL,
+  doc_type ENUM('INVOICE', 'QUOTATION') DEFAULT 'INVOICE',
+  client_id INT NOT NULL,
+  client_name VARCHAR(150) NOT NULL,
+  client_phone VARCHAR(20) NOT NULL,
+  production_house VARCHAR(200),
+  shoot_location VARCHAR(300),
+  shoot_start_date DATE NOT NULL,
+  shoot_wrap_date DATE NOT NULL,
+  subtotal DECIMAL(12, 2) NOT NULL,
+  discount DECIMAL(12, 2) DEFAULT 0.00,
+  gst_percent DECIMAL(5, 2) DEFAULT 0.00,
+  gst_amount DECIMAL(12, 2) DEFAULT 0.00,
+  transport_charges DECIMAL(10, 2) DEFAULT 0.00,
+  security_deposit DECIMAL(12, 2) DEFAULT 0.00,
+  advance_received DECIMAL(12, 2) DEFAULT 0.00,
+  balance_payable DECIMAL(12, 2) NOT NULL,
+  payment_status ENUM('Paid', 'Partial', 'Pending') DEFAULT 'Pending',
+  notes TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Invoice Line Items (Supports Custom Rate per Customer)
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_id INT NOT NULL,
+  prop_id INT NOT NULL,
+  prop_name VARCHAR(255) NOT NULL,
+  serial_number VARCHAR(60) NULL,
+  condition_rating VARCHAR(40) NULL,
+  quantity INT DEFAULT 1,
+  number_of_days INT NOT NULL,
+  custom_daily_rate DECIMAL(10, 2) NOT NULL,
+  total_price DECIMAL(12, 2) NOT NULL,
+  FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

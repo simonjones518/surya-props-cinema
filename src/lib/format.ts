@@ -33,3 +33,16 @@ export const nextSerial = (categorySlug: string) => {
   const seq = String(Math.floor(Date.now() / 1000) % 9999).padStart(4, "0");
   return `SCP-${prefix}-${seq}`;
 };
+
+export const nextDocNumber = (docType: "INVOICE" | "QUOTATION", sequence?: number) => {
+  const year = new Date().getFullYear();
+  const seq = sequence ?? (Math.floor(Date.now() / 1000) % 999) + 1;
+  return `SCP-${docType === "INVOICE" ? "INV" : "QT"}-${year}-${String(seq).padStart(3, "0")}`;
+};
+
+export const addDays = (value: string, days: number) => {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+};

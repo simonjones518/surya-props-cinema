@@ -1,5 +1,17 @@
-import type { BookingDraft, Category, Client, KpiAnalytics, Prop, RentalBooking, RentalStatus } from "./types";
-import { mockBookings, mockCategories, mockClients, mockKpi, mockProps } from "./mock-data";
+import type {
+  BookingDraft,
+  Category,
+  Client,
+  ClientDraft,
+  Invoice,
+  InvoiceDraft,
+  KpiAnalytics,
+  Prop,
+  PropStatus,
+  RentalBooking,
+  RentalStatus,
+} from "./types";
+import { mockBookings, mockCategories, mockClients, mockInvoices, mockKpi, mockProps } from "./mock-data";
 
 /**
  * REST service layer for the Hostinger MySQL backend.
@@ -48,6 +60,30 @@ export const api = {
       method: "POST",
       body: JSON.stringify(prop),
     }),
+  updateProp: (id: number, prop: Partial<Prop>) =>
+    request<{ ok: true }>(`/api/props/${id}`, { ok: true } as const, {
+      method: "PUT",
+      body: JSON.stringify(prop),
+    }),
+  deleteProp: (id: number) =>
+    request<{ ok: true }>(`/api/props/${id}`, { ok: true } as const, { method: "DELETE" }),
+  updatePropStatus: (id: number, status: PropStatus) =>
+    request<{ ok: true }>(`/api/props/${id}/status`, { ok: true } as const, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
+  createClient: (client: ClientDraft) =>
+    request<Client>("/api/clients", { ...client, id: Math.floor(Date.now() % 100000) } as Client, {
+      method: "POST",
+      body: JSON.stringify(client),
+    }),
+  getInvoices: () => request<Invoice[]>("/api/invoices", mockInvoices),
+  createInvoice: (draft: InvoiceDraft) =>
+    request<{ id: number; invoice_number: string }>(
+      "/api/invoices",
+      { id: Math.floor(Date.now() % 100000), invoice_number: draft.invoice_number },
+      { method: "POST", body: JSON.stringify(draft) },
+    ),
 };
 
 export const queryKeys = {
@@ -55,4 +91,6 @@ export const queryKeys = {
   props: ["props"] as const,
   bookings: ["bookings"] as const,
   kpi: ["kpi"] as const,
+  clients: ["clients"] as const,
+  invoices: ["invoices"] as const,
 };

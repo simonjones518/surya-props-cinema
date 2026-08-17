@@ -2,7 +2,7 @@ import armory from "@/assets/stage-armory.jpg";
 import camera from "@/assets/stage-camera.jpg";
 import vehicles from "@/assets/stage-vehicles.jpg";
 import warehouse from "@/assets/hero-wide.jpg";
-import type { Category, Client, KpiAnalytics, Prop, RentalBooking } from "./types";
+import type { Category, Client, Invoice, KpiAnalytics, Prop, RentalBooking } from "./types";
 
 export const mockCategories: Category[] = [
   { id: 1, name: "Armory & Weapons", slug: "weapons", icon: "ShieldAlert" },
@@ -264,6 +264,8 @@ export const mockKpi: KpiAnalytics = {
   gross_revenue_today: 486500,
   net_profit_today: 318400,
   active_rentals: 7,
+  overdue_rentals: 2,
+  advances_collected: 425800,
   on_set_inventory_value: 5120000,
   warehouse_valuation: 18640000,
   outstanding_balances: 505000,
@@ -278,3 +280,84 @@ export const mockKpi: KpiAnalytics = {
     { label: "Sun", revenue: 372000, profit: 240000 },
   ],
 };
+
+export const mockInvoices: Invoice[] = [
+  {
+    id: 1,
+    invoice_number: "SCP-INV-2026-001",
+    doc_type: "INVOICE",
+    client_id: 1,
+    client_name: "Karthik R",
+    client_phone: "+91 98400 11223",
+    production_house: "Vetri Cinemas",
+    shoot_location: "EVP Film City, Chennai",
+    shoot_start_date: "2026-08-18",
+    shoot_wrap_date: "2026-08-27",
+    items: [
+      {
+        prop_id: 5,
+        prop_name: "1972 Willys Jeep",
+        serial_number: "SCP-VEH-0002",
+        condition_rating: "Distressed/Vintage",
+        quantity: 1,
+        number_of_days: 10,
+        custom_daily_rate: 16500,
+        total_price: 165000,
+      },
+      {
+        prop_id: 2,
+        prop_name: "Tactical Assault Vest & Breach Kit",
+        serial_number: "SCP-WPN-0014",
+        condition_rating: "Good",
+        quantity: 3,
+        number_of_days: 10,
+        custom_daily_rate: 2000,
+        total_price: 60000,
+      },
+    ],
+    subtotal: 225000,
+    discount: 5000,
+    transport_charges: 12000,
+    gst_percent: 18,
+    gst_amount: 41760,
+    security_deposit: 195000,
+    advance_received: 180000,
+    balance_payable: 288760,
+    payment_status: "Partial",
+    created_at: "2026-08-15T09:12:00Z",
+  },
+  {
+    id: 2,
+    invoice_number: "SCP-QT-2026-004",
+    doc_type: "QUOTATION",
+    client_id: 2,
+    client_name: "Aditi Sharma",
+    client_phone: "+91 90031 44556",
+    production_house: "Neon Reel Studios",
+    shoot_location: "Binny Mills, Chennai",
+    shoot_start_date: "2026-09-02",
+    shoot_wrap_date: "2026-09-06",
+    items: [
+      {
+        prop_id: 3,
+        prop_name: "ARRI Alexa Mini Hero Rig (Dressed)",
+        serial_number: "SCP-CAM-0007",
+        condition_rating: "Mint",
+        quantity: 2,
+        number_of_days: 5,
+        custom_daily_rate: 8000,
+        total_price: 80000,
+      },
+    ],
+    subtotal: 80000,
+    discount: 0,
+    transport_charges: 6000,
+    gst_percent: 12,
+    gst_amount: 10320,
+    security_deposit: 120000,
+    advance_received: 0,
+    balance_payable: 216320,
+    payment_status: "Pending",
+    created_at: "2026-08-16T14:40:00Z",
+  },
+];

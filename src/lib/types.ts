@@ -73,6 +73,8 @@ export interface KpiAnalytics {
   gross_revenue_today: number;
   net_profit_today: number;
   active_rentals: number;
+  overdue_rentals: number;
+  advances_collected: number;
   on_set_inventory_value: number;
   warehouse_valuation: number;
   outstanding_balances: number;
@@ -92,4 +94,66 @@ export interface BookingDraft {
   security_deposit: number;
   advance_paid: number;
   balance_due: number;
+}
+
+/* ---------- Billing engine ---------- */
+
+export type DocType = "INVOICE" | "QUOTATION";
+export type PaymentStatus = "Paid" | "Partial" | "Pending";
+
+export interface InvoiceLineItem {
+  prop_id: number;
+  prop_name: string;
+  serial_number: string;
+  condition_rating: PropCondition;
+  quantity: number;
+  number_of_days: number;
+  custom_daily_rate: number;
+  total_price: number;
+}
+
+export interface Invoice {
+  id: number;
+  invoice_number: string;
+  doc_type: DocType;
+  client_id: number;
+  client_name: string;
+  client_phone: string;
+  production_house: string;
+  shoot_location?: string;
+  shoot_start_date: string;
+  shoot_wrap_date: string;
+  items: InvoiceLineItem[];
+  subtotal: number;
+  discount: number;
+  transport_charges: number;
+  gst_percent: number;
+  gst_amount: number;
+  security_deposit: number;
+  advance_received: number;
+  balance_payable: number;
+  payment_status: PaymentStatus;
+  notes?: string;
+  created_at: string;
+}
+
+export type InvoiceDraft = Omit<Invoice, "id" | "created_at">;
+
+export interface ClientDraft {
+  production_house: string;
+  contact_person: string;
+  phone: string;
+  email?: string;
+  gst_number?: string;
+  address?: string;
+}
+
+export interface CartLine {
+  prop_id: number;
+  prop_name: string;
+  serial_number: string;
+  condition_rating: PropCondition;
+  base_daily_rate: number;
+  custom_daily_rate: number;
+  quantity: number;
 }
