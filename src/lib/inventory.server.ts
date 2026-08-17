@@ -1,6 +1,6 @@
-// Server-only data layer backed by the Lovable Cloud database.
+// Server-only data layer backed by the SuryaCine Supabase project (external).
 import { useSession } from "@tanstack/react-start/server";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { suryaDb } from "./surya-supabase.server";
 import type {
   BookingDraft,
   Category,
@@ -45,7 +45,7 @@ async function signImages(paths: string[]): Promise<string[]> {
       out.push(path);
       continue;
     }
-    const { data } = await supabaseAdmin.storage.from(BUCKET).createSignedUrl(path, SIGNED_TTL);
+    const { data } = await suryaDb.storage.from(BUCKET).createSignedUrl(path, SIGNED_TTL);
     if (data?.signedUrl) out.push(data.signedUrl);
   }
   return out;
@@ -94,7 +94,7 @@ async function mapProp(row: Record<string, any>, loc?: LocationMaps): Promise<Pr
 }
 
 export async function listGodowns(): Promise<Godown[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("godowns")
     .select("id, name, location_code")
     .order("id");
@@ -107,7 +107,7 @@ export async function listGodowns(): Promise<Godown[]> {
 }
 
 export async function listRacks(): Promise<Rack[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("racks")
     .select("id, godown_id, rack_name")
     .order("id");
@@ -120,7 +120,7 @@ export async function listRacks(): Promise<Rack[]> {
 }
 
 export async function listCategories(): Promise<Category[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("categories")
     .select("id, name, slug, icon")
     .order("id");
@@ -129,20 +129,20 @@ export async function listCategories(): Promise<Category[]> {
 }
 
 export async function listProps(): Promise<Prop[]> {
-  const { data, error } = await supabaseAdmin.from("props").select("*").order("id", { ascending: false });
+  const { data, error } = await suryaDb.from("props").select("*").order("id", { ascending: false });
   if (error) throw new Error(error.message);
   const loc = await locationMaps();
   return Promise.all((data ?? []).map((row) => mapProp(row as Record<string, any>, loc)));
 }
 
 export async function listClients(): Promise<Client[]> {
-  const { data, error } = await supabaseAdmin.from("clients").select("*").order("id", { ascending: false });
+  const { data, error } = await suryaDb.from("clients").select("*").order("id", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map((c: Record<string, any>) => ({ ...c, id: Number(c['id']) })) as Client[];
 }
 
 export async function listBookings(): Promise<RentalBooking[]> {
-  const { data, error } = await supabaseAdmin.from("bookings").select("*").order("id", { ascending: false });
+  const { data, error } = await suryaDb.from("bookings").select("*").order("id", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map((b: Record<string, any>) => ({
     ...b,
@@ -157,7 +157,7 @@ export async function listBookings(): Promise<RentalBooking[]> {
 }
 
 export async function listInvoices(): Promise<Invoice[]> {
-  const { data, error } = await supabaseAdmin.from("invoices").select("*").order("id", { ascending: false });
+  const { data, error } = await suryaDb.from("invoices").select("*").order("id", { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []).map((i: Record<string, any>) => ({
     ...i,
@@ -218,12 +218,12 @@ export async function computeKpi(): Promise<KpiAnalytics> {
 /* ---------- writes (admin only) ---------- */
 
 export async function saveProp(prop: Partial<Prop>) {
-  const { data: cat } = await supabaseAdmin
+  const { data: cat } = await suryaDb
     .from("categories")
     .select("id")
     .eq("slug", prop.category_slug ?? "")
     .maybeSingle();
-  const { error } = await supabaseAdmin.from("props").insert({
+  const { error } = await suryaDb.from("props").insert({
     serial_number: prop.serial_number!,
     title: prop.title!,
     category_id: cat ? Number(cat.id) : null,
@@ -265,19 +265,19 @@ export async function updateProp(id: number, prop: Partial<Prop>) {
     ...(prop.rack_id !== undefined ? { rack_id: prop.rack_id } : {}),
     ...(prop.qr_code_id !== undefined ? { qr_code_id: prop.qr_code_id } : {}),
   };
-  const { error } = await supabaseAdmin.from("props").update(patch).eq("id", id);
+  const { error } = await suryaDb.from("props").update(patch).eq("id", id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
 
 export async function deleteProp(id: number) {
-  const { error } = await supabaseAdmin.from("props").delete().eq("id", id);
+  const { error } = await suryaDb.from("props").delete().eq("id", id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
 
 export async function updatePropStatus(id: number, status: PropStatus) {
-  const { error } = await supabaseAdmin.from("props").update({ status }).eq("id", id);
+  const { error } = await suryaDb.from("props").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
@@ -286,14 +286,14 @@ export async function uploadPropImage(fileName: string, contentType: string, bas
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "-");
   const path = `${Date.now()}-${safe}`;
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, bytes, { contentType });
+  const { error } = await suryaDb.storage.from(BUCKET).upload(path, bytes, { contentType });
   if (error) throw new Error(error.message);
   const [preview] = await signImages([path]);
   return { path, preview: preview ?? "" };
 }
 
 export async function createClientRecord(draft: ClientDraft): Promise<Client> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("clients")
     .insert({
       production_house: draft.production_house,
@@ -315,13 +315,13 @@ export async function createBooking(draft: BookingDraft) {
     contact_person: draft.contact_person,
     phone: draft.phone,
   });
-  const { data: prop } = await supabaseAdmin
+  const { data: prop } = await suryaDb
     .from("props")
     .select("id, title, daily_rate")
     .eq("id", draft.prop_id)
     .maybeSingle();
   const booking_code = `SCP-BK-${Date.now().toString().slice(-6)}`;
-  const { error } = await supabaseAdmin.from("bookings").insert({
+  const { error } = await suryaDb.from("bookings").insert({
     booking_code,
     client_id: client.id,
     production_house: draft.production_house,
@@ -345,12 +345,12 @@ export async function createBooking(draft: BookingDraft) {
     rental_status: "Reserved",
   });
   if (error) throw new Error(error.message);
-  if (prop) await supabaseAdmin.from("props").update({ status: "Booked" }).eq("id", draft.prop_id);
+  if (prop) await suryaDb.from("props").update({ status: "Booked" }).eq("id", draft.prop_id);
   return { booking_code };
 }
 
 export async function updateBookingStatus(id: number, rental_status: RentalStatus) {
-  const { data: booking, error } = await supabaseAdmin
+  const { data: booking, error } = await suryaDb
     .from("bookings")
     .update({ rental_status })
     .eq("id", id)
@@ -367,7 +367,7 @@ export async function updateBookingStatus(id: number, rental_status: RentalStatu
           ? "Maintenance"
           : null;
   if (propStatus && items.length) {
-    await supabaseAdmin
+    await suryaDb
       .from("props")
       .update({ status: propStatus })
       .in("id", items.map((i) => i.prop_id));
@@ -376,7 +376,7 @@ export async function updateBookingStatus(id: number, rental_status: RentalStatu
 }
 
 export async function refundDeposit(id: number) {
-  const { error } = await supabaseAdmin
+  const { error } = await suryaDb
     .from("bookings")
     .update({ deposit_status: "Refunded" })
     .eq("id", id);
@@ -385,7 +385,7 @@ export async function refundDeposit(id: number) {
 }
 
 export async function createInvoice(draft: InvoiceDraft) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("invoices")
     .insert({
       invoice_number: draft.invoice_number,
@@ -432,7 +432,7 @@ export async function uploadRequestImage(fileName: string, contentType: string, 
   if (bytes.byteLength > MAX_UPLOAD_BYTES) throw new Error("Image is larger than 8 MB.");
   const safe = clean(fileName, 80).replace(/[^a-zA-Z0-9._-]/g, "-");
   const path = `requests/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, bytes, { contentType });
+  const { error } = await suryaDb.storage.from(BUCKET).upload(path, bytes, { contentType });
   if (error) throw new Error(error.message);
   const [preview] = await signImages([path]);
   return { path, preview: preview ?? "" };
@@ -469,7 +469,7 @@ export async function createPropRequest(draft: PropRequestDraft) {
 
   const request_code = `SCP-REQ-${Date.now().toString().slice(-6)}`;
   const images = (draft.reference_image_urls ?? []).slice(0, 6).map((p) => clean(p, 300));
-  const { error } = await supabaseAdmin.from("prop_requests").insert({
+  const { error } = await suryaDb.from("prop_requests").insert({
     request_code,
     request_type: type,
     prop_id: type === "Catalog" && draft.prop_id ? Number(draft.prop_id) : null,
@@ -491,7 +491,7 @@ export async function createPropRequest(draft: PropRequestDraft) {
 }
 
 export async function listPropRequests(): Promise<PropRequest[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("prop_requests")
     .select("*")
     .order("id", { ascending: false });
@@ -504,7 +504,7 @@ export async function listPropRequests(): Promise<PropRequest[]> {
 }
 
 export async function updateRequestStatus(id: number, status: PropRequest["status"]) {
-  const { error } = await supabaseAdmin.from("prop_requests").update({ status }).eq("id", id);
+  const { error } = await suryaDb.from("prop_requests").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
@@ -544,7 +544,7 @@ function mapOrder(row: Record<string, any>): RentalOrder {
 }
 
 export async function listRentalOrders(): Promise<RentalOrder[]> {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("rental_orders")
     .select("*")
     .order("id", { ascending: false });
@@ -572,7 +572,7 @@ export async function createRentalOrder(draft: RentalOrderDraft): Promise<Rental
   const advance = num(draft.advance_received);
   const order_number = `SCP-ORD-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("rental_orders")
     .insert({
       order_number,
@@ -597,13 +597,13 @@ export async function createRentalOrder(draft: RentalOrderDraft): Promise<Rental
   if (error) throw new Error(error.message);
 
   const propIds = items.map((i) => i.prop_id).filter(Boolean);
-  if (propIds.length) await supabaseAdmin.from("props").update({ status: "On-Set" }).in("id", propIds);
+  if (propIds.length) await suryaDb.from("props").update({ status: "On-Set" }).in("id", propIds);
   return mapOrder(data as Record<string, any>);
 }
 
 /** Stage 2 — actual return: recalculate the bill on real days used. */
 export async function settleRentalOrder(id: number, actual_return_date: string): Promise<RentalOrder> {
-  const { data: row, error: readError } = await supabaseAdmin
+  const { data: row, error: readError } = await suryaDb
     .from("rental_orders")
     .select("*")
     .eq("id", id)
@@ -619,7 +619,7 @@ export async function settleRentalOrder(id: number, actual_return_date: string):
   }));
   const total_final_amount = items.reduce((s, i) => s + i.line_total, 0);
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("rental_orders")
     .update({
       actual_return_date,
@@ -635,12 +635,12 @@ export async function settleRentalOrder(id: number, actual_return_date: string):
   if (error) throw new Error(error.message);
 
   const propIds = items.map((i) => i.prop_id).filter(Boolean);
-  if (propIds.length) await supabaseAdmin.from("props").update({ status: "In-Stock" }).in("id", propIds);
+  if (propIds.length) await suryaDb.from("props").update({ status: "In-Stock" }).in("id", propIds);
   return mapOrder(data as Record<string, any>);
 }
 
 export async function cancelRentalOrder(id: number) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await suryaDb
     .from("rental_orders")
     .update({ order_status: "Cancelled" })
     .eq("id", id)
@@ -649,6 +649,6 @@ export async function cancelRentalOrder(id: number) {
   if (error) throw new Error(error.message);
   const items = (data?.items ?? []) as { prop_id: number }[];
   const propIds = items.map((i) => i.prop_id).filter(Boolean);
-  if (propIds.length) await supabaseAdmin.from("props").update({ status: "In-Stock" }).in("id", propIds);
+  if (propIds.length) await suryaDb.from("props").update({ status: "In-Stock" }).in("id", propIds);
   return { ok: true as const };
 }
