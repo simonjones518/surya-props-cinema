@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -11,6 +12,7 @@ import {
   Truck,
   Vault,
   Wallet,
+  LogOut,
 } from "lucide-react";
 import { api, queryKeys } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -19,8 +21,10 @@ import { DepositBadge, RentalStatusBadge } from "@/components/status-badge";
 import { StockModal } from "@/components/stock-modal";
 import { inr, inrCompact, prettyDate } from "@/lib/format";
 import type { RentalBooking, RentalStatus } from "@/lib/types";
+import { adminLogout, requireAdmin } from "@/lib/admin-gate.functions";
 
 export const Route = createFileRoute("/admin")({
+  loader: () => requireAdmin(),
   head: () => ({
     meta: [
       { title: "Rental ERP Dashboard — Surya Cine Special Props" },
@@ -41,6 +45,8 @@ export const Route = createFileRoute("/admin")({
 
 function AdminPage() {
   const qc = useQueryClient();
+  const router = useRouter();
+  const logout = useServerFn(adminLogout);
   const [stockOpen, setStockOpen] = useState(false);
   const kpi = useQuery({ queryKey: queryKeys.kpi, queryFn: api.getKpi });
   const bookings = useQuery({ queryKey: queryKeys.bookings, queryFn: api.getBookings });
@@ -80,9 +86,21 @@ function AdminPage() {
             <span className="text-gradient-gold">Rental Command Center</span>
           </h1>
         </div>
-        <Button onClick={() => setStockOpen(true)}>
-          <Plus className="size-4" /> Add Prop to Stock
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => setStockOpen(true)}>
+            <Plus className="size-4" /> Add Prop to Stock
+          </Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await logout();
+              qc.clear();
+              await router.navigate({ to: "/admin-login", replace: true });
+            }}
+          >
+            <LogOut className="size-4" /> Sign Out
+          </Button>
+        </div>
       </div>
 
       <section aria-label="Key metrics" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
