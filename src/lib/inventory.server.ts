@@ -6,6 +6,7 @@ import type {
   Category,
   Client,
   ClientDraft,
+  Godown,
   Invoice,
   InvoiceDraft,
   KpiAnalytics,
@@ -13,7 +14,10 @@ import type {
   PropRequest,
   PropRequestDraft,
   PropStatus,
+  Rack,
   RentalBooking,
+  RentalOrder,
+  RentalOrderDraft,
   RentalStatus,
 } from "./types";
 
@@ -51,7 +55,19 @@ function num(value: unknown) {
   return Number(value ?? 0);
 }
 
-async function mapProp(row: Record<string, any>): Promise<Prop> {
+type LocationMaps = { godowns: Map<number, string>; racks: Map<number, string> };
+
+async function locationMaps(): Promise<LocationMaps> {
+  const [g, r] = await Promise.all([listGodowns(), listRacks()]);
+  return {
+    godowns: new Map(g.map((x) => [x.id, x.name])),
+    racks: new Map(r.map((x) => [x.id, x.rack_name])),
+  };
+}
+
+async function mapProp(row: Record<string, any>, loc?: LocationMaps): Promise<Prop> {
+  const godown_id = row['godown_id'] == null ? null : Number(row['godown_id']);
+  const rack_id = row['rack_id'] == null ? null : Number(row['rack_id']);
   return {
     id: Number(row['id']),
     serial_number: row['serial_number'],
@@ -69,7 +85,38 @@ async function mapProp(row: Record<string, any>): Promise<Prop> {
     ...(row['video_preview_url'] ? { video_preview_url: row['video_preview_url'] } : {}),
     description: row['description'] ?? "",
     qr_code_id: row['qr_code_id'] ?? "",
+    description_specs: row['description_specs'] ?? "",
+    godown_id,
+    rack_id,
+    godown_name: (godown_id && loc?.godowns.get(godown_id)) || "",
+    rack_name: (rack_id && loc?.racks.get(rack_id)) || "",
   };
+}
+
+export async function listGodowns(): Promise<Godown[]> {
+  const { data, error } = await supabaseAdmin
+    .from("godowns")
+    .select("id, name, location_code")
+    .order("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((g: Record<string, any>) => ({
+    id: Number(g['id']),
+    name: g['name'],
+    location_code: g['location_code'],
+  }));
+}
+
+export async function listRacks(): Promise<Rack[]> {
+  const { data, error } = await supabaseAdmin
+    .from("racks")
+    .select("id, godown_id, rack_name")
+    .order("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: Record<string, any>) => ({
+    id: Number(r['id']),
+    godown_id: Number(r['godown_id']),
+    rack_name: r['rack_name'],
+  }));
 }
 
 export async function listCategories(): Promise<Category[]> {
@@ -84,7 +131,8 @@ export async function listCategories(): Promise<Category[]> {
 export async function listProps(): Promise<Prop[]> {
   const { data, error } = await supabaseAdmin.from("props").select("*").order("id", { ascending: false });
   if (error) throw new Error(error.message);
-  return Promise.all((data ?? []).map((row) => mapProp(row as Record<string, any>)));
+  const loc = await locationMaps();
+  return Promise.all((data ?? []).map((row) => mapProp(row as Record<string, any>, loc)));
 }
 
 export async function listClients(): Promise<Client[]> {
@@ -189,6 +237,9 @@ export async function saveProp(prop: Partial<Prop>) {
     status: prop.status ?? "In-Stock",
     image_urls: prop.image_urls ?? [],
     description: prop.description ?? "",
+    description_specs: prop.description_specs ?? "",
+    godown_id: prop.godown_id ?? null,
+    rack_id: prop.rack_id ?? null,
     qr_code_id: prop.qr_code_id ?? `QR-${prop.serial_number}`,
   });
   if (error) throw new Error(error.message);
@@ -209,6 +260,9 @@ export async function updateProp(id: number, prop: Partial<Prop>) {
     ...(prop.status !== undefined ? { status: prop.status } : {}),
     ...(prop.image_urls !== undefined ? { image_urls: prop.image_urls } : {}),
     ...(prop.description !== undefined ? { description: prop.description } : {}),
+    ...(prop.description_specs !== undefined ? { description_specs: prop.description_specs } : {}),
+    ...(prop.godown_id !== undefined ? { godown_id: prop.godown_id } : {}),
+    ...(prop.rack_id !== undefined ? { rack_id: prop.rack_id } : {}),
     ...(prop.qr_code_id !== undefined ? { qr_code_id: prop.qr_code_id } : {}),
   };
   const { error } = await supabaseAdmin.from("props").update(patch).eq("id", id);
@@ -396,6 +450,7 @@ function mapRequest(row: Record<string, any>, images: string[]): PropRequest {
     production_house: row['production_house'] ?? "",
     contact_person: row['contact_person'] ?? "",
     phone: row['phone'] ?? "",
+    shoot_location: row['shoot_location'] ?? "",
     shoot_start_date: row['shoot_start_date'] ?? null,
     shoot_wrap_date: row['shoot_wrap_date'] ?? null,
     quantity: Number(row['quantity'] ?? 1),
@@ -424,6 +479,7 @@ export async function createPropRequest(draft: PropRequestDraft) {
     production_house: clean(draft.production_house, 160),
     contact_person: contact,
     phone,
+    shoot_location: clean(draft.shoot_location, 240),
     shoot_start_date: draft.shoot_start_date || null,
     shoot_wrap_date: draft.shoot_wrap_date || null,
     quantity: Math.max(1, Math.min(99, Number(draft.quantity ?? 1))),
@@ -450,5 +506,149 @@ export async function listPropRequests(): Promise<PropRequest[]> {
 export async function updateRequestStatus(id: number, status: PropRequest["status"]) {
   const { error } = await supabaseAdmin.from("prop_requests").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
+  return { ok: true as const };
+}
+
+/* ---------- rental orders: estimated challan → actual return settlement ---------- */
+
+function daysBetween(from: string, to: string) {
+  const a = new Date(`${from}T00:00:00Z`).getTime();
+  const b = new Date(`${to}T00:00:00Z`).getTime();
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 1;
+  return Math.max(1, Math.round((b - a) / 86_400_000));
+}
+
+function mapOrder(row: Record<string, any>): RentalOrder {
+  return {
+    id: Number(row['id']),
+    order_number: row['order_number'],
+    client_name: row['client_name'] ?? "",
+    production_house: row['production_house'] ?? "",
+    phone_number: row['phone_number'] ?? "",
+    shoot_location: row['shoot_location'] ?? "",
+    dispatch_date: row['dispatch_date'],
+    estimated_return_date: row['estimated_return_date'],
+    actual_return_date: row['actual_return_date'] ?? null,
+    estimated_days: Number(row['estimated_days'] ?? 1),
+    actual_days_used: row['actual_days_used'] == null ? null : Number(row['actual_days_used']),
+    advance_received: num(row['advance_received']),
+    security_deposit: num(row['security_deposit']),
+    estimated_total: num(row['estimated_total']),
+    total_final_amount: num(row['total_final_amount']),
+    balance_payable: num(row['balance_payable']),
+    order_status: row['order_status'],
+    items: (row['items'] ?? []) as RentalOrder["items"],
+    notes: row['notes'] ?? null,
+    created_at: row['created_at'],
+  };
+}
+
+export async function listRentalOrders(): Promise<RentalOrder[]> {
+  const { data, error } = await supabaseAdmin
+    .from("rental_orders")
+    .select("*")
+    .order("id", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row: Record<string, any>) => mapOrder(row));
+}
+
+/** Stage 1 — estimated delivery challan created when props leave the warehouse. */
+export async function createRentalOrder(draft: RentalOrderDraft): Promise<RentalOrder> {
+  if (!draft.items?.length) throw new Error("Add at least one prop to the order.");
+  const estimated_days = Math.max(
+    1,
+    Number(draft.estimated_days) ||
+      daysBetween(draft.dispatch_date, draft.estimated_return_date),
+  );
+  const items = draft.items.map((i) => ({
+    ...i,
+    quantity: Math.max(1, Number(i.quantity) || 1),
+    manual_daily_rate: num(i.manual_daily_rate),
+    estimated_days,
+    actual_days_used: null,
+    line_total: num(i.manual_daily_rate) * Math.max(1, Number(i.quantity) || 1) * estimated_days,
+  }));
+  const estimated_total = items.reduce((s, i) => s + i.line_total, 0);
+  const advance = num(draft.advance_received);
+  const order_number = `SCP-ORD-${new Date().getFullYear()}-${Date.now().toString().slice(-5)}`;
+
+  const { data, error } = await supabaseAdmin
+    .from("rental_orders")
+    .insert({
+      order_number,
+      client_name: clean(draft.client_name, 150),
+      production_house: clean(draft.production_house, 200),
+      phone_number: clean(draft.phone_number, 24),
+      shoot_location: clean(draft.shoot_location, 300),
+      dispatch_date: draft.dispatch_date,
+      estimated_return_date: draft.estimated_return_date,
+      estimated_days,
+      advance_received: advance,
+      security_deposit: num(draft.security_deposit),
+      estimated_total,
+      total_final_amount: estimated_total,
+      balance_payable: estimated_total - advance,
+      order_status: "Estimated/On-Set",
+      items: items as unknown as any,
+      notes: draft.notes ? clean(draft.notes, 1000) : null,
+    })
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  const propIds = items.map((i) => i.prop_id).filter(Boolean);
+  if (propIds.length) await supabaseAdmin.from("props").update({ status: "On-Set" }).in("id", propIds);
+  return mapOrder(data as Record<string, any>);
+}
+
+/** Stage 2 — actual return: recalculate the bill on real days used. */
+export async function settleRentalOrder(id: number, actual_return_date: string): Promise<RentalOrder> {
+  const { data: row, error: readError } = await supabaseAdmin
+    .from("rental_orders")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (readError) throw new Error(readError.message);
+  const order = mapOrder(row as Record<string, any>);
+
+  const actual_days_used = daysBetween(order.dispatch_date, actual_return_date);
+  const items = order.items.map((i) => ({
+    ...i,
+    actual_days_used,
+    line_total: i.manual_daily_rate * i.quantity * actual_days_used,
+  }));
+  const total_final_amount = items.reduce((s, i) => s + i.line_total, 0);
+
+  const { data, error } = await supabaseAdmin
+    .from("rental_orders")
+    .update({
+      actual_return_date,
+      actual_days_used,
+      items: items as unknown as any,
+      total_final_amount,
+      balance_payable: total_final_amount - order.advance_received,
+      order_status: "Returned & Settled",
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw new Error(error.message);
+
+  const propIds = items.map((i) => i.prop_id).filter(Boolean);
+  if (propIds.length) await supabaseAdmin.from("props").update({ status: "In-Stock" }).in("id", propIds);
+  return mapOrder(data as Record<string, any>);
+}
+
+export async function cancelRentalOrder(id: number) {
+  const { data, error } = await supabaseAdmin
+    .from("rental_orders")
+    .update({ order_status: "Cancelled" })
+    .eq("id", id)
+    .select("items")
+    .single();
+  if (error) throw new Error(error.message);
+  const items = (data?.items ?? []) as { prop_id: number }[];
+  const propIds = items.map((i) => i.prop_id).filter(Boolean);
+  if (propIds.length) await supabaseAdmin.from("props").update({ status: "In-Stock" }).in("id", propIds);
   return { ok: true as const };
 }

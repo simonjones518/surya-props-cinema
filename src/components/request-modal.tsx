@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
-import { inr, prettyDate, shootDays } from "@/lib/format";
+import { prettyDate, shootDays } from "@/lib/format";
 import { openWhatsApp } from "@/lib/whatsapp";
 import type { Prop } from "@/lib/types";
 
@@ -34,6 +34,7 @@ export function RequestModal({
   const [phone, setPhone] = useState("");
   const [start, setStart] = useState("");
   const [wrap, setWrap] = useState("");
+  const [shootLocation, setShootLocation] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [notes, setNotes] = useState("");
 
@@ -49,6 +50,7 @@ export function RequestModal({
         production_house: productionHouse,
         contact_person: contactPerson,
         phone,
+        shoot_location: shootLocation,
         shoot_start_date: start || null,
         shoot_wrap_date: wrap || null,
         quantity,
@@ -60,9 +62,10 @@ export function RequestModal({
         `*Surya Cine Special Props — Prop Request*`,
         `Request: ${res.request_code}`,
         `Prop: ${prop?.title} (${prop?.serial_number}) ×${quantity}`,
-        prop ? `Daily rate: ${inr(prop.daily_rate)}` : "",
+        prop?.description_specs ? `Specs: ${prop.description_specs}` : "",
         productionHouse ? `Production house: ${productionHouse}` : "",
         `Contact: ${contactPerson} — ${phone}`,
+        shootLocation ? `Shoot location: ${shootLocation}` : "",
         start && wrap ? `Shoot: ${prettyDate(start)} → ${prettyDate(wrap)} (${days} day(s))` : "",
         notes ? `Notes: ${notes}` : "",
       ].filter(Boolean);
@@ -83,10 +86,10 @@ export function RequestModal({
       <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
-            Request This Prop
+            Request Rental Quote
           </DialogTitle>
           <DialogDescription>
-            {prop ? `${prop.title} · ${prop.serial_number}` : ""} — our desk confirms availability on WhatsApp.
+            {prop ? `${prop.title} · ${prop.serial_number}` : ""} — our desk confirms availability and shares a custom quote on WhatsApp.
           </DialogDescription>
         </DialogHeader>
 
@@ -116,6 +119,15 @@ export function RequestModal({
             <Input type="date" value={wrap} min={start || undefined} onChange={(e) => setWrap(e.target.value)} />
           </Field>
           <div className="sm:col-span-2">
+            <Field label="Shoot Location">
+              <Input
+                value={shootLocation}
+                onChange={(e) => setShootLocation(e.target.value)}
+                placeholder="EVP Film City, Chennai"
+              />
+            </Field>
+          </div>
+          <div className="sm:col-span-2">
             <Field label="Requirement Notes">
               <Textarea
                 rows={3}
@@ -127,12 +139,11 @@ export function RequestModal({
           </div>
         </div>
 
-        {prop && (
+        {prop?.description_specs && (
           <div className="surface-metal rounded-lg border border-primary/25 p-4 text-sm">
-            <p className="font-display text-lg tracking-wider text-primary">Indicative Rates</p>
+            <p className="font-display text-lg tracking-wider text-primary">Configuration</p>
             <p className="mt-2 text-muted-foreground">
-              {inr(prop.daily_rate)} / day · {inr(prop.weekly_rate)} / week · refundable deposit{" "}
-              {inr(prop.security_deposit)}
+              {prop.description_specs}
               {days > 0 ? ` · ${days} shoot day(s) requested` : ""}
             </p>
           </div>
@@ -144,7 +155,7 @@ export function RequestModal({
           </Button>
           <Button disabled={!valid || isPending} onClick={() => mutate()}>
             <MessageCircle className="size-4" />
-            {isPending ? "Sending…" : "Send Request on WhatsApp"}
+            {isPending ? "Sending…" : "Send Quote Request on WhatsApp"}
           </Button>
         </DialogFooter>
       </DialogContent>

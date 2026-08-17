@@ -33,6 +33,77 @@ export interface Prop {
   video_preview_url?: string;
   description: string;
   qr_code_id: string;
+  /** Mandatory technical specs / dimensions printed on every invoice line. */
+  description_specs: string;
+  godown_id: number | null;
+  rack_id: number | null;
+  godown_name: string;
+  rack_name: string;
+}
+
+export interface Godown {
+  id: number;
+  name: string;
+  location_code: string;
+}
+
+export interface Rack {
+  id: number;
+  godown_id: number;
+  rack_name: string;
+}
+
+/* ---------- rental orders: estimate → actual return settlement ---------- */
+
+export type OrderStatus = "Estimated/On-Set" | "Returned & Settled" | "Cancelled";
+
+export interface RentalOrderItem {
+  prop_id: number;
+  prop_name: string;
+  prop_description: string;
+  serial_number: string;
+  quantity: number;
+  manual_daily_rate: number;
+  estimated_days: number;
+  actual_days_used: number | null;
+  line_total: number;
+}
+
+export interface RentalOrder {
+  id: number;
+  order_number: string;
+  client_name: string;
+  production_house: string;
+  phone_number: string;
+  shoot_location: string;
+  dispatch_date: string;
+  estimated_return_date: string;
+  actual_return_date: string | null;
+  estimated_days: number;
+  actual_days_used: number | null;
+  advance_received: number;
+  security_deposit: number;
+  estimated_total: number;
+  total_final_amount: number;
+  balance_payable: number;
+  order_status: OrderStatus;
+  items: RentalOrderItem[];
+  notes?: string | null;
+  created_at: string;
+}
+
+export interface RentalOrderDraft {
+  client_name: string;
+  production_house: string;
+  phone_number: string;
+  shoot_location: string;
+  dispatch_date: string;
+  estimated_return_date: string;
+  estimated_days: number;
+  advance_received: number;
+  security_deposit: number;
+  notes?: string;
+  items: Omit<RentalOrderItem, "actual_days_used" | "line_total">[];
 }
 
 export interface Client {
@@ -173,6 +244,7 @@ export interface PropRequest {
   production_house: string;
   contact_person: string;
   phone: string;
+  shoot_location: string;
   shoot_start_date: string | null;
   shoot_wrap_date: string | null;
   quantity: number;
@@ -190,6 +262,7 @@ export interface PropRequestDraft {
   production_house: string;
   contact_person: string;
   phone: string;
+  shoot_location?: string;
   shoot_start_date?: string | null;
   shoot_wrap_date?: string | null;
   quantity?: number;
