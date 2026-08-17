@@ -9,7 +9,6 @@ import { useWishlist } from "@/lib/wishlist";
 const nav = [
   { to: "/", label: "Home" },
   { to: "/catalog", label: "Catalog" },
-  { to: "/admin", label: "Admin ERP" },
 ] as const;
 
 export function SiteHeader() {
