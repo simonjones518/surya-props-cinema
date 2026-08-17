@@ -1,5 +1,6 @@
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import { inr } from "@/lib/format";
 import type { QuoteRequest } from "@/lib/types";
 
@@ -30,9 +31,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
       <article id="print-area" className="space-y-5 rounded-xl border border-primary/25 bg-card p-6">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
           <div>
-            <h2 className="font-display text-2xl tracking-widest text-gradient-gold">
-              SURYA CINE SPECIAL PROPS
-            </h2>
+            <BrandLogo className="h-14" />
             <p className="text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
               Chennai, India · Film Prop Rental
             </p>
