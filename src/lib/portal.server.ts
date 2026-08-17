@@ -65,6 +65,7 @@ export async function clientSignUp(input: {
   production_house: string;
   contact_person: string;
   phone: string;
+  designation?: string;
 }) {
   const email = clean(input.email, 200).toLowerCase();
   const password = String(input.password ?? "");
@@ -94,6 +95,7 @@ export async function clientSignUp(input: {
     production_house: clean(input.production_house, 160) || contact,
     contact_person: contact,
     phone,
+    designation: clean(input.designation ?? "", 120),
   });
 
   const s = await session();
