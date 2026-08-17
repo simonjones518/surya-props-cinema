@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
 import { useWishlist } from "@/lib/wishlist";
 
@@ -23,6 +24,8 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
   const qc = useQueryClient();
   const { lines, setQuantity, remove, clear, count } = useWishlist();
   const session = useQuery({ queryKey: portalKeys.session, queryFn: portal.session });
+  const [banner, setBanner] = useState("");
+  const [movie, setMovie] = useState("");
   const [location, setLocation] = useState("");
   const [start, setStart] = useState(today);
   const [ret, setRet] = useState(today);
@@ -31,6 +34,8 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
   const submit = useMutation({
     mutationFn: () =>
       portal.requestQuote({
+        production_house: banner,
+        movie_name: movie,
         shoot_location: location,
         shoot_start_date: start,
         estimated_return_date: ret,
@@ -43,14 +48,23 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
       });
       clear();
       setNotes("");
+      setMovie("");
       void qc.invalidateQueries({ queryKey: portalKeys.myQuotes });
+      void qc.invalidateQueries({ queryKey: portalKeys.productionHouses });
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error("Could not send the request", { description: e.message }),
   });
 
   const signedIn = Boolean(session.data);
-  const ready = count > 0 && location.trim() !== "" && start !== "" && ret !== "" && signedIn;
+  const ready =
+    count > 0 &&
+    banner.trim() !== "" &&
+    movie.trim() !== "" &&
+    location.trim() !== "" &&
+    start !== "" &&
+    ret !== "" &&
+    signedIn;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -107,6 +121,23 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="wl-banner">Production House</Label>
+            <ProductionHouseSelect id="wl-banner" value={banner} onChange={setBanner} />
+            <p className="text-[11px] text-muted-foreground">
+              Search the banner you're shooting for, or add a new one.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="wl-movie">Movie / Project Name</Label>
+            <Input
+              id="wl-movie"
+              value={movie}
+              onChange={(e) => setMovie(e.target.value)}
+              placeholder="Vetri Kodi Kattu"
+              maxLength={160}
+            />
+          </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="wl-location">Shoot Location</Label>
             <Input
