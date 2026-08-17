@@ -302,6 +302,12 @@ export interface ClientProfile {
   address: string;
 }
 
+/** A film banner / production company. Any client can create new ones on the fly. */
+export interface ProductionHouse {
+  id: number;
+  name: string;
+}
+
 export interface QuotePayment {
   id: number;
   quote_id: number;
@@ -317,6 +323,9 @@ export interface QuoteRequest {
   quote_code: string;
   user_id: string;
   production_house: string;
+  production_house_id: number | null;
+  movie_name: string;
+  client_designation: string;
   contact_person: string;
   phone: string;
   shoot_location: string;
@@ -341,6 +350,8 @@ export interface QuoteRequest {
 }
 
 export interface QuoteRequestDraft {
+  production_house: string;
+  movie_name: string;
   shoot_location: string;
   shoot_start_date: string;
   estimated_return_date: string;
