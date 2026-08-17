@@ -116,8 +116,8 @@ export function PosCart({
           production_house: newClient.production_house || newClient.contact_person,
           contact_person: newClient.contact_person,
           phone: newClient.phone,
-          gst_number: newClient.gst_number || undefined,
-          address: newClient.address || undefined,
+          ...(newClient.gst_number ? { gst_number: newClient.gst_number } : {}),
+          ...(newClient.address ? { address: newClient.address } : {}),
         });
         qc.setQueryData<Client[]>(queryKeys.clients, (old) => [...(old ?? []), client as Client]);
       }
@@ -128,7 +128,7 @@ export function PosCart({
         client_name: client.contact_person,
         client_phone: client.phone,
         production_house: client.production_house,
-        shoot_location: shootLocation || undefined,
+        ...(shootLocation ? { shoot_location: shootLocation } : {}),
         shoot_start_date: startDate,
         shoot_wrap_date: wrapDate,
         items: lines.map((l) => ({
