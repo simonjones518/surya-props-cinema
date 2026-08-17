@@ -157,3 +157,41 @@ export interface CartLine {
   custom_daily_rate: number;
   quantity: number;
 }
+/* ---------- customer prop requests ---------- */
+
+export type RequestType = "Catalog" | "Custom";
+export type RequestStatus = "New" | "Contacted" | "Quoted" | "Fulfilled" | "Rejected";
+
+export interface PropRequest {
+  id: number;
+  request_code: string;
+  request_type: RequestType;
+  prop_id: number | null;
+  prop_title: string;
+  custom_description: string;
+  reference_image_urls: string[];
+  production_house: string;
+  contact_person: string;
+  phone: string;
+  shoot_start_date: string | null;
+  shoot_wrap_date: string | null;
+  quantity: number;
+  notes?: string | null;
+  status: RequestStatus;
+  created_at: string;
+}
+
+export interface PropRequestDraft {
+  request_type: RequestType;
+  prop_id?: number | null;
+  prop_title: string;
+  custom_description?: string;
+  reference_image_urls?: string[];
+  production_house: string;
+  contact_person: string;
+  phone: string;
+  shoot_start_date?: string | null;
+  shoot_wrap_date?: string | null;
+  quantity?: number;
+  notes?: string | null;
+}

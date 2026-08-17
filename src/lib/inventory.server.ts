@@ -10,6 +10,8 @@ import type {
   InvoiceDraft,
   KpiAnalytics,
   Prop,
+  PropRequest,
+  PropRequestDraft,
   PropStatus,
   RentalBooking,
   RentalStatus,
@@ -357,4 +359,96 @@ export async function createInvoice(draft: InvoiceDraft) {
     .single();
   if (error) throw new Error(error.message);
   return { id: Number(data.id), invoice_number: data.invoice_number as string };
+}
+
+/* ---------- customer prop requests ---------- */
+
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+function clean(value: unknown, max = 400) {
+  return String(value ?? "").trim().slice(0, max);
+}
+
+/** Public: customers upload reference photos for custom prop requests. */
+export async function uploadRequestImage(fileName: string, contentType: string, base64: string) {
+  if (!/^image\/(png|jpe?g|webp|gif|heic|heif)$/i.test(contentType)) {
+    throw new Error("Only image files can be attached.");
+  }
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  if (bytes.byteLength > MAX_UPLOAD_BYTES) throw new Error("Image is larger than 8 MB.");
+  const safe = clean(fileName, 80).replace(/[^a-zA-Z0-9._-]/g, "-");
+  const path = `requests/${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safe}`;
+  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, bytes, { contentType });
+  if (error) throw new Error(error.message);
+  const [preview] = await signImages([path]);
+  return { path, preview: preview ?? "" };
+}
+
+function mapRequest(row: Record<string, any>, images: string[]): PropRequest {
+  return {
+    id: Number(row['id']),
+    request_code: row['request_code'],
+    request_type: row['request_type'],
+    prop_id: row['prop_id'] === null ? null : Number(row['prop_id']),
+    prop_title: row['prop_title'] ?? "",
+    custom_description: row['custom_description'] ?? "",
+    reference_image_urls: images,
+    production_house: row['production_house'] ?? "",
+    contact_person: row['contact_person'] ?? "",
+    phone: row['phone'] ?? "",
+    shoot_start_date: row['shoot_start_date'] ?? null,
+    shoot_wrap_date: row['shoot_wrap_date'] ?? null,
+    quantity: Number(row['quantity'] ?? 1),
+    notes: row['notes'] ?? null,
+    status: row['status'],
+    created_at: row['created_at'],
+  };
+}
+
+/** Public write: a customer requests a catalog prop or a custom prop. */
+export async function createPropRequest(draft: PropRequestDraft) {
+  const type = draft.request_type === "Custom" ? "Custom" : "Catalog";
+  const contact = clean(draft.contact_person, 120);
+  const phone = clean(draft.phone, 24);
+  if (!contact || !phone) throw new Error("Contact name and phone are required.");
+
+  const request_code = `SCP-REQ-${Date.now().toString().slice(-6)}`;
+  const images = (draft.reference_image_urls ?? []).slice(0, 6).map((p) => clean(p, 300));
+  const { error } = await supabaseAdmin.from("prop_requests").insert({
+    request_code,
+    request_type: type,
+    prop_id: type === "Catalog" && draft.prop_id ? Number(draft.prop_id) : null,
+    prop_title: clean(draft.prop_title, 160),
+    custom_description: clean(draft.custom_description, 2000),
+    reference_image_urls: images,
+    production_house: clean(draft.production_house, 160),
+    contact_person: contact,
+    phone,
+    shoot_start_date: draft.shoot_start_date || null,
+    shoot_wrap_date: draft.shoot_wrap_date || null,
+    quantity: Math.max(1, Math.min(99, Number(draft.quantity ?? 1))),
+    notes: draft.notes ? clean(draft.notes, 1000) : null,
+    status: "New",
+  });
+  if (error) throw new Error(error.message);
+  return { request_code };
+}
+
+export async function listPropRequests(): Promise<PropRequest[]> {
+  const { data, error } = await supabaseAdmin
+    .from("prop_requests")
+    .select("*")
+    .order("id", { ascending: false });
+  if (error) throw new Error(error.message);
+  return Promise.all(
+    (data ?? []).map(async (row: Record<string, any>) =>
+      mapRequest(row, await signImages(row['reference_image_urls'] ?? [])),
+    ),
+  );
+}
+
+export async function updateRequestStatus(id: number, status: PropRequest["status"]) {
+  const { error } = await supabaseAdmin.from("prop_requests").update({ status }).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true as const };
 }

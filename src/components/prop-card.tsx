@@ -48,7 +48,7 @@ export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) =>
           Deposit {inr(prop.security_deposit)} · Replacement value {inr(prop.replacement_value)}
         </p>
         <Button className="w-full" disabled={!rentable} onClick={() => onRent(prop)}>
-          {rentable ? "Take on Rent" : `Unavailable — ${prop.status}`}
+          {rentable ? "Request on Rent" : `Unavailable — ${prop.status}`}
         </Button>
       </div>
     </article>

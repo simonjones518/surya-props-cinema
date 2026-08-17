@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
 import { api, queryKeys } from "@/lib/api";
 import { PropCard } from "@/components/prop-card";
-import { RentModal } from "@/components/rent-modal";
+import { RequestModal } from "@/components/request-modal";
+import { CustomRequestModal } from "@/components/custom-request-modal";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Prop } from "@/lib/types";
@@ -35,6 +37,7 @@ function CatalogPage() {
   const [genre, setGenre] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Prop | null>(null);
+  const [customOpen, setCustomOpen] = useState(false);
 
   const categories = useQuery({ queryKey: queryKeys.categories, queryFn: api.getCategories });
   const props = useQuery({ queryKey: queryKeys.props, queryFn: api.getProps });
@@ -59,7 +62,12 @@ function CatalogPage() {
         </h1>
         <p className="mt-4 text-sm text-muted-foreground sm:text-base">
           Live inventory with daily and weekly rates in ₹, condition grading and refundable security deposits.
+          Request any prop and our production desk confirms it on WhatsApp.
         </p>
+        <Button className="mt-6" onClick={() => setCustomOpen(true)}>
+          <Sparkles className="size-4" />
+          Prop Not Listed? Request a Custom Prop
+        </Button>
       </header>
 
       <div className="mt-8 space-y-4">
@@ -101,7 +109,13 @@ function CatalogPage() {
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <p className="mt-16 text-center text-muted-foreground">No props match these filters.</p>
+        <div className="mt-16 text-center">
+          <p className="text-muted-foreground">No props match these filters.</p>
+          <Button className="mt-5" onClick={() => setCustomOpen(true)}>
+            <Sparkles className="size-4" />
+            Request It as a Custom Prop
+          </Button>
+        </div>
       ) : (
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((prop) => (
@@ -110,7 +124,8 @@ function CatalogPage() {
         </div>
       )}
 
-      <RentModal prop={selected} open={selected !== null} onOpenChange={(v) => !v && setSelected(null)} />
+      <RequestModal prop={selected} open={selected !== null} onOpenChange={(v) => !v && setSelected(null)} />
+      <CustomRequestModal open={customOpen} onOpenChange={setCustomOpen} />
     </main>
   );
 }
