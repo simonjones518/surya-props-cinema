@@ -52,8 +52,15 @@ export function QuoteApprovals() {
             <header className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="font-display text-xl tracking-wide">{quote.quote_code}</p>
+                <p className="text-sm font-semibold text-primary">
+                  {quote.movie_name || "Untitled project"}
+                  {quote.production_house && (
+                    <span className="text-muted-foreground"> · {quote.production_house}</span>
+                  )}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {quote.production_house || "—"} · {quote.contact_person} · {quote.phone}
+                  Attn {quote.contact_person}
+                  {quote.client_designation ? ` (${quote.client_designation})` : ""} · {quote.phone}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {quote.shoot_location || "Location TBC"} · {quote.shoot_start_date} →{" "}
