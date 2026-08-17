@@ -66,6 +66,8 @@ function ClientPortal() {
     queryKey: portalKeys.myQuotes,
     queryFn: portal.getMyQuotes,
     enabled: Boolean(session.data),
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchInterval: 15000,
     refetchOnWindowFocus: true,
   });
@@ -151,6 +153,16 @@ function ClientPortal() {
           />
           {quotes.isLoading ? (
             <Skeleton className="h-36 rounded-xl" />
+          ) : quotes.isError ? (
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-6 text-center">
+              <p className="text-sm font-semibold text-destructive">Your quotations could not be loaded.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {quotes.error instanceof Error ? quotes.error.message : "Please try again."}
+              </p>
+              <Button className="mt-4" variant="outline" onClick={() => void quotes.refetch()}>
+                Try Again
+              </Button>
+            </div>
           ) : active.length === 0 ? (
             <EmptyState />
           ) : (

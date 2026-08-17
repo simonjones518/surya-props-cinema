@@ -18,6 +18,7 @@ import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
 import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
 import { useWishlist } from "@/lib/wishlist";
+import type { QuoteRequest } from "@/lib/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -44,6 +45,10 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
         items: lines.map((l) => ({ prop_id: l.prop_id, quantity: l.quantity })),
       }),
     onSuccess: (res) => {
+      qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => {
+        const withoutSaved = (current ?? []).filter((quote) => quote.id !== res.id);
+        return [res, ...withoutSaved];
+      });
       toast.success("Quote request sent to the production desk", {
         description: `Reference ${res.quote_code} · track it in your portal`,
       });
