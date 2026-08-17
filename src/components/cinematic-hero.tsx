@@ -206,12 +206,6 @@ function StageCard({
           >
             Browse Props
           </Link>
-          <Link
-            to="/admin"
-            className="inline-flex items-center rounded-md border border-primary/40 px-5 py-2.5 text-sm font-bold uppercase tracking-wider text-primary transition-colors hover:border-primary hover:bg-primary/10"
-          >
-            Admin ERP
-          </Link>
         </div>
       </div>
     </motion.article>
