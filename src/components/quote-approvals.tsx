@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BadgeCheck, FileText, IndianRupee, PackageCheck, Printer, Truck } from "lucide-react";
+import { BadgeCheck, FileText, IndianRupee, PackageCheck, Printer, Send, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
+import { QuoteTimeline } from "@/components/quote-timeline";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
 import type { QuoteRequest } from "@/lib/types";
@@ -35,6 +36,16 @@ export function QuoteApprovals() {
       void qc.invalidateQueries({ queryKey: ["props"] });
     },
     onError: (e: Error) => toast.error("Could not verify", { description: e.message }),
+  });
+
+  const dispatchProps = useMutation({
+    mutationFn: (id: number) => portal.dispatchQuote(id),
+    onSuccess: () => {
+      toast.success("Props dispatched — rental is now live on-set");
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      void qc.invalidateQueries({ queryKey: ["props"] });
+    },
+    onError: (e: Error) => toast.error("Could not dispatch", { description: e.message }),
   });
 
   if (quotes.isLoading) return <Skeleton className="mt-6 h-40 rounded-xl" />;
@@ -74,6 +85,8 @@ export function QuoteApprovals() {
                 {QUOTE_LABEL[quote.status]}
               </span>
             </header>
+
+            <QuoteTimeline quote={quote} side="admin" />
 
             <ul className="mt-4 divide-y divide-border/60 text-sm">
               {quote.items.map((item) => (
@@ -148,10 +161,19 @@ export function QuoteApprovals() {
               )}
               {quote.status === "advance_submitted" && (
                 <Button size="sm" onClick={() => verify.mutate(quote.id)} disabled={verify.isPending}>
-                  <BadgeCheck className="size-4" /> Verify Advance
+                  <BadgeCheck className="size-4" /> Confirm Payment Received
                 </Button>
               )}
-              {quote.status === "on_set" && (
+              {quote.status === "payment_received" && (
+                <Button
+                  size="sm"
+                  onClick={() => dispatchProps.mutate(quote.id)}
+                  disabled={dispatchProps.isPending}
+                >
+                  <Send className="size-4" /> Dispatch Props
+                </Button>
+              )}
+              {(quote.status === "dispatched" || quote.status === "on_set") && (
                 <Button size="sm" onClick={() => setReturnFor(quote)}>
                   <PackageCheck className="size-4" /> Record Return
                 </Button>
