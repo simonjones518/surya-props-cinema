@@ -110,3 +110,62 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   total_price DECIMAL(12, 2) NOT NULL,
   FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- ===== Multi-Godown warehouse + manual-rate rental orders (Hostinger MySQL parity) =====
+CREATE TABLE IF NOT EXISTS godowns (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  location_code VARCHAR(50) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS racks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  godown_id INT NOT NULL,
+  rack_name VARCHAR(100) NOT NULL,
+  FOREIGN KEY (godown_id) REFERENCES godowns(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS rental_orders (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_number VARCHAR(50) NOT NULL UNIQUE,
+  client_name VARCHAR(150) NOT NULL,
+  production_house VARCHAR(200) NULL,
+  phone_number VARCHAR(24) NOT NULL,
+  shoot_location VARCHAR(300) NULL,
+  dispatch_date DATE NOT NULL,
+  estimated_return_date DATE NOT NULL,
+  actual_return_date DATE NULL,
+  estimated_days INT NOT NULL DEFAULT 1,
+  actual_days_used INT NULL,
+  advance_received DECIMAL(12,2) NOT NULL DEFAULT 0,
+  security_deposit DECIMAL(12,2) NOT NULL DEFAULT 0,
+  estimated_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  total_final_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  balance_payable DECIMAL(12,2) NOT NULL DEFAULT 0,
+  order_status VARCHAR(30) NOT NULL DEFAULT 'Estimated/On-Set',
+  notes TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS rental_order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  prop_id INT NOT NULL,
+  prop_name VARCHAR(255) NOT NULL,
+  prop_description TEXT NULL,
+  serial_number VARCHAR(60) NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  manual_daily_rate DECIMAL(10,2) NOT NULL DEFAULT 0,
+  estimated_days INT NOT NULL DEFAULT 1,
+  actual_days_used INT NULL,
+  line_total DECIMAL(12,2) NOT NULL DEFAULT 0,
+  FOREIGN KEY (order_id) REFERENCES rental_orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+ALTER TABLE props ADD COLUMN IF NOT EXISTS description_specs TEXT NULL;
+ALTER TABLE props ADD COLUMN IF NOT EXISTS godown_id INT NULL;
+ALTER TABLE props ADD COLUMN IF NOT EXISTS rack_id INT NULL;
+
+INSERT IGNORE INTO godowns (id, name, location_code) VALUES
+  (1, 'Godown 1 (Main Soundstage)', 'GD-01'),
+  (2, 'Godown 2 (Vehicles & Heavy Props)', 'GD-02'),
+  (3, 'Godown 3 (Armory & Electronics)', 'GD-03');

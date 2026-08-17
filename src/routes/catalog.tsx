@@ -18,7 +18,7 @@ export const Route = createFileRoute("/catalog")({
       {
         name: "description",
         content:
-          "Rent screen-ready film props in India: vintage weapons, cinema camera rigs, retro vehicles and hero gadgets with daily and weekly rates in ₹.",
+          "Rent screen-ready film props in India: vintage weapons, cinema camera rigs, retro vehicles and hero gadgets with full technical specs. Request a custom rental quote for your shoot.",
       },
       { property: "og:title", content: "Prop Rental Catalog — Surya Cine Special Props" },
       {
@@ -61,7 +61,7 @@ function CatalogPage() {
           <span className="text-gradient-gold">Screen-Ready Props</span>, Booked in Minutes
         </h1>
         <p className="mt-4 text-sm text-muted-foreground sm:text-base">
-          Live inventory with daily and weekly rates in ₹, condition grading and refundable security deposits.
+          Live inventory with full configuration details, condition grading and warehouse availability. Rates are quoted per production.
           Request any prop and our production desk confirms it on WhatsApp.
         </p>
         <Button className="mt-6" onClick={() => setCustomOpen(true)}>

@@ -6,6 +6,7 @@ import type {
   Prop,
   PropRequestDraft,
   PropStatus,
+  RentalOrderDraft,
   RentalStatus,
   RequestStatus,
 } from "./types";
@@ -154,4 +155,46 @@ export const updateRequestStatusFn = createServerFn({ method: "POST" })
     const m = await db();
     await m.assertAdmin();
     return m.updateRequestStatus(data.id, data.status);
+  });
+
+/* ---------- warehouse structure (public reads) ---------- */
+
+export const fetchGodowns = createServerFn({ method: "GET" }).handler(async () =>
+  (await db()).listGodowns(),
+);
+
+export const fetchRacks = createServerFn({ method: "GET" }).handler(async () =>
+  (await db()).listRacks(),
+);
+
+/* ---------- rental orders (admin only) ---------- */
+
+export const fetchRentalOrders = createServerFn({ method: "GET" }).handler(async () => {
+  const m = await db();
+  await m.assertAdmin();
+  return m.listRentalOrders();
+});
+
+export const createRentalOrderFn = createServerFn({ method: "POST" })
+  .inputValidator((data: RentalOrderDraft) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.createRentalOrder(data);
+  });
+
+export const settleRentalOrderFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; actual_return_date: string }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.settleRentalOrder(data.id, data.actual_return_date);
+  });
+
+export const cancelRentalOrderFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.cancelRentalOrder(data.id);
   });

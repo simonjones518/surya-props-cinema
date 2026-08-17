@@ -136,6 +136,27 @@ export type Database = {
         }
         Relationships: []
       }
+      godowns: {
+        Row: {
+          created_at: string
+          id: number
+          location_code: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          location_code: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          location_code?: string
+          name?: string
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           advance_received: number
@@ -234,6 +255,7 @@ export type Database = {
           reference_image_urls: string[]
           request_code: string
           request_type: string
+          shoot_location: string
           shoot_start_date: string | null
           shoot_wrap_date: string | null
           status: string
@@ -253,6 +275,7 @@ export type Database = {
           reference_image_urls?: string[]
           request_code: string
           request_type?: string
+          shoot_location?: string
           shoot_start_date?: string | null
           shoot_wrap_date?: string | null
           status?: string
@@ -272,6 +295,7 @@ export type Database = {
           reference_image_urls?: string[]
           request_code?: string
           request_type?: string
+          shoot_location?: string
           shoot_start_date?: string | null
           shoot_wrap_date?: string | null
           status?: string
@@ -295,10 +319,13 @@ export type Database = {
           created_at: string
           daily_rate: number
           description: string
+          description_specs: string
           genre_tags: string[]
+          godown_id: number | null
           id: number
           image_urls: string[]
           qr_code_id: string
+          rack_id: number | null
           replacement_value: number
           security_deposit: number
           serial_number: string
@@ -315,10 +342,13 @@ export type Database = {
           created_at?: string
           daily_rate?: number
           description?: string
+          description_specs?: string
           genre_tags?: string[]
+          godown_id?: number | null
           id?: number
           image_urls?: string[]
           qr_code_id?: string
+          rack_id?: number | null
           replacement_value?: number
           security_deposit?: number
           serial_number: string
@@ -335,10 +365,13 @@ export type Database = {
           created_at?: string
           daily_rate?: number
           description?: string
+          description_specs?: string
           genre_tags?: string[]
+          godown_id?: number | null
           id?: number
           image_urls?: string[]
           qr_code_id?: string
+          rack_id?: number | null
           replacement_value?: number
           security_deposit?: number
           serial_number?: string
@@ -356,7 +389,122 @@ export type Database = {
             referencedRelation: "categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "props_godown_id_fkey"
+            columns: ["godown_id"]
+            isOneToOne: false
+            referencedRelation: "godowns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "props_rack_id_fkey"
+            columns: ["rack_id"]
+            isOneToOne: false
+            referencedRelation: "racks"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      racks: {
+        Row: {
+          created_at: string
+          godown_id: number
+          id: number
+          rack_name: string
+        }
+        Insert: {
+          created_at?: string
+          godown_id: number
+          id?: number
+          rack_name: string
+        }
+        Update: {
+          created_at?: string
+          godown_id?: number
+          id?: number
+          rack_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "racks_godown_id_fkey"
+            columns: ["godown_id"]
+            isOneToOne: false
+            referencedRelation: "godowns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rental_orders: {
+        Row: {
+          actual_days_used: number | null
+          actual_return_date: string | null
+          advance_received: number
+          balance_payable: number
+          client_name: string
+          created_at: string
+          dispatch_date: string
+          estimated_days: number
+          estimated_return_date: string
+          estimated_total: number
+          id: number
+          items: Json
+          notes: string | null
+          order_number: string
+          order_status: string
+          phone_number: string
+          production_house: string
+          security_deposit: number
+          shoot_location: string
+          total_final_amount: number
+          updated_at: string
+        }
+        Insert: {
+          actual_days_used?: number | null
+          actual_return_date?: string | null
+          advance_received?: number
+          balance_payable?: number
+          client_name?: string
+          created_at?: string
+          dispatch_date: string
+          estimated_days?: number
+          estimated_return_date: string
+          estimated_total?: number
+          id?: number
+          items?: Json
+          notes?: string | null
+          order_number: string
+          order_status?: string
+          phone_number?: string
+          production_house?: string
+          security_deposit?: number
+          shoot_location?: string
+          total_final_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          actual_days_used?: number | null
+          actual_return_date?: string | null
+          advance_received?: number
+          balance_payable?: number
+          client_name?: string
+          created_at?: string
+          dispatch_date?: string
+          estimated_days?: number
+          estimated_return_date?: string
+          estimated_total?: number
+          id?: number
+          items?: Json
+          notes?: string | null
+          order_number?: string
+          order_status?: string
+          phone_number?: string
+          production_house?: string
+          security_deposit?: number
+          shoot_location?: string
+          total_final_amount?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {

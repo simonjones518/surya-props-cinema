@@ -1,7 +1,6 @@
-import { IndianRupee, QrCode } from "lucide-react";
+import { MapPin, QrCode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConditionBadge, StockBadge } from "@/components/status-badge";
-import { inr } from "@/lib/format";
 import type { Prop } from "@/lib/types";
 
 export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) => void }) {
@@ -29,6 +28,14 @@ export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) =>
       <div className="space-y-3 p-4">
         <h3 className="font-display text-xl leading-tight tracking-wide text-foreground">{prop.title}</h3>
         <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{prop.description}</p>
+        {prop.description_specs && (
+          <div className="rounded-lg border border-border bg-secondary/60 p-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+              Configuration / Dimensions
+            </p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{prop.description_specs}</p>
+          </div>
+        )}
         <div className="flex flex-wrap gap-1.5">
           {prop.genre_tags.map((tag) => (
             <span
@@ -40,33 +47,16 @@ export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) =>
           ))}
         </div>
         <ConditionBadge condition={prop.condition_rating} />
-        <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-secondary/60 p-3">
-          <Rate label="Per day" value={prop.daily_rate} highlight />
-          <Rate label="Per week" value={prop.weekly_rate} />
-        </div>
-        <p className="text-[11px] text-muted-foreground">
-          Deposit {inr(prop.security_deposit)} · Replacement value {inr(prop.replacement_value)}
-        </p>
+        {(prop.godown_name || prop.rack_name) && (
+          <p className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <MapPin className="size-3 text-primary" />
+            {[prop.godown_name, prop.rack_name].filter(Boolean).join(" · ")}
+          </p>
+        )}
         <Button className="w-full" disabled={!rentable} onClick={() => onRent(prop)}>
-          {rentable ? "Request on Rent" : `Unavailable — ${prop.status}`}
+          {rentable ? "Request Rental Quote" : `Unavailable — ${prop.status}`}
         </Button>
       </div>
     </article>
-  );
-}
-
-function Rate({ label, value, highlight }: { label: string; value: number; highlight?: boolean }) {
-  return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-      <p
-        className={`flex items-center font-display text-xl tracking-wide ${
-          highlight ? "text-primary" : "text-foreground"
-        }`}
-      >
-        <IndianRupee className="mr-0.5 size-4" />
-        {value.toLocaleString("en-IN")}
-      </p>
-    </div>
   );
 }

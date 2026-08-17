@@ -1,5 +1,5 @@
-import { useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, QrCode, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,10 +43,19 @@ export function StockModal({
   const [replacement, setReplacement] = useState(150000);
   const [condition, setCondition] = useState<PropCondition>("Mint");
   const [description, setDescription] = useState("");
+  const [specs, setSpecs] = useState("");
+  const [godownId, setGodownId] = useState("");
+  const [rackId, setRackId] = useState("");
   const [images, setImages] = useState<{ path: string; preview: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  const godowns = useQuery({ queryKey: queryKeys.godowns, queryFn: api.getGodowns });
+  const racks = useQuery({ queryKey: queryKeys.racks, queryFn: api.getRacks });
+  const godownRacks = useMemo(
+    () => (racks.data ?? []).filter((r) => String(r.godown_id) === godownId),
+    [racks.data, godownId],
+  );
 
   async function handleFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -76,6 +85,9 @@ export function StockModal({
         replacement_value: replacement,
         condition_rating: condition,
         description,
+        description_specs: specs,
+        godown_id: godownId ? Number(godownId) : null,
+        rack_id: rackId ? Number(rackId) : null,
         image_urls: images.map((i) => i.path),
         qr_code_id: `QR-${serial}`,
       }),
@@ -85,6 +97,7 @@ export function StockModal({
       void queryClient.invalidateQueries({ queryKey: queryKeys.kpi });
       setTitle("");
       setDescription("");
+      setSpecs("");
       setImages([]);
       setSerial(nextSerial(categorySlug));
       onOpenChange(false);
@@ -162,6 +175,55 @@ export function StockModal({
               </div>
             </div>
             <div className="space-y-2 sm:col-span-2">
+              <Label>Assigned Godown</Label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Select
+                  value={godownId}
+                  onValueChange={(v) => {
+                    setGodownId(v);
+                    setRackId("");
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select godown" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(godowns.data ?? []).map((g) => (
+                      <SelectItem key={g.id} value={String(g.id)}>
+                        {g.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={rackId} onValueChange={setRackId} disabled={!godownId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={godownId ? "Select rack / bay" : "Pick a godown first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {godownRacks.map((r) => (
+                      <SelectItem key={r.id} value={String(r.id)}>
+                        {r.rack_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>
+                Technical Specs / Dimensions <span className="text-primary">*</span>
+              </Label>
+              <Textarea
+                value={specs}
+                onChange={(e) => setSpecs(e.target.value)}
+                rows={3}
+                placeholder="Full cage, V-Mount battery plate, Tilta follow focus, Matte Box, 1.2 kg"
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Printed under the item name on every estimate and final invoice.
+              </p>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
               <Label>Description</Label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
             </div>
@@ -218,7 +280,7 @@ export function StockModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={!title || isPending} onClick={() => mutate()}>
+          <Button disabled={!title || !specs.trim() || isPending} onClick={() => mutate()}>
             {isPending ? "Saving…" : "Save Prop"}
           </Button>
         </DialogFooter>

@@ -15,7 +15,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Rent screen-ready film props: vintage armory, cinema camera rigs, retro vehicles and hero gadgets. Daily and weekly rates in ₹ with instant quotations.",
+          "Rent screen-ready film props: vintage armory, cinema camera rigs, retro vehicles and hero gadgets. Request a custom rental quote for your shoot dates — pricing shared privately.",
       },
       { property: "og:title", content: "Surya Cine Special Props — Film Prop Rental" },
       {

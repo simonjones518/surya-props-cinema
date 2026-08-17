@@ -37,8 +37,11 @@ import { PosCart } from "@/components/pos-cart";
 import { InventoryTable } from "@/components/inventory-table";
 import { RequestsTable } from "@/components/requests-table";
 import { InvoiceDocument } from "@/components/invoice-document";
+import { RentalOrderModal } from "@/components/rental-order-modal";
+import { RentalOrderDocument } from "@/components/rental-order-document";
+import { GodownMatrix } from "@/components/godown-matrix";
 import { inr, inrCompact, prettyDate } from "@/lib/format";
-import type { Invoice, Prop, RentalBooking, RentalStatus } from "@/lib/types";
+import type { Invoice, Prop, RentalBooking, RentalOrder, RentalStatus } from "@/lib/types";
 import { adminLogout, requireAdmin } from "@/lib/admin-gate.functions";
 
 export const Route = createFileRoute("/admin")({
@@ -73,13 +76,34 @@ function AdminPage() {
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState("");
   const [viewDoc, setViewDoc] = useState<Invoice | null>(null);
-  const [tab, setTab] = useState<"pipeline" | "requests" | "inventory" | "billing">("pipeline");
+  const [viewOrder, setViewOrder] = useState<RentalOrder | null>(null);
+  const [orderOpen, setOrderOpen] = useState(false);
+  const [settleId, setSettleId] = useState<number | null>(null);
+  const [returnDate, setReturnDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [tab, setTab] = useState<
+    "pipeline" | "orders" | "warehouse" | "requests" | "inventory" | "billing"
+  >("orders");
   const kpi = useQuery({ queryKey: queryKeys.kpi, queryFn: api.getKpi });
   const bookings = useQuery({ queryKey: queryKeys.bookings, queryFn: api.getBookings });
   const categories = useQuery({ queryKey: queryKeys.categories, queryFn: api.getCategories });
   const props = useQuery({ queryKey: queryKeys.props, queryFn: api.getProps });
   const clients = useQuery({ queryKey: queryKeys.clients, queryFn: api.getClients });
   const invoices = useQuery({ queryKey: queryKeys.invoices, queryFn: api.getInvoices });
+  const orders = useQuery({ queryKey: queryKeys.orders, queryFn: api.getRentalOrders });
+
+  const settleMutation = useMutation({
+    mutationFn: ({ id, date }: { id: number; date: string }) => api.settleRentalOrder(id, date),
+    onSuccess: (order) => {
+      void qc.invalidateQueries({ queryKey: queryKeys.orders });
+      void qc.invalidateQueries({ queryKey: queryKeys.props });
+      setSettleId(null);
+      setViewOrder(order);
+      toast.success(`${order.order_number} settled`, {
+        description: `${order.actual_days_used} actual day(s) · balance ${inr(order.balance_payable)}`,
+      });
+    },
+    onError: (e: Error) => toast.error("Settlement failed", { description: e.message }),
+  });
 
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: number; status: RentalStatus }) =>
@@ -144,8 +168,11 @@ function AdminPage() {
           </h1>
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => setOrderOpen(true)}>
+            <Truck className="size-4" /> New Rental Order / Challan
+          </Button>
           <Button onClick={() => setCartOpen(true)}>
-            <Receipt className="size-4" /> Create New Rental / Quotation
+            <Receipt className="size-4" /> Quick Quotation
           </Button>
           <Button variant="outline" onClick={() => setStockOpen(true)}>
             <Plus className="size-4" /> Add New Prop
@@ -201,6 +228,8 @@ function AdminPage() {
 
       <nav aria-label="Dashboard sections" className="mt-10 flex flex-wrap gap-2 print:hidden">
         {([
+          ["orders", "Rental Orders & Settlement"],
+          ["warehouse", "Warehouse Matrix"],
           ["pipeline", "Rental Pipeline"],
           ["requests", "Customer Requests"],
           ["inventory", "Inventory & Stock"],
@@ -221,6 +250,87 @@ function AdminPage() {
           </button>
         ))}
       </nav>
+
+      {tab === "orders" && (
+        <section className="mt-6 print:hidden" aria-label="Rental orders and settlement">
+          <div className="overflow-x-auto rounded-xl border border-primary/20 bg-card">
+            <table className="w-full min-w-[980px] text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <Th>Order</Th>
+                  <Th>Client</Th>
+                  <Th>Dispatch</Th>
+                  <Th>Days</Th>
+                  <Th>Total</Th>
+                  <Th>Advance</Th>
+                  <Th>Balance</Th>
+                  <Th>Status</Th>
+                  <Th>Actions</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {(orders.data ?? []).map((o) => (
+                  <tr key={o.id} className="border-b border-border/60 last:border-0 hover:bg-secondary/40">
+                    <Td className="font-mono text-xs text-primary">{o.order_number}</Td>
+                    <Td className="font-semibold">
+                      {o.production_house || o.client_name}
+                      <span className="block text-[11px] font-normal text-muted-foreground">
+                        {o.items.length} item(s) · {o.phone_number}
+                      </span>
+                    </Td>
+                    <Td className="whitespace-nowrap text-xs">{prettyDate(o.dispatch_date)}</Td>
+                    <Td className="text-xs">
+                      {o.actual_days_used ?? o.estimated_days}
+                      <span className="text-muted-foreground">
+                        {o.actual_days_used ? " actual" : " est."}
+                      </span>
+                    </Td>
+                    <Td className="whitespace-nowrap font-semibold">
+                      {inr(o.actual_days_used ? o.total_final_amount : o.estimated_total)}
+                    </Td>
+                    <Td className="whitespace-nowrap">{inr(o.advance_received)}</Td>
+                    <Td
+                      className={`whitespace-nowrap ${o.balance_payable > 0 ? "text-amber-neon" : "text-success"}`}
+                    >
+                      {inr(o.balance_payable)}
+                    </Td>
+                    <Td className="text-xs">{o.order_status}</Td>
+                    <Td>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setViewOrder(o)}>
+                          View / Print
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={o.order_status !== "Estimated/On-Set"}
+                          onClick={() => {
+                            setSettleId(o.id);
+                            setReturnDate(new Date().toISOString().slice(0, 10));
+                          }}
+                        >
+                          Mark Returned
+                        </Button>
+                      </div>
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {orders.isLoading && <div className="p-6"><Skeleton className="h-32 w-full" /></div>}
+            {!orders.isLoading && (orders.data ?? []).length === 0 && (
+              <p className="p-6 text-center text-muted-foreground">
+                No rental orders yet — create an estimated delivery challan when props leave the warehouse.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === "warehouse" && (
+        <section className="mt-6 print:hidden" aria-label="Warehouse stock matrix">
+          <GodownMatrix props={props.data ?? []} />
+        </section>
+      )}
 
       {tab === "pipeline" && (
       <section className="mt-6 print:hidden" aria-label="Rental pipeline">
@@ -358,6 +468,46 @@ function AdminPage() {
       )}
 
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />
+      <RentalOrderModal
+        open={orderOpen}
+        onOpenChange={setOrderOpen}
+        props={props.data ?? []}
+        onCreated={(order) => {
+          setTab("orders");
+          setViewOrder(order);
+        }}
+      />
+
+      <Dialog open={settleId !== null} onOpenChange={(v) => !v && setSettleId(null)}>
+        <DialogContent className="max-w-md border-primary/25 bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
+              Actual Return &amp; Final Settlement
+            </DialogTitle>
+            <DialogDescription>
+              Enter the real return date — the bill recalculates on actual days used.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Actual Return Date</Label>
+            <Input type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettleId(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!returnDate || settleMutation.isPending}
+              onClick={() =>
+                settleId !== null && settleMutation.mutate({ id: settleId, date: returnDate })
+              }
+            >
+              {settleMutation.isPending ? "Settling…" : "Recalculate & Settle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <PosCart
         open={cartOpen}
         onOpenChange={setCartOpen}
@@ -402,6 +552,12 @@ function AdminPage() {
       {viewDoc && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-background/95 p-4 backdrop-blur-sm sm:p-8 print:static print:bg-white print:p-0">
           <InvoiceDocument invoice={viewDoc} onClose={() => setViewDoc(null)} />
+        </div>
+      )}
+
+      {viewOrder && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-background/95 p-4 backdrop-blur-sm sm:p-8 print:static print:bg-white print:p-0">
+          <RentalOrderDocument order={viewOrder} onClose={() => setViewOrder(null)} />
         </div>
       )}
     </main>
