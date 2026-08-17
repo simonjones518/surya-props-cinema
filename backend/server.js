@@ -380,7 +380,6 @@ app.post("/api/invoices", wrap(async (req, res) => {
         await conn.execute("UPDATE props SET status = 'Booked' WHERE id = ?", [Number(i.prop_id)]);
       }
       await conn.commit();
-      conn.release();
       return res.json({ id: invoiceId, invoice_number: d.invoice_number, booking_code });
     }
 
@@ -390,7 +389,7 @@ app.post("/api/invoices", wrap(async (req, res) => {
     await conn.rollback();
     throw e;
   } finally {
-    if (!conn.connection?._closing) { try { conn.release(); } catch { /* already released */ } }
+    conn.release();
   }
 }));
 
