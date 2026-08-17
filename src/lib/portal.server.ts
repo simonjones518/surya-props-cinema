@@ -291,7 +291,18 @@ export async function createQuoteRequest(draft: QuoteRequestDraft) {
     status: "quote_requested",
   });
   if (insErr) throw new Error(insErr.message);
-  return { quote_code };
+  return {
+    quote_code,
+    production_house: banner.name,
+    movie_name,
+    contact_person: profile.contact_person,
+    phone: profile.phone,
+    shoot_location: clean(draft.shoot_location, 240),
+    shoot_start_date: draft.shoot_start_date,
+    estimated_return_date: draft.estimated_return_date,
+    estimated_days: days(draft.shoot_start_date, draft.estimated_return_date),
+    items: items.map((i) => ({ prop_name: i.prop_name, quantity: i.quantity })),
+  };
 }
 
 export async function listMyQuotes(): Promise<QuoteRequest[]> {
