@@ -1,7 +1,7 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { QrCode, RefreshCw } from "lucide-react";
+import { ImagePlus, Loader2, QrCode, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { api } from "@/lib/api";
+import { api, queryKeys } from "@/lib/api";
 import { inr, nextSerial } from "@/lib/format";
 import type { Category, PropCondition } from "@/lib/types";
 
@@ -43,6 +43,26 @@ export function StockModal({
   const [replacement, setReplacement] = useState(150000);
   const [condition, setCondition] = useState<PropCondition>("Mint");
   const [description, setDescription] = useState("");
+  const [images, setImages] = useState<{ path: string; preview: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
+
+  async function handleFiles(files: FileList | null) {
+    if (!files?.length) return;
+    setUploading(true);
+    try {
+      for (const file of Array.from(files)) {
+        const uploaded = await api.uploadPropImage(file);
+        setImages((prev) => [...prev, uploaded]);
+      }
+    } catch (e) {
+      toast.error("Photo upload failed", { description: (e as Error).message });
+    } finally {
+      setUploading(false);
+      if (fileInput.current) fileInput.current.value = "";
+    }
+  }
 
   const { mutate, isPending } = useMutation({
     mutationFn: () =>
@@ -56,10 +76,17 @@ export function StockModal({
         replacement_value: replacement,
         condition_rating: condition,
         description,
+        image_urls: images.map((i) => i.path),
         qr_code_id: `QR-${serial}`,
       }),
     onSuccess: () => {
       toast.success("Prop saved to warehouse", { description: `${serial} · ${title}` });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.props });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.kpi });
+      setTitle("");
+      setDescription("");
+      setImages([]);
+      setSerial(nextSerial(categorySlug));
       onOpenChange(false);
     },
     onError: (e: Error) => toast.error("Could not save prop", { description: e.message }),
@@ -137,6 +164,41 @@ export function StockModal({
             <div className="space-y-2 sm:col-span-2">
               <Label>Description</Label>
               <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={3} />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Photos</Label>
+              <div className="flex flex-wrap items-center gap-3">
+                {images.map((img) => (
+                  <div key={img.path} className="relative size-20 overflow-hidden rounded-lg border border-primary/30">
+                    <img src={img.preview} alt={title || "Prop photo"} className="size-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setImages((prev) => prev.filter((i) => i.path !== img.path))}
+                      className="absolute right-1 top-1 grid size-5 place-items-center rounded-full bg-background/80 text-foreground"
+                      aria-label="Remove photo"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={uploading}
+                  onClick={() => fileInput.current?.click()}
+                >
+                  {uploading ? <Loader2 className="size-4 animate-spin" /> : <ImagePlus className="size-4" />}
+                  {uploading ? "Uploading…" : "Upload Photos"}
+                </Button>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => void handleFiles(e.target.files)}
+                />
+              </div>
             </div>
           </div>
 
