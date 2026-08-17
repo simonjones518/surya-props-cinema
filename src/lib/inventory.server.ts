@@ -194,7 +194,7 @@ export async function saveProp(prop: Partial<Prop>) {
 }
 
 export async function updateProp(id: number, prop: Partial<Prop>) {
-  const patch: Record<string, unknown> = {};
+  const patch: Record<string, any> = {};
   for (const key of [
     "serial_number",
     "title",
@@ -344,7 +344,7 @@ export async function createInvoice(draft: InvoiceDraft) {
       shoot_location: draft.shoot_location ?? null,
       shoot_start_date: draft.shoot_start_date,
       shoot_wrap_date: draft.shoot_wrap_date,
-      items: draft.items,
+      items: draft.items as unknown as any,
       subtotal: draft.subtotal,
       discount: draft.discount,
       transport_charges: draft.transport_charges,
