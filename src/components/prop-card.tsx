@@ -6,8 +6,8 @@ import type { Prop } from "@/lib/types";
 
 export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) => void }) {
   const rentable = prop.status === "In-Stock";
-  const { add, has } = useWishlist();
-  const inList = has(prop.id);
+  const { add, lines } = useWishlist();
+  const inList = lines.some((l) => l.prop_id === prop.id);
   return (
     <article className="group overflow-hidden rounded-xl border border-primary/20 bg-card transition-all hover:border-primary/60 hover:glow-gold">
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -64,7 +64,7 @@ export function PropCard({ prop, onRent }: { prop: Prop; onRent: (prop: Prop) =>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => add(prop)}
+              onClick={() => add(prop.id, prop.title)}
               aria-label={`Add ${prop.title} to shoot wishlist`}
             >
               {inList ? <Check className="size-4" /> : <Plus className="size-4" />}
