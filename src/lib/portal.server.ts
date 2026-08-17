@@ -3,6 +3,7 @@ import { useSession } from "@tanstack/react-start/server";
 import { suryaAuth, suryaDb } from "./surya-supabase.server";
 import type {
   ClientProfile,
+  ProductionHouse,
   QuoteItem,
   QuotePayment,
   QuoteRequest,
@@ -134,6 +135,7 @@ export async function getProfile(): Promise<ClientProfile> {
     production_house: (data?.["production_house"] as string) ?? "",
     contact_person: (data?.["contact_person"] as string) ?? "",
     phone: (data?.["phone"] as string) ?? "",
+    designation: (data?.["designation"] as string) ?? "",
     address: (data?.["address"] as string) ?? "",
   };
 }
@@ -146,10 +148,41 @@ export async function saveProfile(input: Partial<ClientProfile>) {
     production_house: clean(input.production_house, 160),
     contact_person: clean(input.contact_person, 120),
     phone: clean(input.phone, 24),
+    designation: clean(input.designation, 120),
     address: clean(input.address, 400),
   });
   if (error) throw new Error(error.message);
   return { ok: true as const };
+}
+
+/* ---------- production houses (shared, client-extensible banner list) ---------- */
+
+export async function listProductionHouses(): Promise<ProductionHouse[]> {
+  const { data, error } = await suryaDb
+    .from("production_houses")
+    .select("id, name")
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((r: any) => ({ id: Number(r.id), name: r.name as string }));
+}
+
+/** Select-or-create: returns the banner row, inserting it globally when new. */
+async function resolveProductionHouse(name: string, userId: string) {
+  const clean_name = clean(name, 160);
+  if (!clean_name) throw new Error("Select or add the production house for this shoot.");
+  const { data: existing } = await suryaDb
+    .from("production_houses")
+    .select("id, name")
+    .ilike("name", clean_name)
+    .maybeSingle();
+  if (existing) return { id: Number(existing["id"]), name: existing["name"] as string };
+  const { data, error } = await suryaDb
+    .from("production_houses")
+    .insert({ name: clean_name, created_by: userId })
+    .select("id, name")
+    .maybeSingle();
+  if (error || !data) throw new Error(error?.message ?? "Could not add the production house.");
+  return { id: Number(data["id"]), name: data["name"] as string };
 }
 
 /* ---------- mapping ---------- */
