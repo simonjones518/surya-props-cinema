@@ -299,6 +299,7 @@ export interface ClientProfile {
   production_house: string;
   contact_person: string;
   phone: string;
+  designation: string;
   address: string;
 }
 
