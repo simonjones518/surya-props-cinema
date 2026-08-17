@@ -33,6 +33,7 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [productionHouse, setProductionHouse] = useState("");
   const [contact, setContact] = useState("");
+  const [designation, setDesignation] = useState("");
   const [phone, setPhone] = useState("");
   const navigate = useNavigate();
   const router = useRouter();
@@ -70,6 +71,7 @@ function AuthPage() {
         production_house: productionHouse,
         contact_person: contact,
         phone,
+        designation,
       }),
     onSuccess: async () => {
       toast.success("Production account created");
@@ -91,8 +93,8 @@ function AuthPage() {
           {isSignUp ? "Create Production Account" : "Client Portal Sign In"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          For filmmakers and production houses — track quotations, advances, active shoots and
-          settlement invoices.
+          One account for every banner you work with — track quotations, advances, active shoots and
+          settlement invoices across all your projects.
         </p>
 
         <form
@@ -106,23 +108,23 @@ function AuthPage() {
           {isSignUp && (
             <>
               <div className="space-y-1.5">
-                <Label htmlFor="ph">Production House</Label>
-                <Input
-                  id="ph"
-                  value={productionHouse}
-                  onChange={(e) => setProductionHouse(e.target.value)}
-                  maxLength={160}
-                  placeholder="Sun Pictures"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cp">Contact Person</Label>
+                <Label htmlFor="cp">Your Full Name</Label>
                 <Input
                   id="cp"
                   value={contact}
                   onChange={(e) => setContact(e.target.value)}
                   maxLength={120}
                   required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="desig">Designation</Label>
+                <Input
+                  id="desig"
+                  value={designation}
+                  onChange={(e) => setDesignation(e.target.value)}
+                  maxLength={120}
+                  placeholder="Art Director / Line Producer"
                 />
               </div>
               <div className="space-y-1.5">
@@ -134,6 +136,19 @@ function AuthPage() {
                   maxLength={24}
                   required
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="ph">Primary Production House (optional)</Label>
+                <Input
+                  id="ph"
+                  value={productionHouse}
+                  onChange={(e) => setProductionHouse(e.target.value)}
+                  maxLength={160}
+                  placeholder="Sun Pictures"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  You can request props for any banner — pick or add one per shoot.
+                </p>
               </div>
             </>
           )}
