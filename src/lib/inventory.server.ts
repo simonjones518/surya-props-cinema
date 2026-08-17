@@ -194,24 +194,21 @@ export async function saveProp(prop: Partial<Prop>) {
 }
 
 export async function updateProp(id: number, prop: Partial<Prop>) {
-  const patch: Record<string, any> = {};
-  for (const key of [
-    "serial_number",
-    "title",
-    "category_slug",
-    "genre_tags",
-    "daily_rate",
-    "weekly_rate",
-    "security_deposit",
-    "replacement_value",
-    "condition_rating",
-    "status",
-    "image_urls",
-    "description",
-    "qr_code_id",
-  ] as const) {
-    if (prop[key] !== undefined) patch[key] = prop[key];
-  }
+  const patch = {
+    ...(prop.serial_number !== undefined ? { serial_number: prop.serial_number } : {}),
+    ...(prop.title !== undefined ? { title: prop.title } : {}),
+    ...(prop.category_slug !== undefined ? { category_slug: prop.category_slug } : {}),
+    ...(prop.genre_tags !== undefined ? { genre_tags: prop.genre_tags } : {}),
+    ...(prop.daily_rate !== undefined ? { daily_rate: prop.daily_rate } : {}),
+    ...(prop.weekly_rate !== undefined ? { weekly_rate: prop.weekly_rate } : {}),
+    ...(prop.security_deposit !== undefined ? { security_deposit: prop.security_deposit } : {}),
+    ...(prop.replacement_value !== undefined ? { replacement_value: prop.replacement_value } : {}),
+    ...(prop.condition_rating !== undefined ? { condition_rating: prop.condition_rating } : {}),
+    ...(prop.status !== undefined ? { status: prop.status } : {}),
+    ...(prop.image_urls !== undefined ? { image_urls: prop.image_urls } : {}),
+    ...(prop.description !== undefined ? { description: prop.description } : {}),
+    ...(prop.qr_code_id !== undefined ? { qr_code_id: prop.qr_code_id } : {}),
+  };
   const { error } = await supabaseAdmin.from("props").update(patch).eq("id", id);
   if (error) throw new Error(error.message);
   return { ok: true as const };
