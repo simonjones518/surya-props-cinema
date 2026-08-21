@@ -353,7 +353,18 @@ export interface QuoteRequest {
   admin_notes: string | null;
   client_notes: string | null;
   created_at: string;
+  /* ---- 5-stage documentation engine ---- */
+  accepted_at: string | null;
+  advance_receipt_no: string | null;
+  advance_mode: string | null;
+  advance_utr: string | null;
+  advance_verified_at: string | null;
+  dispatch_at: string | null;
+  dispatch_vehicle: string | null;
+  dispatch_notes: string | null;
+  balance_cleared_at: string | null;
 }
+
 
 export interface QuoteRequestDraft {
   production_house: string;
