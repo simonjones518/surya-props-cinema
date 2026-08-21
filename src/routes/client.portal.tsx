@@ -92,6 +92,17 @@ function ClientPortal() {
     },
   });
 
+  const acceptQuotation = useMutation({
+    mutationFn: (id: number) => portal.acceptQuotation(id),
+    onSuccess: () => {
+      toast.success("Quotation accepted — advance payment request issued");
+      void qc.invalidateQueries({ queryKey: portalKeys.myQuotes });
+    },
+    onError: (e: Error) => toast.error("Could not accept the quotation", { description: e.message }),
+  });
+
+
+
   if (session.isLoading || !session.data) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
