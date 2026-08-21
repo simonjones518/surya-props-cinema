@@ -353,11 +353,16 @@ function QuoteCard({
   quote,
   onPay,
   onView,
+  onAccept,
+  accepting,
 }: {
   quote: QuoteRequest;
   onPay: () => void;
   onView: (kind: QuoteDocKind) => void;
+  onAccept: () => void;
+  accepting: boolean;
 }) {
+
   const priced = quote.status !== "quote_requested";
   const days = quote.actual_days_used ?? quote.estimated_days;
   return (
