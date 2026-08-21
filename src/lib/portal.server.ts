@@ -630,3 +630,36 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
   }
   return { ok: true as const, actual_days_used, final_total, balance_due };
 }
+
+/** Stage 5b — client clears the final balance: invoice flips to "Paid & Order Closed". */
+export async function closeSettlement(id: number) {
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("*")
+    .eq("id", Number(id))
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (quote["status"] !== "settled") {
+    throw new Error("Record the return and generate the settlement invoice first.");
+  }
+
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({
+      status: "closed",
+      balance_due: 0,
+      balance_cleared_at: new Date().toISOString(),
+    })
+    .eq("id", Number(id));
+  if (upErr) throw new Error(upErr.message);
+
+  await suryaDb
+    .from("quote_payments")
+    .update({ status: "verified" })
+    .eq("quote_id", Number(id))
+    .eq("kind", "settlement");
+
+  return { ok: true as const };
+}
+
