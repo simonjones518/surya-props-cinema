@@ -85,11 +85,15 @@ export const portal = {
     estimated_days: number;
     admin_notes?: string;
   }) => priceQuoteFn({ data }),
-  verifyAdvance: (id: number) => verifyAdvanceFn({ data: { id } }),
-  dispatchQuote: (id: number) => dispatchQuoteFn({ data: { id } }),
+  verifyAdvance: (data: { id: number; amount_received?: number; mode?: string; utr?: string }) =>
+    verifyAdvanceFn({ data }),
+  dispatchQuote: (data: { id: number; vehicle?: string; notes?: string }) =>
+    dispatchQuoteFn({ data }),
   recordReturn: (id: number, actual_return_date: string) =>
     recordReturnFn({ data: { id, actual_return_date } }),
+  closeSettlement: (id: number) => closeSettlementFn({ data: { id } }),
 };
+
 
 export const portalKeys = {
   session: ["client-session"] as const,
