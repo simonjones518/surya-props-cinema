@@ -181,11 +181,7 @@ export function QuoteApprovals() {
                 </Button>
               )}
               {quote.status === "payment_received" && (
-                <Button
-                  size="sm"
-                  onClick={() => dispatchProps.mutate(quote.id)}
-                  disabled={dispatchProps.isPending}
-                >
+                <Button size="sm" onClick={() => setDispatchFor(quote)}>
                   <Send className="size-4" /> Dispatch Props
                 </Button>
               )}
@@ -194,20 +190,29 @@ export function QuoteApprovals() {
                   <PackageCheck className="size-4" /> Record Return
                 </Button>
               )}
+              {quote.status === "settled" && (
+                <Button
+                  size="sm"
+                  onClick={() => closeOrder.mutate(quote.id)}
+                  disabled={closeOrder.isPending}
+                >
+                  <BadgeCheck className="size-4" /> Mark Balance Cleared
+                </Button>
+              )}
               {quote.status !== "quote_requested" && (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setDoc({ quote, kind: "quotation" })}>
-                    <FileText className="size-4" /> Quotation
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setDoc({ quote, kind: "challan" })}>
-                    <Truck className="size-4" /> Dispatch Challan
-                  </Button>
+                  <DocButton quote={quote} kind="quotation" onOpen={setDoc} icon={FileText} />
+                  <DocButton quote={quote} kind="advance-request" onOpen={setDoc} icon={IndianRupee} />
                 </>
               )}
-              {quote.status === "settled" && (
-                <Button size="sm" variant="outline" onClick={() => setDoc({ quote, kind: "settlement" })}>
-                  <Printer className="size-4" /> Settlement Invoice
-                </Button>
+              {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(
+                quote.status,
+              ) && <DocButton quote={quote} kind="receipt" onOpen={setDoc} icon={BadgeCheck} />}
+              {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+                <DocButton quote={quote} kind="challan" onOpen={setDoc} icon={Truck} />
+              )}
+              {(quote.status === "settled" || quote.status === "closed") && (
+                <DocButton quote={quote} kind="settlement" onOpen={setDoc} icon={Printer} />
               )}
             </div>
           </article>
@@ -216,6 +221,16 @@ export function QuoteApprovals() {
 
       <PricingDialog quote={priceFor} onOpenChange={(v) => !v && setPriceFor(null)} />
       <ReturnDialog quote={returnFor} onOpenChange={(v) => !v && setReturnFor(null)} />
+      <DispatchDialog
+        quote={dispatchFor}
+        onOpenChange={(v) => !v && setDispatchFor(null)}
+        onSubmit={(payload) => {
+          dispatchProps.mutate(payload);
+          setDispatchFor(null);
+        }}
+        pending={dispatchProps.isPending}
+      />
+
 
       <Dialog open={doc !== null} onOpenChange={(v) => !v && setDoc(null)}>
         <DialogContent className="max-h-[94vh] max-w-3xl overflow-y-auto border-primary/25 bg-card">
