@@ -555,8 +555,16 @@ export async function dispatchQuote(input: { id: number; vehicle?: string; notes
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
-  if (!["payment_received", "on_set"].includes(quote["status"])) {
-    throw new Error("Confirm the advance payment before dispatching the props.");
+  const zeroAdvance = num(quote["advance_required"]) <= 0;
+  const dispatchable = zeroAdvance
+    ? ["quote_sent", "quote_accepted", "advance_submitted", "payment_received", "on_set"]
+    : ["payment_received", "on_set"];
+  if (!dispatchable.includes(quote["status"])) {
+    throw new Error(
+      zeroAdvance
+        ? "Send the quotation before dispatching the props."
+        : "Confirm the advance payment before dispatching the props.",
+    );
   }
 
   const now = new Date();
