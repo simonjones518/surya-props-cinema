@@ -34,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DepositBadge, RentalStatusBadge } from "@/components/status-badge";
 import { StockModal } from "@/components/stock-modal";
 import { PosCart } from "@/components/pos-cart";
+import { DirectInvoiceModal } from "@/components/direct-invoice-modal";
 import { InventoryTable } from "@/components/inventory-table";
 import { RequestsTable } from "@/components/requests-table";
 import { InvoiceDocument } from "@/components/invoice-document";
@@ -74,6 +75,7 @@ function AdminPage() {
   const logout = useServerFn(adminLogout);
   const [stockOpen, setStockOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  const [directOpen, setDirectOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState("");
   const [viewDoc, setViewDoc] = useState<Invoice | null>(null);
@@ -428,6 +430,14 @@ function AdminPage() {
 
       {tab === "billing" && (
         <section className="mt-6 print:hidden" aria-label="Invoices and quotations">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Props handed over by phone? Raise an invoice manually and WhatsApp it to the client.
+            </p>
+            <Button size="sm" onClick={() => setDirectOpen(true)}>
+              <Receipt className="size-4" /> Raise Direct Invoice
+            </Button>
+          </div>
           <div className="overflow-x-auto rounded-xl border border-primary/20 bg-card">
             <table className="w-full min-w-[860px] text-sm">
               <thead>
@@ -471,6 +481,7 @@ function AdminPage() {
         </section>
       )}
 
+      <DirectInvoiceModal open={directOpen} onOpenChange={setDirectOpen} />
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />
       <RentalOrderModal
         open={orderOpen}

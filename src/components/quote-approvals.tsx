@@ -32,6 +32,7 @@ export function QuoteApprovals() {
   const [priceFor, setPriceFor] = useState<QuoteRequest | null>(null);
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
   const [dispatchFor, setDispatchFor] = useState<QuoteRequest | null>(null);
+  const [advanceFor, setAdvanceFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
   const qc = useQueryClient();
 
@@ -55,6 +56,21 @@ export function QuoteApprovals() {
       void qc.invalidateQueries({ queryKey: ["props"] });
     },
     onError: (e: Error) => toast.error("Could not dispatch", { description: e.message }),
+  });
+
+  const reviseAdvance = useMutation({
+    mutationFn: (payload: { id: number; advance_required: number }) =>
+      portal.setAdvanceRequired(payload.id, payload.advance_required),
+    onSuccess: (_r, vars) => {
+      toast.success(
+        vars.advance_required > 0
+          ? `Advance revised to ${inr(vars.advance_required)}`
+          : "Advance waived — no advance payment required",
+      );
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      setAdvanceFor(null);
+    },
+    onError: (e: Error) => toast.error("Could not revise the advance", { description: e.message }),
   });
 
   const closeOrder = useMutation({
@@ -178,6 +194,17 @@ export function QuoteApprovals() {
                   {quote.status === "quote_sent" ? "Revise Pricing" : "Set Rates & Approve"}
                 </Button>
               )}
+              {["quote_sent", "quote_accepted", "advance_submitted"].includes(quote.status) && (
+                <Button size="sm" variant="outline" onClick={() => setAdvanceFor(quote)}>
+                  <IndianRupee className="size-4" /> Revise Advance
+                </Button>
+              )}
+              {quote.advance_required <= 0 &&
+                ["quote_sent", "quote_accepted"].includes(quote.status) && (
+                  <Button size="sm" onClick={() => setDispatchFor(quote)}>
+                    <Send className="size-4" /> Dispatch (No Advance)
+                  </Button>
+                )}
               {quote.status === "advance_submitted" && (
                 <Button size="sm" onClick={() => verify.mutate(quote.id)} disabled={verify.isPending}>
                   <BadgeCheck className="size-4" /> Confirm Payment Received
@@ -222,6 +249,12 @@ export function QuoteApprovals() {
         ))
       )}
 
+      <AdvanceDialog
+        quote={advanceFor}
+        onOpenChange={(v) => !v && setAdvanceFor(null)}
+        onSubmit={(payload) => reviseAdvance.mutate(payload)}
+        pending={reviseAdvance.isPending}
+      />
       <PricingDialog quote={priceFor} onOpenChange={(v) => !v && setPriceFor(null)} />
       <ReturnDialog quote={returnFor} onOpenChange={(v) => !v && setReturnFor(null)} />
       <DispatchDialog
@@ -265,6 +298,92 @@ function DocButton({
     <Button size="sm" variant="outline" onClick={() => onOpen({ quote, kind })}>
       <Icon className="size-4" /> {DOC_LABEL[kind]}
     </Button>
+  );
+}
+
+function AdvanceDialog({
+  quote,
+  onOpenChange,
+  onSubmit,
+  pending,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+  onSubmit: (payload: { id: number; advance_required: number }) => void;
+  pending: boolean;
+}) {
+  const [amount, setAmount] = useState(0);
+  useEffect(() => setAmount(quote?.advance_required ?? 0), [quote?.id, quote?.advance_required]);
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">Advance Payment</DialogTitle>
+          <DialogDescription>
+            Raise, reduce or waive the advance for this shoot. Set ₹0 to dispatch with no advance.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="adv-amount">Advance Required ₹ (0 = no advance)</Label>
+            <Input
+              id="adv-amount"
+              type="number"
+              min={0}
+              value={amount}
+              onChange={(e) => setAmount(Math.max(0, Number(e.target.value)))}
+            />
+          </div>
+          {quote && (
+            <p className="text-xs text-muted-foreground">
+              Estimated total {inr(quote.estimated_total)} + deposit {inr(quote.security_deposit)} →
+              balance after advance{" "}
+              <span className="font-semibold text-primary">
+                {inr(Math.max(0, quote.estimated_total + quote.security_deposit - amount))}
+              </span>
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAmount(0)}
+              disabled={pending}
+            >
+              Waive advance
+            </Button>
+            {quote && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => setAmount(Math.round(quote.estimated_total * 0.5))}
+                >
+                  50% of rent
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pending}
+                  onClick={() => setAmount(Math.round(quote.estimated_total))}
+                >
+                  Full rent
+                </Button>
+              </>
+            )}
+          </div>
+          <Button
+            className="w-full"
+            disabled={pending || !quote}
+            onClick={() => quote && onSubmit({ id: quote.id, advance_required: amount })}
+          >
+            {pending ? "Saving…" : "Save Advance Amount"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -500,7 +619,7 @@ function PricingDialog({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="q-adv">Advance Required ₹</Label>
+                <Label htmlFor="q-adv">Advance Required ₹ (0 = none)</Label>
                 <Input
                   id="q-adv"
                   type="number"

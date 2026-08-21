@@ -17,6 +17,7 @@ import {
   recordReturnFn,
   rejectQuoteFn,
   saveMyProfileFn,
+  setAdvanceRequiredFn,
   uploadPaymentProofFn,
   verifyAdvanceFn,
 } from "./portal.functions";
@@ -77,6 +78,8 @@ export const portal = {
 
   /* admin */
   getAllQuotes: () => fetchAllQuotes() as Promise<QuoteRequest[]>,
+  setAdvanceRequired: (id: number, advance_required: number) =>
+    setAdvanceRequiredFn({ data: { id, advance_required } }),
   priceQuote: (data: {
     id: number;
     items: { prop_id: number; daily_rate: number; quantity: number }[];

@@ -454,27 +454,37 @@ function QuoteCard({
         </div>
       )}
 
+      {priced && quote.advance_required <= 0 && quote.advance_paid <= 0 && (
+        <p className="mt-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+          No advance required for this shoot — accept the quotation and we will dispatch on
+          schedule. The full amount is settled after the props return.
+        </p>
+      )}
+
       <div className="mt-4 flex flex-wrap gap-2">
         {quote.status === "quote_sent" && (
           <Button onClick={onAccept} disabled={accepting}>
             <CheckCircle2 className="size-4" /> Accept Quotation
           </Button>
         )}
-        {(quote.status === "quote_sent" || quote.status === "quote_accepted") && (
-          <Button onClick={onPay} variant={quote.status === "quote_sent" ? "outline" : "default"}>
-            <Wallet className="size-4" /> Pay Advance
-          </Button>
-        )}
+        {quote.advance_required > 0 &&
+          (quote.status === "quote_sent" || quote.status === "quote_accepted") && (
+            <Button onClick={onPay} variant={quote.status === "quote_sent" ? "outline" : "default"}>
+              <Wallet className="size-4" /> Pay Advance
+            </Button>
+          )}
         {priced && (
           <Button variant="outline" onClick={() => onView("quotation")}>
             <FileText className="size-4" /> View Quotation
           </Button>
         )}
-        {(quote.status === "quote_accepted" || quote.status === "advance_submitted") && (
-          <Button variant="outline" onClick={() => onView("advance-request")}>
-            <Wallet className="size-4" /> Advance Request
-          </Button>
-        )}
+        {quote.advance_required > 0 &&
+          (quote.status === "quote_accepted" || quote.status === "advance_submitted") && (
+            <Button variant="outline" onClick={() => onView("advance-request")}>
+              <Wallet className="size-4" /> Advance Request
+            </Button>
+          )}
+
         {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
           <Button variant="outline" onClick={() => onView("receipt")}>
             <Receipt className="size-4" /> Advance Receipt
