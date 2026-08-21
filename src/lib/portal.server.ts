@@ -227,7 +227,17 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     admin_notes: row["admin_notes"] ?? null,
     client_notes: row["client_notes"] ?? null,
     created_at: row["created_at"],
+    accepted_at: row["accepted_at"] ?? null,
+    advance_receipt_no: row["advance_receipt_no"] ?? null,
+    advance_mode: row["advance_mode"] ?? null,
+    advance_utr: row["advance_utr"] ?? null,
+    advance_verified_at: row["advance_verified_at"] ?? null,
+    dispatch_at: row["dispatch_at"] ?? null,
+    dispatch_vehicle: row["dispatch_vehicle"] ?? null,
+    dispatch_notes: row["dispatch_notes"] ?? null,
+    balance_cleared_at: row["balance_cleared_at"] ?? null,
   };
+
 }
 
 /* ---------- stage 1: client requests a quote ---------- */
