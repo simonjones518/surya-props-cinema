@@ -498,6 +498,46 @@ export async function priceQuote(input: {
   return { ok: true as const };
 }
 
+/**
+ * Admin can revise the advance ask at any point before dispatch — including
+ * setting it to ₹0 so the shoot can proceed with no advance at all.
+ */
+export async function setAdvanceRequired(input: { id: number; advance_required: number }) {
+  const id = Number(input.id);
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (["dispatched", "on_set", "settled", "closed"].includes(quote["status"])) {
+    throw new Error("The advance cannot be revised after dispatch.");
+  }
+
+  const advance_required = Math.max(0, Number(input.advance_required ?? 0));
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({
+      advance_required,
+      balance_due:
+        num(quote["estimated_total"]) + num(quote["security_deposit"]) - advance_required,
+    })
+    .eq("id", id);
+  if (upErr) throw new Error(upErr.message);
+
+  await suryaDb
+    .from("quote_payments")
+    .update({ amount: advance_required })
+    .eq("quote_id", id)
+    .eq("kind", "advance")
+    .eq("status", "pending");
+
+  return { ok: true as const, advance_required };
+}
+
+
+
 /** Stage 3b — admin confirms the advance landed; the Advance Money Receipt is issued. */
 export async function verifyAdvance(input: {
   id: number;
