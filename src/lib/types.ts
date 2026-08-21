@@ -274,12 +274,15 @@ export interface PropRequestDraft {
 export type QuoteStatus =
   | "quote_requested"
   | "quote_sent"
+  | "quote_accepted"
   | "advance_submitted"
   | "payment_received"
   | "dispatched"
   | "on_set"
   | "settled"
+  | "closed"
   | "rejected";
+
 
 export interface QuoteItem {
   prop_id: number;
