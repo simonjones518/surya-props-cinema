@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
+import { DOC_LABEL, QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { QuoteTimeline } from "@/components/quote-timeline";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
@@ -47,7 +47,8 @@ export function QuoteApprovals() {
   });
 
   const dispatchProps = useMutation({
-    mutationFn: (id: number) => portal.dispatchQuote({ id }),
+    mutationFn: (payload: { id: number; vehicle?: string; notes?: string }) =>
+      portal.dispatchQuote(payload),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
