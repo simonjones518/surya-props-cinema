@@ -1,0 +1,390 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { FileText, Plus, Send, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
+import { api, queryKeys } from "@/lib/api";
+import { inr } from "@/lib/format";
+import { openWhatsAppTo } from "@/lib/whatsapp";
+import type { QuoteRequest } from "@/lib/types";
+
+type ManualLine = {
+  key: string;
+  prop_name: string;
+  prop_specs: string;
+  serial_number: string;
+  quantity: number;
+  daily_rate: number;
+};
+
+const today = () => new Date().toISOString().slice(0, 10);
+const newLine = (): ManualLine => ({
+  key: Math.random().toString(36).slice(2, 9),
+  prop_name: "",
+  prop_specs: "",
+  serial_number: "",
+  quantity: 1,
+  daily_rate: 0,
+});
+
+function daysBetween(from: string, to: string) {
+  const a = new Date(from).getTime();
+  const b = new Date(to).getTime();
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return 1;
+  return Math.max(1, Math.round((b - a) / 86_400_000) + 1);
+}
+
+/**
+ * Admin-only manual billing desk: raise a quotation or a final settlement
+ * invoice for props handed over off-portal (phone-call rentals), then print,
+ * download or WhatsApp it straight to the client.
+ */
+export function DirectInvoiceModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const [kind, setKind] = useState<QuoteDocKind>("settlement");
+  const [preview, setPreview] = useState(false);
+
+  const [contact, setContact] = useState("");
+  const [designation, setDesignation] = useState("");
+  const [phone, setPhone] = useState("");
+  const [house, setHouse] = useState("");
+  const [movie, setMovie] = useState("");
+  const [location, setLocation] = useState("");
+  const [startDate, setStartDate] = useState(today);
+  const [returnDate, setReturnDate] = useState(today);
+  const [deposit, setDeposit] = useState(0);
+  const [advance, setAdvance] = useState(0);
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<ManualLine[]>([newLine()]);
+
+  const days = daysBetween(startDate, returnDate);
+  const rentTotal = lines.reduce((s, l) => s + l.daily_rate * l.quantity * days, 0);
+  const balance = rentTotal + deposit - advance;
+
+  const doc: QuoteRequest = useMemo(
+    () => ({
+      id: 0,
+      quote_code: `SCP-MAN-${new Date().getFullYear()}-${String(Date.now()).slice(-4)}`,
+      user_id: "manual",
+      production_house: house || contact,
+      production_house_id: null,
+      movie_name: movie,
+      client_designation: designation,
+      contact_person: contact,
+      phone,
+      shoot_location: location,
+      shoot_start_date: startDate,
+      estimated_return_date: returnDate,
+      estimated_days: days,
+      actual_return_date: returnDate,
+      actual_days_used: days,
+      items: lines.map((l, idx) => ({
+        prop_id: idx + 1,
+        prop_name: l.prop_name || "Prop item",
+        prop_specs: l.prop_specs,
+        serial_number: l.serial_number,
+        godown_name: "",
+        rack_name: "",
+        quantity: l.quantity,
+        daily_rate: l.daily_rate,
+        line_total: l.daily_rate * l.quantity * days,
+      })),
+      estimated_total: rentTotal,
+      security_deposit: deposit,
+      advance_required: advance,
+      advance_paid: advance,
+      final_total: rentTotal,
+      balance_due: balance,
+      status: kind === "settlement" ? "settled" : "quote_sent",
+      payment_reference: null,
+      payment_proof_url: null,
+      admin_notes: notes || null,
+      client_notes: null,
+      created_at: new Date().toISOString(),
+      accepted_at: null,
+      advance_receipt_no: null,
+      advance_mode: advance > 0 ? "Manual" : null,
+      advance_utr: null,
+      advance_verified_at: advance > 0 ? new Date().toISOString() : null,
+      dispatch_at: startDate,
+      dispatch_vehicle: null,
+      dispatch_notes: null,
+      balance_cleared_at: null,
+    }),
+    [
+      house,
+      contact,
+      movie,
+      designation,
+      phone,
+      location,
+      startDate,
+      returnDate,
+      days,
+      lines,
+      rentTotal,
+      deposit,
+      advance,
+      balance,
+      kind,
+      notes,
+    ],
+  );
+
+  const save = useMutation({
+    mutationFn: () =>
+      api.createInvoice({
+        invoice_number: doc.quote_code.replace("SCP-MAN", kind === "settlement" ? "SCP-INV" : "SCP-QTN"),
+        doc_type: kind === "settlement" ? "INVOICE" : "QUOTATION",
+        client_id: 0,
+        client_name: contact,
+        client_phone: phone,
+        production_house: house,
+        shoot_location: location,
+        shoot_start_date: startDate,
+        shoot_wrap_date: returnDate,
+        items: doc.items.map((i) => ({
+          prop_id: i.prop_id,
+          prop_name: i.prop_name,
+          serial_number: i.serial_number,
+          condition_rating: "Good" as const,
+          quantity: i.quantity,
+          number_of_days: days,
+          custom_daily_rate: i.daily_rate,
+          total_price: i.line_total,
+        })),
+        subtotal: rentTotal,
+        discount: 0,
+        transport_charges: 0,
+        gst_percent: 0,
+        gst_amount: 0,
+        security_deposit: deposit,
+        advance_received: advance,
+        balance_payable: balance,
+        payment_status: balance <= 0 ? "Paid" : advance > 0 ? "Partial" : "Pending",
+        notes: notes || undefined,
+      }),
+    onSuccess: (res) => {
+      toast.success(`${res.invoice_number} saved to billing records`);
+      void qc.invalidateQueries({ queryKey: queryKeys.invoices });
+    },
+    onError: (e: Error) => toast.error("Could not save the document", { description: e.message }),
+  });
+
+  const valid = contact.trim() !== "" && lines.some((l) => l.prop_name.trim() !== "" && l.daily_rate > 0);
+
+  function shareOnWhatsApp() {
+    const label = kind === "settlement" ? "Invoice" : "Quotation";
+    const body = [
+      "🎬 *Surya Cine Special Props*",
+      "",
+      `Hi ${contact}, here is your ${label} for *${movie || house || "your shoot"}*.`,
+      `*Ref:* ${doc.quote_code}`,
+      `*Rental (${days} day(s)):* ${inr(rentTotal)}`,
+      deposit > 0 ? `*Security Deposit:* ${inr(deposit)}` : "",
+      advance > 0 ? `*Advance Received:* ${inr(advance)}` : "",
+      `*Balance Payable:* ${inr(balance)}`,
+      "",
+      "The signed PDF copy is attached in this chat.",
+    ]
+      .filter(Boolean)
+      .join("\n");
+    openWhatsAppTo(phone, body);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[94vh] max-w-3xl overflow-y-auto border-primary/25 bg-card">
+        <DialogHeader className="print:hidden">
+          <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
+            Raise Direct Invoice
+          </DialogTitle>
+          <DialogDescription>
+            For props already handed over by phone — bill the client without a portal quotation,
+            then print, download or WhatsApp the document.
+          </DialogDescription>
+        </DialogHeader>
+
+        {preview ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2 print:hidden">
+              <Button variant="outline" size="sm" onClick={() => setPreview(false)}>
+                Back to edit
+              </Button>
+              <Button size="sm" onClick={shareOnWhatsApp} disabled={!phone}>
+                <Send className="size-4" /> Send on WhatsApp
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => save.mutate()}
+                disabled={save.isPending}
+              >
+                <FileText className="size-4" /> {save.isPending ? "Saving…" : "Save to records"}
+              </Button>
+            </div>
+            <QuoteDocument quote={doc} kind={kind} />
+          </div>
+        ) : (
+          <div className="space-y-4 print:hidden">
+            <div className="flex flex-wrap gap-2">
+              {(["settlement", "quotation"] as QuoteDocKind[]).map((k) => (
+                <Button
+                  key={k}
+                  size="sm"
+                  variant={kind === k ? "default" : "outline"}
+                  onClick={() => setKind(k)}
+                >
+                  {k === "settlement" ? "Final Invoice" : "Quotation"}
+                </Button>
+              ))}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Client Name" value={contact} onChange={setContact} placeholder="Ravi Kumar" />
+              <Field label="Designation" value={designation} onChange={setDesignation} placeholder="Art Director" />
+              <Field label="Phone (WhatsApp)" value={phone} onChange={setPhone} placeholder="98490 05451" />
+              <Field label="Production House" value={house} onChange={setHouse} placeholder="Sun Pictures" />
+              <Field label="Movie / Project" value={movie} onChange={setMovie} placeholder="Project name" />
+              <Field label="Shoot Location" value={location} onChange={setLocation} placeholder="EVP Film City" />
+              <div className="space-y-1.5">
+                <Label htmlFor="di-start">Dispatch / Start Date</Label>
+                <Input id="di-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="di-return">Return Date</Label>
+                <Input id="di-return" type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-primary/20 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Props billed · {days} day(s)
+                </p>
+                <Button size="sm" variant="outline" onClick={() => setLines([...lines, newLine()])}>
+                  <Plus className="size-4" /> Add item
+                </Button>
+              </div>
+              {lines.map((l, idx) => (
+                <div key={l.key} className="grid gap-2 border-t border-border/60 pt-2 sm:grid-cols-[1fr_auto]">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <Input
+                      placeholder="Prop name"
+                      value={l.prop_name}
+                      onChange={(e) => patch(idx, { prop_name: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Specs / dimensions"
+                      value={l.prop_specs}
+                      onChange={(e) => patch(idx, { prop_specs: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Serial no"
+                      value={l.serial_number}
+                      onChange={(e) => patch(idx, { serial_number: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      className="w-20"
+                      type="number"
+                      min={1}
+                      value={l.quantity}
+                      onChange={(e) => patch(idx, { quantity: Math.max(1, Number(e.target.value)) })}
+                    />
+                    <Input
+                      className="w-28"
+                      type="number"
+                      min={0}
+                      placeholder="Rate/day"
+                      value={l.daily_rate}
+                      onChange={(e) => patch(idx, { daily_rate: Math.max(0, Number(e.target.value)) })}
+                    />
+                    <span className="w-24 text-right font-display text-lg tracking-wide text-primary">
+                      {inr(l.daily_rate * l.quantity * days)}
+                    </span>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label="Remove item"
+                      onClick={() => setLines(lines.filter((x) => x.key !== l.key))}
+                      disabled={lines.length === 1}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="di-dep">Security Deposit ₹</Label>
+                <Input id="di-dep" type="number" min={0} value={deposit} onChange={(e) => setDeposit(Math.max(0, Number(e.target.value)))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="di-adv">Advance Received ₹</Label>
+                <Input id="di-adv" type="number" min={0} value={advance} onChange={(e) => setAdvance(Math.max(0, Number(e.target.value)))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Balance Payable</Label>
+                <p className="font-display text-2xl tracking-wide text-primary">{inr(balance)}</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="di-notes">Notes on the document</Label>
+              <Textarea id="di-notes" rows={2} maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+
+            <Button className="w-full" disabled={!valid} onClick={() => setPreview(true)}>
+              <FileText className="size-4" /> Generate {kind === "settlement" ? "Invoice" : "Quotation"}
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+
+  function patch(idx: number, next: Partial<ManualLine>) {
+    setLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...next } : l)));
+  }
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const id = `di-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`;
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      <Input id={id} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+    </div>
+  );
+}
