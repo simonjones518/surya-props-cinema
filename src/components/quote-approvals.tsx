@@ -35,9 +35,9 @@ export function QuoteApprovals() {
   const qc = useQueryClient();
 
   const verify = useMutation({
-    mutationFn: (id: number) => portal.verifyAdvance(id),
+    mutationFn: (id: number) => portal.verifyAdvance({ id }),
     onSuccess: () => {
-      toast.success("Advance verified — props locked as On-Set");
+      toast.success("Advance verified — money receipt generated");
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
       void qc.invalidateQueries({ queryKey: ["props"] });
     },
@@ -45,7 +45,7 @@ export function QuoteApprovals() {
   });
 
   const dispatchProps = useMutation({
-    mutationFn: (id: number) => portal.dispatchQuote(id),
+    mutationFn: (id: number) => portal.dispatchQuote({ id }),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
@@ -53,6 +53,16 @@ export function QuoteApprovals() {
     },
     onError: (e: Error) => toast.error("Could not dispatch", { description: e.message }),
   });
+
+  const closeOrder = useMutation({
+    mutationFn: (id: number) => portal.closeSettlement(id),
+    onSuccess: () => {
+      toast.success("Balance cleared — order closed");
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+    },
+    onError: (e: Error) => toast.error("Could not close order", { description: e.message }),
+  });
+
 
   if (quotes.isLoading) return <Skeleton className="mt-6 h-40 rounded-xl" />;
   const list = quotes.data ?? [];
