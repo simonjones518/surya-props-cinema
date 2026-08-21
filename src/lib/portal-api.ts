@@ -1,9 +1,11 @@
 import {
+  acceptQuotationFn,
   acceptQuoteFn,
   clientSessionFn,
   clientSignInFn,
   clientSignOutFn,
   clientSignUpFn,
+  closeSettlementFn,
   createQuoteRequestFn,
   dispatchQuoteFn,
   fetchAllQuotes,
@@ -18,6 +20,7 @@ import {
   uploadPaymentProofFn,
   verifyAdvanceFn,
 } from "./portal.functions";
+
 import type {
   ClientProfile,
   ProductionHouse,
@@ -54,9 +57,15 @@ export const portal = {
   getMyPayments: () => fetchMyPayments() as Promise<QuotePayment[]>,
   requestQuote: (data: QuoteRequestDraft) =>
     createQuoteRequestFn({ data }) as Promise<QuoteRequest>,
-  acceptQuote: (data: { id: number; payment_reference: string; payment_proof_path?: string | null }) =>
-    acceptQuoteFn({ data }),
+  acceptQuotation: (id: number) => acceptQuotationFn({ data: { id } }),
+  acceptQuote: (data: {
+    id: number;
+    payment_reference: string;
+    payment_proof_path?: string | null;
+    payment_mode?: string;
+  }) => acceptQuoteFn({ data }),
   rejectQuote: (id: number) => rejectQuoteFn({ data: { id } }),
+
   uploadProof: async (file: File) =>
     uploadPaymentProofFn({
       data: {
@@ -76,11 +85,15 @@ export const portal = {
     estimated_days: number;
     admin_notes?: string;
   }) => priceQuoteFn({ data }),
-  verifyAdvance: (id: number) => verifyAdvanceFn({ data: { id } }),
-  dispatchQuote: (id: number) => dispatchQuoteFn({ data: { id } }),
+  verifyAdvance: (data: { id: number; amount_received?: number; mode?: string; utr?: string }) =>
+    verifyAdvanceFn({ data }),
+  dispatchQuote: (data: { id: number; vehicle?: string; notes?: string }) =>
+    dispatchQuoteFn({ data }),
   recordReturn: (id: number, actual_return_date: string) =>
     recordReturnFn({ data: { id, actual_return_date } }),
+  closeSettlement: (id: number) => closeSettlementFn({ data: { id } }),
 };
+
 
 export const portalKeys = {
   session: ["client-session"] as const,
@@ -94,21 +107,26 @@ export const portalKeys = {
 export const QUOTE_LABEL: Record<QuoteStatus, string> = {
   quote_requested: "Quote Under Review",
   quote_sent: "Quote Ready — Action Needed",
+  quote_accepted: "Accepted — Pay Advance",
   advance_submitted: "Advance Under Verification",
   payment_received: "Payment Received",
   dispatched: "Dispatched — On Rent",
   on_set: "Dispatched — On Rent",
   settled: "Returned & Settled",
+  closed: "Paid & Order Closed",
   rejected: "Declined",
 };
 
 export const QUOTE_TONE: Record<QuoteStatus, string> = {
   quote_requested: "border-muted-foreground/40 bg-secondary text-muted-foreground",
   quote_sent: "border-primary/60 bg-primary/15 text-primary",
+  quote_accepted: "border-primary/60 bg-primary/15 text-primary",
   advance_submitted: "border-accent/60 bg-accent/15 text-accent",
   payment_received: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
   dispatched: "border-accent/60 bg-accent/15 text-accent",
   on_set: "border-accent/60 bg-accent/15 text-accent",
   settled: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
+  closed: "border-emerald-500/50 bg-emerald-500/10 text-emerald-400",
   rejected: "border-destructive/50 bg-destructive/10 text-destructive",
 };
+

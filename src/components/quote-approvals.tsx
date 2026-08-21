@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
+import { DOC_LABEL, QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { QuoteTimeline } from "@/components/quote-timeline";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
@@ -31,13 +31,15 @@ export function QuoteApprovals() {
   });
   const [priceFor, setPriceFor] = useState<QuoteRequest | null>(null);
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
+  const [dispatchFor, setDispatchFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
   const qc = useQueryClient();
 
+
   const verify = useMutation({
-    mutationFn: (id: number) => portal.verifyAdvance(id),
+    mutationFn: (id: number) => portal.verifyAdvance({ id }),
     onSuccess: () => {
-      toast.success("Advance verified — props locked as On-Set");
+      toast.success("Advance verified — money receipt generated");
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
       void qc.invalidateQueries({ queryKey: ["props"] });
     },
@@ -45,7 +47,8 @@ export function QuoteApprovals() {
   });
 
   const dispatchProps = useMutation({
-    mutationFn: (id: number) => portal.dispatchQuote(id),
+    mutationFn: (payload: { id: number; vehicle?: string; notes?: string }) =>
+      portal.dispatchQuote(payload),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
@@ -53,6 +56,16 @@ export function QuoteApprovals() {
     },
     onError: (e: Error) => toast.error("Could not dispatch", { description: e.message }),
   });
+
+  const closeOrder = useMutation({
+    mutationFn: (id: number) => portal.closeSettlement(id),
+    onSuccess: () => {
+      toast.success("Balance cleared — order closed");
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+    },
+    onError: (e: Error) => toast.error("Could not close order", { description: e.message }),
+  });
+
 
   if (quotes.isLoading) return <Skeleton className="mt-6 h-40 rounded-xl" />;
   const list = quotes.data ?? [];
@@ -171,11 +184,7 @@ export function QuoteApprovals() {
                 </Button>
               )}
               {quote.status === "payment_received" && (
-                <Button
-                  size="sm"
-                  onClick={() => dispatchProps.mutate(quote.id)}
-                  disabled={dispatchProps.isPending}
-                >
+                <Button size="sm" onClick={() => setDispatchFor(quote)}>
                   <Send className="size-4" /> Dispatch Props
                 </Button>
               )}
@@ -184,20 +193,29 @@ export function QuoteApprovals() {
                   <PackageCheck className="size-4" /> Record Return
                 </Button>
               )}
+              {quote.status === "settled" && (
+                <Button
+                  size="sm"
+                  onClick={() => closeOrder.mutate(quote.id)}
+                  disabled={closeOrder.isPending}
+                >
+                  <BadgeCheck className="size-4" /> Mark Balance Cleared
+                </Button>
+              )}
               {quote.status !== "quote_requested" && (
                 <>
-                  <Button size="sm" variant="outline" onClick={() => setDoc({ quote, kind: "quotation" })}>
-                    <FileText className="size-4" /> Quotation
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => setDoc({ quote, kind: "challan" })}>
-                    <Truck className="size-4" /> Dispatch Challan
-                  </Button>
+                  <DocButton quote={quote} kind="quotation" onOpen={setDoc} icon={FileText} />
+                  <DocButton quote={quote} kind="advance-request" onOpen={setDoc} icon={IndianRupee} />
                 </>
               )}
-              {quote.status === "settled" && (
-                <Button size="sm" variant="outline" onClick={() => setDoc({ quote, kind: "settlement" })}>
-                  <Printer className="size-4" /> Settlement Invoice
-                </Button>
+              {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(
+                quote.status,
+              ) && <DocButton quote={quote} kind="receipt" onOpen={setDoc} icon={BadgeCheck} />}
+              {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+                <DocButton quote={quote} kind="challan" onOpen={setDoc} icon={Truck} />
+              )}
+              {(quote.status === "settled" || quote.status === "closed") && (
+                <DocButton quote={quote} kind="settlement" onOpen={setDoc} icon={Printer} />
               )}
             </div>
           </article>
@@ -206,6 +224,16 @@ export function QuoteApprovals() {
 
       <PricingDialog quote={priceFor} onOpenChange={(v) => !v && setPriceFor(null)} />
       <ReturnDialog quote={returnFor} onOpenChange={(v) => !v && setReturnFor(null)} />
+      <DispatchDialog
+        quote={dispatchFor}
+        onOpenChange={(v) => !v && setDispatchFor(null)}
+        onSubmit={(payload) => {
+          dispatchProps.mutate(payload);
+          setDispatchFor(null);
+        }}
+        pending={dispatchProps.isPending}
+      />
+
 
       <Dialog open={doc !== null} onOpenChange={(v) => !v && setDoc(null)}>
         <DialogContent className="max-h-[94vh] max-w-3xl overflow-y-auto border-primary/25 bg-card">
@@ -221,6 +249,85 @@ export function QuoteApprovals() {
     </section>
   );
 }
+
+function DocButton({
+  quote,
+  kind,
+  onOpen,
+  icon: Icon,
+}: {
+  quote: QuoteRequest;
+  kind: QuoteDocKind;
+  onOpen: (v: { quote: QuoteRequest; kind: QuoteDocKind }) => void;
+  icon: typeof FileText;
+}) {
+  return (
+    <Button size="sm" variant="outline" onClick={() => onOpen({ quote, kind })}>
+      <Icon className="size-4" /> {DOC_LABEL[kind]}
+    </Button>
+  );
+}
+
+function DispatchDialog({
+  quote,
+  onOpenChange,
+  onSubmit,
+  pending,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+  onSubmit: (payload: { id: number; vehicle?: string; notes?: string }) => void;
+  pending: boolean;
+}) {
+  const [vehicle, setVehicle] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    setVehicle("");
+    setNotes("");
+  }, [quote?.id]);
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">Dispatch Props</DialogTitle>
+          <DialogDescription>
+            The rental clock starts today. A delivery challan is generated on dispatch.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="dispatch-vehicle">Vehicle / Transport</Label>
+            <Input
+              id="dispatch-vehicle"
+              value={vehicle}
+              onChange={(e) => setVehicle(e.target.value)}
+              placeholder="TN 09 AB 1234 — Tempo"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="dispatch-notes">Dispatch notes</Label>
+            <Textarea
+              id="dispatch-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Handled by, packing condition, accessories included…"
+            />
+          </div>
+          <Button
+            className="w-full"
+            disabled={pending || !quote}
+            onClick={() => quote && onSubmit({ id: quote.id, vehicle, notes })}
+          >
+            <Send className="size-4" /> Confirm Dispatch
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (

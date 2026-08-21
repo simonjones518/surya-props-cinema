@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, LogOut, Receipt, Upload, Wallet } from "lucide-react";
+import { CheckCircle2, FileText, LogOut, Receipt, Upload, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -92,6 +92,17 @@ function ClientPortal() {
     },
   });
 
+  const acceptQuotation = useMutation({
+    mutationFn: (id: number) => portal.acceptQuotation(id),
+    onSuccess: () => {
+      toast.success("Quotation accepted — advance payment request issued");
+      void qc.invalidateQueries({ queryKey: portalKeys.myQuotes });
+    },
+    onError: (e: Error) => toast.error("Could not accept the quotation", { description: e.message }),
+  });
+
+
+
   if (session.isLoading || !session.data) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
@@ -110,8 +121,9 @@ function ClientPortal() {
         q.movie_name.toLowerCase().includes(term) ||
         q.quote_code.toLowerCase().includes(term)),
   );
-  const active = matches.filter((q) => q.status !== "settled" && q.status !== "rejected");
-  const settled = matches.filter((q) => q.status === "settled");
+  const CLOSED = ["settled", "closed", "rejected"];
+  const active = matches.filter((q) => !CLOSED.includes(q.status));
+  const settled = matches.filter((q) => q.status === "settled" || q.status === "closed");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -172,6 +184,8 @@ function ClientPortal() {
                 quote={quote}
                 onPay={() => setPayFor(quote)}
                 onView={(kind) => setDoc({ quote, kind })}
+                onAccept={() => acceptQuotation.mutate(quote.id)}
+                accepting={acceptQuotation.isPending}
               />
             ))
           )}
@@ -199,15 +213,36 @@ function ClientPortal() {
                       variant="outline"
                       onClick={() => setDoc({ quote, kind: "quotation" })}
                     >
-                      <FileText className="size-4" /> Estimated Slip
+                      <FileText className="size-4" /> Quotation
                     </Button>
                   )}
-                  {quote.status === "settled" && (
+                  {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(
+                    quote.status,
+                  ) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDoc({ quote, kind: "receipt" })}
+                    >
+                      <Receipt className="size-4" /> Advance Receipt
+                    </Button>
+                  )}
+                  {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDoc({ quote, kind: "challan" })}
+                    >
+                      <FileText className="size-4" /> Delivery Challan
+                    </Button>
+                  )}
+                  {(quote.status === "settled" || quote.status === "closed") && (
                     <Button size="sm" onClick={() => setDoc({ quote, kind: "settlement" })}>
                       <Receipt className="size-4" /> Final Settlement
                     </Button>
                   )}
                 </div>
+
               </div>
             ))
           )}
@@ -353,11 +388,16 @@ function QuoteCard({
   quote,
   onPay,
   onView,
+  onAccept,
+  accepting,
 }: {
   quote: QuoteRequest;
   onPay: () => void;
   onView: (kind: QuoteDocKind) => void;
+  onAccept: () => void;
+  accepting: boolean;
 }) {
+
   const priced = quote.status !== "quote_requested";
   const days = quote.actual_days_used ?? quote.estimated_days;
   return (
@@ -416,8 +456,13 @@ function QuoteCard({
 
       <div className="mt-4 flex flex-wrap gap-2">
         {quote.status === "quote_sent" && (
-          <Button onClick={onPay}>
-            <Wallet className="size-4" /> Accept Quote &amp; Pay Advance
+          <Button onClick={onAccept} disabled={accepting}>
+            <CheckCircle2 className="size-4" /> Accept Quotation
+          </Button>
+        )}
+        {(quote.status === "quote_sent" || quote.status === "quote_accepted") && (
+          <Button onClick={onPay} variant={quote.status === "quote_sent" ? "outline" : "default"}>
+            <Wallet className="size-4" /> Pay Advance
           </Button>
         )}
         {priced && (
@@ -425,12 +470,28 @@ function QuoteCard({
             <FileText className="size-4" /> View Quotation
           </Button>
         )}
-        {quote.status === "settled" && (
+        {(quote.status === "quote_accepted" || quote.status === "advance_submitted") && (
+          <Button variant="outline" onClick={() => onView("advance-request")}>
+            <Wallet className="size-4" /> Advance Request
+          </Button>
+        )}
+        {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+          <Button variant="outline" onClick={() => onView("receipt")}>
+            <Receipt className="size-4" /> Advance Receipt
+          </Button>
+        )}
+        {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+          <Button variant="outline" onClick={() => onView("challan")}>
+            <FileText className="size-4" /> Delivery Challan
+          </Button>
+        )}
+        {(quote.status === "settled" || quote.status === "closed") && (
           <Button variant="outline" onClick={() => onView("settlement")}>
             <Receipt className="size-4" /> Final Settlement Invoice
           </Button>
         )}
       </div>
+
     </article>
   );
 }

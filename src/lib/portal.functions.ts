@@ -63,9 +63,18 @@ export const uploadPaymentProofFn = createServerFn({ method: "POST" })
     (await db()).uploadPaymentProof(data.fileName, data.contentType, data.base64),
   );
 
+export const acceptQuotationFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => (await db()).acceptQuotation(data.id));
+
 export const acceptQuoteFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { id: number; payment_reference: string; payment_proof_path?: string | null }) => data,
+    (data: {
+      id: number;
+      payment_reference: string;
+      payment_proof_path?: string | null;
+      payment_mode?: string;
+    }) => data,
   )
   .handler(async ({ data }) => (await db()).acceptQuote(data));
 
@@ -97,10 +106,12 @@ export const priceQuoteFn = createServerFn({ method: "POST" })
   });
 
 export const verifyAdvanceFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: number }) => data)
+  .inputValidator(
+    (data: { id: number; amount_received?: number; mode?: string; utr?: string }) => data,
+  )
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();
-    return (await db()).verifyAdvance(data.id);
+    return (await db()).verifyAdvance(data);
   });
 
 export const recordReturnFn = createServerFn({ method: "POST" })
@@ -111,8 +122,16 @@ export const recordReturnFn = createServerFn({ method: "POST" })
   });
 
 export const dispatchQuoteFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; vehicle?: string; notes?: string }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).dispatchQuote(data);
+  });
+
+export const closeSettlementFn = createServerFn({ method: "POST" })
   .inputValidator((data: { id: number }) => data)
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();
-    return (await db()).dispatchQuote(data.id);
+    return (await db()).closeSettlement(data.id);
   });
+

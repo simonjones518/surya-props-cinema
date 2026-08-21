@@ -227,7 +227,17 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     admin_notes: row["admin_notes"] ?? null,
     client_notes: row["client_notes"] ?? null,
     created_at: row["created_at"],
+    accepted_at: row["accepted_at"] ?? null,
+    advance_receipt_no: row["advance_receipt_no"] ?? null,
+    advance_mode: row["advance_mode"] ?? null,
+    advance_utr: row["advance_utr"] ?? null,
+    advance_verified_at: row["advance_verified_at"] ?? null,
+    dispatch_at: row["dispatch_at"] ?? null,
+    dispatch_vehicle: row["dispatch_vehicle"] ?? null,
+    dispatch_notes: row["dispatch_notes"] ?? null,
+    balance_cleared_at: row["balance_cleared_at"] ?? null,
   };
+
 }
 
 /* ---------- stage 1: client requests a quote ---------- */
@@ -349,14 +359,37 @@ export async function uploadPaymentProof(fileName: string, contentType: string, 
   return { path };
 }
 
+/** Stage 2b — client accepts the quotation; the Advance Payment Request is issued. */
+export async function acceptQuotation(id: number) {
+  const me = await requireClient();
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("status")
+    .eq("id", Number(id))
+    .eq("user_id", me.userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (quote["status"] !== "quote_sent") throw new Error("This quotation cannot be accepted now.");
+
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({ status: "quote_accepted", accepted_at: new Date().toISOString() })
+    .eq("id", Number(id))
+    .eq("user_id", me.userId);
+  if (upErr) throw new Error(upErr.message);
+  return { ok: true as const };
+}
+
 export async function acceptQuote(input: {
   id: number;
   payment_reference: string;
   payment_proof_path?: string | null;
+  payment_mode?: string;
 }) {
   const me = await requireClient();
   const reference = clean(input.payment_reference, 120);
-  if (!reference) throw new Error("Enter the UPI / transaction reference.");
+  if (!reference) throw new Error("Enter the UPI / transaction reference (UTR).");
 
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
@@ -366,13 +399,19 @@ export async function acceptQuote(input: {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
-  if (quote["status"] !== "quote_sent") throw new Error("This quotation is not awaiting payment.");
+  if (!["quote_sent", "quote_accepted"].includes(quote["status"])) {
+    throw new Error("This quotation is not awaiting payment.");
+  }
 
+  const mode = clean(input.payment_mode ?? "UPI", 24) || "UPI";
   const { error: upErr } = await suryaDb
     .from("quote_requests")
     .update({
       status: "advance_submitted",
       payment_reference: reference,
+      advance_utr: reference,
+      advance_mode: mode,
+      accepted_at: quote["accepted_at"] ?? new Date().toISOString(),
       payment_proof_path: input.payment_proof_path ? clean(input.payment_proof_path, 300) : null,
     })
     .eq("id", Number(input.id))
@@ -384,11 +423,12 @@ export async function acceptQuote(input: {
     user_id: me.userId,
     kind: "advance",
     amount: num(quote["advance_required"]),
-    reference,
+    reference: `${mode} · ${reference}`,
     status: "pending",
   });
   return { ok: true as const };
 }
+
 
 export async function rejectQuoteByClient(id: number) {
   const me = await requireClient();
@@ -458,42 +498,60 @@ export async function priceQuote(input: {
   return { ok: true as const };
 }
 
-/** Stage 3b — admin confirms the advance actually landed (UPI reference / proof). */
-export async function verifyAdvance(id: number) {
+/** Stage 3b — admin confirms the advance landed; the Advance Money Receipt is issued. */
+export async function verifyAdvance(input: {
+  id: number;
+  amount_received?: number;
+  mode?: string;
+  utr?: string;
+}) {
+  const id = Number(input.id);
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
     .select("*")
-    .eq("id", Number(id))
+    .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
 
-  const advance = num(quote["advance_required"]);
+  const advance =
+    input.amount_received != null && Number(input.amount_received) > 0
+      ? Number(input.amount_received)
+      : num(quote["advance_required"]);
+  const mode = clean(input.mode ?? quote["advance_mode"] ?? "UPI", 24) || "UPI";
+  const utr = clean(input.utr ?? quote["advance_utr"] ?? quote["payment_reference"] ?? "", 120);
+  const receipt_no = quote["advance_receipt_no"] ?? `SCP-RCP-${String(id).padStart(4, "0")}`;
+
   const { error: upErr } = await suryaDb
     .from("quote_requests")
     .update({
       status: "payment_received",
       advance_paid: advance,
+      advance_mode: mode,
+      advance_utr: utr || null,
+      advance_receipt_no: receipt_no,
+      advance_verified_at: new Date().toISOString(),
       balance_due: num(quote["estimated_total"]) + num(quote["security_deposit"]) - advance,
     })
-    .eq("id", Number(id));
+    .eq("id", id);
   if (upErr) throw new Error(upErr.message);
 
   await suryaDb
     .from("quote_payments")
     .update({ status: "verified" })
-    .eq("quote_id", Number(id))
+    .eq("quote_id", id)
     .eq("kind", "advance");
 
-  return { ok: true as const };
+  return { ok: true as const, receipt_no };
 }
 
-/** Stage 3c — props physically dispatched: rent starts, inventory locks. */
-export async function dispatchQuote(id: number) {
+/** Stage 4 — props physically dispatched: rental clock starts, inventory locks. */
+export async function dispatchQuote(input: { id: number; vehicle?: string; notes?: string }) {
+  const id = Number(input.id);
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
     .select("*")
-    .eq("id", Number(id))
+    .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
@@ -501,10 +559,18 @@ export async function dispatchQuote(id: number) {
     throw new Error("Confirm the advance payment before dispatching the props.");
   }
 
+  const now = new Date();
   const { error: upErr } = await suryaDb
     .from("quote_requests")
-    .update({ status: "dispatched" })
-    .eq("id", Number(id));
+    .update({
+      status: "dispatched",
+      dispatch_at: now.toISOString(),
+      // The rental clock starts the day the props physically leave the warehouse.
+      shoot_start_date: now.toISOString().slice(0, 10),
+      dispatch_vehicle: clean(input.vehicle ?? "", 60) || null,
+      dispatch_notes: clean(input.notes ?? "", 500) || null,
+    })
+    .eq("id", id);
   if (upErr) throw new Error(upErr.message);
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
@@ -514,7 +580,7 @@ export async function dispatchQuote(id: number) {
   return { ok: true as const };
 }
 
-/** Stage 4 — record return, recompute on actual days used, release inventory. */
+/** Stage 5 — record return, recompute on actual days used, release inventory. */
 export async function recordReturn(input: { id: number; actual_return_date: string }) {
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
@@ -525,7 +591,9 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
   if (!quote) throw new Error("Quotation not found.");
   if (!input.actual_return_date) throw new Error("Actual return date is required.");
 
-  const actual_days_used = days(quote["shoot_start_date"], input.actual_return_date);
+  const clockStart = (quote["dispatch_at"] ?? quote["shoot_start_date"]) as string;
+  const actual_days_used = days(String(clockStart).slice(0, 10), input.actual_return_date);
+
   const items: QuoteItem[] = ((quote["items"] ?? []) as QuoteItem[]).map((i) => ({
     ...i,
     line_total: i.daily_rate * i.quantity * actual_days_used,
@@ -562,3 +630,36 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
   }
   return { ok: true as const, actual_days_used, final_total, balance_due };
 }
+
+/** Stage 5b — client clears the final balance: invoice flips to "Paid & Order Closed". */
+export async function closeSettlement(id: number) {
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("*")
+    .eq("id", Number(id))
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (quote["status"] !== "settled") {
+    throw new Error("Record the return and generate the settlement invoice first.");
+  }
+
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({
+      status: "closed",
+      balance_due: 0,
+      balance_cleared_at: new Date().toISOString(),
+    })
+    .eq("id", Number(id));
+  if (upErr) throw new Error(upErr.message);
+
+  await suryaDb
+    .from("quote_payments")
+    .update({ status: "verified" })
+    .eq("quote_id", Number(id))
+    .eq("kind", "settlement");
+
+  return { ok: true as const };
+}
+

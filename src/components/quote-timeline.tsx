@@ -12,8 +12,14 @@ export const QUOTE_STAGES: { key: QuoteStatus; title: string; client: string; ad
   {
     key: "quote_sent",
     title: "Quotation Issued",
-    client: "Rates & advance are ready — accept and pay.",
-    admin: "Quotation sent; awaiting client advance.",
+    client: "Rates & advance are ready — accept the quotation.",
+    admin: "Quotation sent; awaiting client acceptance.",
+  },
+  {
+    key: "quote_accepted",
+    title: "Quote Accepted",
+    client: "Pay the advance and share the UTR / screenshot.",
+    admin: "Client accepted — advance payment request issued.",
   },
   {
     key: "advance_submitted",
@@ -24,7 +30,7 @@ export const QUOTE_STAGES: { key: QuoteStatus; title: string; client: string; ad
   {
     key: "payment_received",
     title: "Payment Received",
-    client: "Advance confirmed by Surya Cine.",
+    client: "Advance confirmed — money receipt available.",
     admin: "Advance verified — dispatch the props.",
   },
   {
@@ -39,7 +45,14 @@ export const QUOTE_STAGES: { key: QuoteStatus; title: string; client: string; ad
     client: "Final amount calculated on actual days used.",
     admin: "Settlement invoice generated.",
   },
+  {
+    key: "closed",
+    title: "Paid & Closed",
+    client: "Balance cleared — order closed.",
+    admin: "Balance cleared; deposit refund can be released.",
+  },
 ];
+
 
 /** Legacy rows created before the dispatch stage existed. */
 function normalize(status: QuoteStatus): QuoteStatus {
@@ -63,7 +76,7 @@ export function QuoteTimeline({ quote, side }: { quote: QuoteRequest; side: "cli
   const current = stageIndex(quote.status);
 
   return (
-    <ol className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-3 lg:grid-cols-6">
+    <ol className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-4 lg:grid-cols-7">
       {QUOTE_STAGES.map((stage, i) => {
         const done = i < current;
         const active = i === current;
