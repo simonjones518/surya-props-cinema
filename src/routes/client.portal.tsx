@@ -416,8 +416,13 @@ function QuoteCard({
 
       <div className="mt-4 flex flex-wrap gap-2">
         {quote.status === "quote_sent" && (
-          <Button onClick={onPay}>
-            <Wallet className="size-4" /> Accept Quote &amp; Pay Advance
+          <Button onClick={onAccept} disabled={accepting}>
+            <CheckCircle2 className="size-4" /> Accept Quotation
+          </Button>
+        )}
+        {(quote.status === "quote_sent" || quote.status === "quote_accepted") && (
+          <Button onClick={onPay} variant={quote.status === "quote_sent" ? "outline" : "default"}>
+            <Wallet className="size-4" /> Pay Advance
           </Button>
         )}
         {priced && (
@@ -425,12 +430,28 @@ function QuoteCard({
             <FileText className="size-4" /> View Quotation
           </Button>
         )}
-        {quote.status === "settled" && (
+        {(quote.status === "quote_accepted" || quote.status === "advance_submitted") && (
+          <Button variant="outline" onClick={() => onView("advance-request")}>
+            <Wallet className="size-4" /> Advance Request
+          </Button>
+        )}
+        {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+          <Button variant="outline" onClick={() => onView("receipt")}>
+            <Receipt className="size-4" /> Advance Receipt
+          </Button>
+        )}
+        {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+          <Button variant="outline" onClick={() => onView("challan")}>
+            <FileText className="size-4" /> Delivery Challan
+          </Button>
+        )}
+        {(quote.status === "settled" || quote.status === "closed") && (
           <Button variant="outline" onClick={() => onView("settlement")}>
             <Receipt className="size-4" /> Final Settlement Invoice
           </Button>
         )}
       </div>
+
     </article>
   );
 }
