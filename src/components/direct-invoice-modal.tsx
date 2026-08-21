@@ -179,7 +179,7 @@ export function DirectInvoiceModal({
         advance_received: advance,
         balance_payable: balance,
         payment_status: balance <= 0 ? "Paid" : advance > 0 ? "Partial" : "Pending",
-        notes: notes || undefined,
+        notes: notes,
       }),
     onSuccess: (res) => {
       toast.success(`${res.invoice_number} saved to billing records`);
