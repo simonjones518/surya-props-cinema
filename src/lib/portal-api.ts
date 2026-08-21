@@ -1,9 +1,11 @@
 import {
+  acceptQuotationFn,
   acceptQuoteFn,
   clientSessionFn,
   clientSignInFn,
   clientSignOutFn,
   clientSignUpFn,
+  closeSettlementFn,
   createQuoteRequestFn,
   dispatchQuoteFn,
   fetchAllQuotes,
@@ -18,6 +20,7 @@ import {
   uploadPaymentProofFn,
   verifyAdvanceFn,
 } from "./portal.functions";
+
 import type {
   ClientProfile,
   ProductionHouse,
