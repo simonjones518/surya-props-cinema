@@ -249,6 +249,85 @@ export function QuoteApprovals() {
   );
 }
 
+function DocButton({
+  quote,
+  kind,
+  onOpen,
+  icon: Icon,
+}: {
+  quote: QuoteRequest;
+  kind: QuoteDocKind;
+  onOpen: (v: { quote: QuoteRequest; kind: QuoteDocKind }) => void;
+  icon: typeof FileText;
+}) {
+  return (
+    <Button size="sm" variant="outline" onClick={() => onOpen({ quote, kind })}>
+      <Icon className="size-4" /> {DOC_LABEL[kind]}
+    </Button>
+  );
+}
+
+function DispatchDialog({
+  quote,
+  onOpenChange,
+  onSubmit,
+  pending,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+  onSubmit: (payload: { id: number; vehicle?: string; notes?: string }) => void;
+  pending: boolean;
+}) {
+  const [vehicle, setVehicle] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    setVehicle("");
+    setNotes("");
+  }, [quote?.id]);
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">Dispatch Props</DialogTitle>
+          <DialogDescription>
+            The rental clock starts today. A delivery challan is generated on dispatch.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="dispatch-vehicle">Vehicle / Transport</Label>
+            <Input
+              id="dispatch-vehicle"
+              value={vehicle}
+              onChange={(e) => setVehicle(e.target.value)}
+              placeholder="TN 09 AB 1234 — Tempo"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="dispatch-notes">Dispatch notes</Label>
+            <Textarea
+              id="dispatch-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Handled by, packing condition, accessories included…"
+            />
+          </div>
+          <Button
+            className="w-full"
+            disabled={pending || !quote}
+            onClick={() => quote && onSubmit({ id: quote.id, vehicle, notes })}
+          >
+            <Send className="size-4" /> Confirm Dispatch
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div>
