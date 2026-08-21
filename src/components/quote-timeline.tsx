@@ -76,7 +76,7 @@ export function QuoteTimeline({ quote, side }: { quote: QuoteRequest; side: "cli
   const current = stageIndex(quote.status);
 
   return (
-    <ol className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-3 lg:grid-cols-6">
+    <ol className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-4 lg:grid-cols-7">
       {QUOTE_STAGES.map((stage, i) => {
         const done = i < current;
         const active = i === current;
