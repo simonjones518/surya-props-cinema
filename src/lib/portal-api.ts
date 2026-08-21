@@ -57,9 +57,15 @@ export const portal = {
   getMyPayments: () => fetchMyPayments() as Promise<QuotePayment[]>,
   requestQuote: (data: QuoteRequestDraft) =>
     createQuoteRequestFn({ data }) as Promise<QuoteRequest>,
-  acceptQuote: (data: { id: number; payment_reference: string; payment_proof_path?: string | null }) =>
-    acceptQuoteFn({ data }),
+  acceptQuotation: (id: number) => acceptQuotationFn({ data: { id } }),
+  acceptQuote: (data: {
+    id: number;
+    payment_reference: string;
+    payment_proof_path?: string | null;
+    payment_mode?: string;
+  }) => acceptQuoteFn({ data }),
   rejectQuote: (id: number) => rejectQuoteFn({ data: { id } }),
+
   uploadProof: async (file: File) =>
     uploadPaymentProofFn({
       data: {
