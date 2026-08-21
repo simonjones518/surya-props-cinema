@@ -213,15 +213,36 @@ function ClientPortal() {
                       variant="outline"
                       onClick={() => setDoc({ quote, kind: "quotation" })}
                     >
-                      <FileText className="size-4" /> Estimated Slip
+                      <FileText className="size-4" /> Quotation
                     </Button>
                   )}
-                  {quote.status === "settled" && (
+                  {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(
+                    quote.status,
+                  ) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDoc({ quote, kind: "receipt" })}
+                    >
+                      <Receipt className="size-4" /> Advance Receipt
+                    </Button>
+                  )}
+                  {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDoc({ quote, kind: "challan" })}
+                    >
+                      <FileText className="size-4" /> Delivery Challan
+                    </Button>
+                  )}
+                  {(quote.status === "settled" || quote.status === "closed") && (
                     <Button size="sm" onClick={() => setDoc({ quote, kind: "settlement" })}>
                       <Receipt className="size-4" /> Final Settlement
                     </Button>
                   )}
                 </div>
+
               </div>
             ))
           )}
