@@ -31,8 +31,10 @@ export function QuoteApprovals() {
   });
   const [priceFor, setPriceFor] = useState<QuoteRequest | null>(null);
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
+  const [dispatchFor, setDispatchFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
   const qc = useQueryClient();
+
 
   const verify = useMutation({
     mutationFn: (id: number) => portal.verifyAdvance({ id }),
