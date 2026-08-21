@@ -359,14 +359,37 @@ export async function uploadPaymentProof(fileName: string, contentType: string, 
   return { path };
 }
 
+/** Stage 2b — client accepts the quotation; the Advance Payment Request is issued. */
+export async function acceptQuotation(id: number) {
+  const me = await requireClient();
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("status")
+    .eq("id", Number(id))
+    .eq("user_id", me.userId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (quote["status"] !== "quote_sent") throw new Error("This quotation cannot be accepted now.");
+
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({ status: "quote_accepted", accepted_at: new Date().toISOString() })
+    .eq("id", Number(id))
+    .eq("user_id", me.userId);
+  if (upErr) throw new Error(upErr.message);
+  return { ok: true as const };
+}
+
 export async function acceptQuote(input: {
   id: number;
   payment_reference: string;
   payment_proof_path?: string | null;
+  payment_mode?: string;
 }) {
   const me = await requireClient();
   const reference = clean(input.payment_reference, 120);
-  if (!reference) throw new Error("Enter the UPI / transaction reference.");
+  if (!reference) throw new Error("Enter the UPI / transaction reference (UTR).");
 
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
@@ -376,13 +399,19 @@ export async function acceptQuote(input: {
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
-  if (quote["status"] !== "quote_sent") throw new Error("This quotation is not awaiting payment.");
+  if (!["quote_sent", "quote_accepted"].includes(quote["status"])) {
+    throw new Error("This quotation is not awaiting payment.");
+  }
 
+  const mode = clean(input.payment_mode ?? "UPI", 24) || "UPI";
   const { error: upErr } = await suryaDb
     .from("quote_requests")
     .update({
       status: "advance_submitted",
       payment_reference: reference,
+      advance_utr: reference,
+      advance_mode: mode,
+      accepted_at: quote["accepted_at"] ?? new Date().toISOString(),
       payment_proof_path: input.payment_proof_path ? clean(input.payment_proof_path, 300) : null,
     })
     .eq("id", Number(input.id))
@@ -394,11 +423,12 @@ export async function acceptQuote(input: {
     user_id: me.userId,
     kind: "advance",
     amount: num(quote["advance_required"]),
-    reference,
+    reference: `${mode} · ${reference}`,
     status: "pending",
   });
   return { ok: true as const };
 }
+
 
 export async function rejectQuoteByClient(id: number) {
   const me = await requireClient();
