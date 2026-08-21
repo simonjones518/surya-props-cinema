@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, LogOut, Receipt, Upload, Wallet } from "lucide-react";
+import { CheckCircle2, FileText, LogOut, Receipt, Upload, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -110,8 +110,9 @@ function ClientPortal() {
         q.movie_name.toLowerCase().includes(term) ||
         q.quote_code.toLowerCase().includes(term)),
   );
-  const active = matches.filter((q) => q.status !== "settled" && q.status !== "rejected");
-  const settled = matches.filter((q) => q.status === "settled");
+  const CLOSED = ["settled", "closed", "rejected"];
+  const active = matches.filter((q) => !CLOSED.includes(q.status));
+  const settled = matches.filter((q) => q.status === "settled" || q.status === "closed");
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -172,6 +173,8 @@ function ClientPortal() {
                 quote={quote}
                 onPay={() => setPayFor(quote)}
                 onView={(kind) => setDoc({ quote, kind })}
+                onAccept={() => acceptQuotation.mutate(quote.id)}
+                accepting={acceptQuotation.isPending}
               />
             ))
           )}
