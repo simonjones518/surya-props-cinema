@@ -45,14 +45,17 @@ function toHex(buf: ArrayBuffer) {
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function derive(password: string, saltHex: string) {
+/* Edge/Worker WebCrypto caps PBKDF2 at 100,000 iterations. */
+const PBKDF2_ITERATIONS = 100_000;
+
+async function derive(password: string, saltHex: string, iterations = PBKDF2_ITERATIONS) {
   const enc = new TextEncoder();
   const salt = Uint8Array.from(saltHex.match(/.{2}/g)!.map((h) => parseInt(h, 16)));
   const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, [
     "deriveBits",
   ]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: 120_000, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations: Math.min(iterations, 100_000), hash: "SHA-256" },
     key,
     256,
   );
@@ -61,13 +64,18 @@ async function derive(password: string, saltHex: string) {
 
 async function hashPassword(password: string) {
   const salt = toHex(crypto.getRandomValues(new Uint8Array(16)).buffer);
-  return `pbkdf2$${salt}$${await derive(password, salt)}`;
+  return `pbkdf2$${PBKDF2_ITERATIONS}$${salt}$${await derive(password, salt)}`;
 }
 
 async function verifyPassword(password: string, stored: string) {
-  const [, salt, digest] = stored.split("$");
+  const parts = stored.split("$");
+  // new format: pbkdf2$<iterations>$<salt>$<digest>; legacy: pbkdf2$<salt>$<digest>
+  const [salt, digest, iterations] =
+    parts.length === 4
+      ? [parts[2], parts[3], Number(parts[1])]
+      : [parts[1], parts[2], PBKDF2_ITERATIONS];
   if (!salt || !digest) return false;
-  return (await derive(password, salt)) === digest;
+  return (await derive(password, salt, iterations || PBKDF2_ITERATIONS)) === digest;
 }
 
 /* ---------- session ---------- */
