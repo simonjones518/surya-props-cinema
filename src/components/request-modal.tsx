@@ -189,8 +189,6 @@ export function RequestModal({
             {isPending ? "Sending…" : signedIn ? "Submit Quote Request" : "Sign In & Submit Request"}
           </Button>
         </DialogFooter>
-
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
