@@ -13,6 +13,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { SiteHeader } from "@/components/site-header";
+import { MobileTabBar } from "@/components/mobile-tab-bar";
+
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -131,8 +133,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // The Admin ERP ships its own sidebar shell, so the public site chrome is hidden there.
+  // The Admin ERP and the crew portal ship their own shells, so public chrome is hidden there.
   const chrome = !pathname.startsWith("/admin");
+  const publicSite = chrome && !pathname.startsWith("/worker") && !pathname.startsWith("/staff");
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -140,14 +143,16 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       {chrome && (
-      <footer className="border-t border-border bg-card">
+      <footer className="border-t border-border bg-card pb-16 md:pb-0">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:px-6">
           <p>© {new Date().getFullYear()} Surya Cine Special Props · Chennai, India</p>
           <p className="uppercase tracking-[0.25em]">Where real props bring stories to life</p>
         </div>
       </footer>
       )}
+      {publicSite && <MobileTabBar />}
       <Toaster />
+
     </QueryClientProvider>
   );
 }
