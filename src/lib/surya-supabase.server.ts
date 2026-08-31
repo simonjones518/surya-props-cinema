@@ -4,11 +4,11 @@
 import { createClient } from "@supabase/supabase-js";
 
 function build() {
-  const url = process.env["SURYA_SUPABASE_URL"];
-  const key = process.env["SURYA_SUPABASE_SERVICE_ROLE_KEY"];
+  const url = process.env["SURYA_PROJECT_URL"] ?? process.env["SURYA_SUPABASE_URL"];
+  const key = process.env["SURYA_PROJECT_SERVICE_ROLE_KEY"] ?? process.env["SURYA_SUPABASE_SERVICE_ROLE_KEY"];
   if (!url || !key) {
     throw new Error(
-      "Missing SURYA_SUPABASE_URL or SURYA_SUPABASE_SERVICE_ROLE_KEY environment variable.",
+      "Missing SURYA_PROJECT_URL or SURYA_PROJECT_SERVICE_ROLE_KEY environment variable.",
     );
   }
   return createClient(url, key, {
@@ -32,10 +32,10 @@ export const suryaDb = new Proxy({} as ReturnType<typeof build>, {
  * signed, httpOnly cookie session instead.
  */
 function buildAuth() {
-  const url = process.env["SURYA_SUPABASE_URL"];
-  const key = process.env["SURYA_SUPABASE_PUBLISHABLE_KEY"];
+  const url = process.env["SURYA_PROJECT_URL"] ?? process.env["SURYA_SUPABASE_URL"];
+  const key = process.env["SURYA_PROJECT_PUBLISHABLE_KEY"] ?? process.env["SURYA_SUPABASE_PUBLISHABLE_KEY"];
   if (!url || !key) {
-    throw new Error("Missing SURYA_SUPABASE_URL or SURYA_SUPABASE_PUBLISHABLE_KEY.");
+    throw new Error("Missing SURYA_PROJECT_URL or SURYA_PROJECT_PUBLISHABLE_KEY.");
   }
   return createClient(url, key, {
     auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
