@@ -172,10 +172,11 @@ export function RequestModal({
 
         {!signedIn && (
           <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-muted-foreground">
+            You'll be asked to{" "}
             <Link to="/auth" className="font-semibold text-primary underline">
-              Sign in or create a production account
+              sign in or create a production account
             </Link>{" "}
-            to submit this request and track the quotation in your portal.
+            — this request is submitted automatically right after login.
           </p>
         )}
 
@@ -183,10 +184,12 @@ export function RequestModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={!valid || isPending} onClick={() => mutate()}>
+          <Button disabled={!valid || isPending} onClick={handleSubmit}>
             <MessageCircle className="size-4" />
-            {isPending ? "Sending…" : "Submit Quote Request"}
+            {isPending ? "Sending…" : signedIn ? "Submit Quote Request" : "Sign In & Submit Request"}
           </Button>
+        </DialogFooter>
+
         </DialogFooter>
       </DialogContent>
     </Dialog>
