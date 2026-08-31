@@ -82,7 +82,7 @@ export function OverviewDesktop({
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid items-start gap-6 xl:grid-cols-3">
         <section
           aria-label="Revenue trend"
           className="rounded-xl border border-primary/20 bg-card p-5 xl:col-span-2"
