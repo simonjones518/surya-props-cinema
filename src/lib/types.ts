@@ -375,3 +375,34 @@ export interface QuoteRequestDraft {
   client_notes?: string;
   items: { prop_id: number; quantity: number }[];
 }
+
+/* ---------- admin: client accounts directory ---------- */
+
+export interface ClientAccountSummary {
+  user_id: string;
+  email: string;
+  contact_person: string;
+  designation: string;
+  phone: string;
+  production_house: string;
+  address: string;
+  joined_at: string;
+  production_houses: string[];
+  movies: string[];
+  quotes_total: number;
+  quotes_active: number;
+  quotes_closed: number;
+  quoted_value: number;
+  approved_value: number;
+  received_total: number;
+  outstanding_total: number;
+  deposits_held: number;
+  last_activity_at: string | null;
+}
+
+export interface ClientDossier {
+  profile: ClientAccountSummary;
+  quotes: QuoteRequest[];
+  payments: QuotePayment[];
+  invoices: Invoice[];
+}

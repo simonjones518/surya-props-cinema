@@ -42,6 +42,7 @@ import { QuoteApprovals } from "@/components/quote-approvals";
 import { StaffManager } from "@/components/staff-manager";
 import { FieldOpsLog } from "@/components/field-ops-log";
 import { FinanceLedger } from "@/components/finance-ledger";
+import { ClientsDirectory } from "@/components/admin/clients-directory";
 
 import { inr, inrCompact, prettyDate } from "@/lib/format";
 import type { Invoice, Prop, RentalBooking, RentalOrder, RentalStatus } from "@/lib/types";
@@ -242,6 +243,8 @@ function AdminPage() {
 
 
       {tab === "quotes" && <QuoteApprovals />}
+
+      {tab === "clients" && <ClientsDirectory />}
 
       {tab === "staff" && <StaffManager />}
 

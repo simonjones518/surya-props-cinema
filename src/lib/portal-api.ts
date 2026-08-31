@@ -9,6 +9,8 @@ import {
   createQuoteRequestFn,
   dispatchQuoteFn,
   fetchAllQuotes,
+  fetchClientAccounts,
+  fetchClientDossier,
   fetchMyPayments,
   fetchMyProfile,
   fetchMyQuotes,
@@ -23,6 +25,8 @@ import {
 } from "./portal.functions";
 
 import type {
+  ClientAccountSummary,
+  ClientDossier,
   ClientProfile,
   ProductionHouse,
   QuotePayment,
@@ -78,6 +82,9 @@ export const portal = {
 
   /* admin */
   getAllQuotes: () => fetchAllQuotes() as Promise<QuoteRequest[]>,
+  getClientAccounts: () => fetchClientAccounts() as Promise<ClientAccountSummary[]>,
+  getClientDossier: (userId: string) =>
+    fetchClientDossier({ data: { userId } }) as Promise<ClientDossier>,
   setAdvanceRequired: (id: number, advance_required: number) =>
     setAdvanceRequiredFn({ data: { id, advance_required } }),
   priceQuote: (data: {
@@ -105,6 +112,8 @@ export const portalKeys = {
   myQuotes: ["client-quotes"] as const,
   myPayments: ["client-payments"] as const,
   allQuotes: ["admin-quotes"] as const,
+  clientAccounts: ["admin-client-accounts"] as const,
+  clientDossier: (userId: string) => ["admin-client-dossier", userId] as const,
 };
 
 export const QUOTE_LABEL: Record<QuoteStatus, string> = {

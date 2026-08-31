@@ -2,6 +2,9 @@
 import { useSession } from "@tanstack/react-start/server";
 import { suryaAuth, suryaDb } from "./surya-supabase.server";
 import type {
+  ClientAccountSummary,
+  ClientDossier,
+  Invoice,
   ClientProfile,
   ProductionHouse,
   QuoteItem,
@@ -711,3 +714,205 @@ export async function closeSettlement(id: number) {
   return { ok: true as const };
 }
 
+
+/* ---------- admin: client accounts directory & service history ---------- */
+
+const ACTIVE_QUOTE_STATUSES: QuoteStatus[] = [
+  "quote_sent",
+  "quote_accepted",
+  "advance_submitted",
+  "payment_received",
+  "dispatched",
+  "on_set",
+  "settled",
+];
+const APPROVED_QUOTE_STATUSES: QuoteStatus[] = [
+  "quote_accepted",
+  "advance_submitted",
+  "payment_received",
+  "dispatched",
+  "on_set",
+  "settled",
+  "closed",
+];
+
+const uniq = (values: (string | null | undefined)[]) =>
+  Array.from(new Set(values.map((v) => clean(v ?? "", 160)).filter(Boolean)));
+
+function quoteValue(q: QuoteRequest) {
+  return q.final_total > 0 ? q.final_total : q.estimated_total;
+}
+
+function buildSummary(
+  profileRow: Record<string, any> | undefined,
+  userId: string,
+  quotes: QuoteRequest[],
+  payments: QuotePayment[],
+): ClientAccountSummary {
+  const approved = quotes.filter((q) => APPROVED_QUOTE_STATUSES.includes(q.status));
+  const received = payments
+    .filter((p) => p.status === "verified")
+    .reduce((s, p) => s + p.amount, 0);
+  const deposits = approved
+    .filter((q) => q.status !== "closed")
+    .reduce((s, q) => s + q.security_deposit, 0);
+  const outstanding = quotes
+    .filter((q) => q.status !== "closed" && q.status !== "rejected")
+    .reduce((s, q) => s + Math.max(0, q.balance_due), 0);
+  const latest = quotes[0];
+
+  return {
+    user_id: userId,
+    email: clean(profileRow?.["email"] ?? "", 200),
+    contact_person:
+      clean(profileRow?.["contact_person"] ?? "", 160) || latest?.contact_person || "Client",
+    designation: clean(profileRow?.["designation"] ?? "", 120) || latest?.client_designation || "",
+    phone: clean(profileRow?.["phone"] ?? "", 24) || latest?.phone || "",
+    production_house:
+      clean(profileRow?.["production_house"] ?? "", 160) || latest?.production_house || "",
+    address: clean(profileRow?.["address"] ?? "", 400),
+    joined_at: profileRow?.["created_at"] ?? latest?.created_at ?? "",
+    production_houses: uniq(quotes.map((q) => q.production_house)),
+    movies: uniq(quotes.map((q) => q.movie_name)),
+    quotes_total: quotes.length,
+    quotes_active: quotes.filter((q) => ACTIVE_QUOTE_STATUSES.includes(q.status)).length,
+    quotes_closed: quotes.filter((q) => q.status === "closed").length,
+    quoted_value: quotes.reduce((s, q) => s + q.estimated_total, 0),
+    approved_value: approved.reduce((s, q) => s + quoteValue(q), 0),
+    received_total: received,
+    outstanding_total: outstanding,
+    deposits_held: deposits,
+    last_activity_at: latest?.created_at ?? null,
+  };
+}
+
+function mapPayment(p: Record<string, any>): QuotePayment {
+  return {
+    id: Number(p["id"]),
+    quote_id: Number(p["quote_id"]),
+    kind: p["kind"],
+    amount: num(p["amount"]),
+    reference: p["reference"] ?? "",
+    status: p["status"],
+    created_at: p["created_at"],
+  };
+}
+
+/** Every registered client account with rolled-up service + money history. */
+export async function listClientAccounts(): Promise<ClientAccountSummary[]> {
+  const [profilesRes, quotesRes, paymentsRes] = await Promise.all([
+    suryaDb.from("client_profiles").select("*"),
+    suryaDb.from("quote_requests").select("*").order("id", { ascending: false }),
+    suryaDb.from("quote_payments").select("*"),
+  ]);
+  if (profilesRes.error) throw new Error(profilesRes.error.message);
+  if (quotesRes.error) throw new Error(quotesRes.error.message);
+  if (paymentsRes.error) throw new Error(paymentsRes.error.message);
+
+  const quotes = await Promise.all(
+    (quotesRes.data ?? []).map((r) => mapQuote(r as Record<string, any>)),
+  );
+  const payments = (paymentsRes.data ?? []).map((p) => mapPayment(p as Record<string, any>));
+
+  const ids = uniq([
+    ...(profilesRes.data ?? []).map((p: any) => String(p.user_id)),
+    ...quotes.map((q) => q.user_id),
+  ]);
+
+  return ids
+    .map((id) => {
+      const mine = quotes.filter((q) => q.user_id === id);
+      const mineIds = mine.map((q) => q.id);
+      return buildSummary(
+        (profilesRes.data ?? []).find((p: any) => String(p.user_id) === id),
+        id,
+        mine,
+        payments.filter((p) => mineIds.includes(p.quote_id)),
+      );
+    })
+    .sort((a, b) => (b.last_activity_at ?? "").localeCompare(a.last_activity_at ?? ""));
+}
+
+/** Full dossier for one client: quotes, payment ledger and matching invoices. */
+export async function getClientDossier(userId: string) {
+  const id = clean(userId, 80);
+  if (!id) throw new Error("Client id is required.");
+
+  const [profileRes, quotesRes] = await Promise.all([
+    suryaDb.from("client_profiles").select("*").eq("user_id", id).maybeSingle(),
+    suryaDb.from("quote_requests").select("*").eq("user_id", id).order("id", { ascending: false }),
+  ]);
+  if (quotesRes.error) throw new Error(quotesRes.error.message);
+
+  const quotes = await Promise.all(
+    (quotesRes.data ?? []).map((r) => mapQuote(r as Record<string, any>)),
+  );
+  const quoteIds = quotes.map((q) => q.id);
+
+  const paymentsRes = quoteIds.length
+    ? await suryaDb
+        .from("quote_payments")
+        .select("*")
+        .in("quote_id", quoteIds)
+        .order("id", { ascending: false })
+    : { data: [], error: null };
+  if (paymentsRes.error) throw new Error(paymentsRes.error.message);
+  const payments = (paymentsRes.data ?? []).map((p) => mapPayment(p as Record<string, any>));
+
+  const profileRow = (profileRes.data ?? undefined) as Record<string, any> | undefined;
+  const profile = buildSummary(profileRow, id, quotes, payments);
+
+  // Direct/manual invoices are not linked by user id — match on phone or banner.
+  const phones = uniq([profile.phone, ...quotes.map((q) => q.phone)]);
+  const banners = uniq([profile.production_house, ...profile.production_houses]);
+  const { data: invoiceRows } = await suryaDb
+    .from("invoices")
+    .select("*")
+    .order("id", { ascending: false });
+  const invoices = ((invoiceRows ?? []) as Record<string, any>[])
+    .filter(
+      (r) =>
+        phones.includes(clean(r["client_phone"], 24)) ||
+        banners.some(
+          (b) => b.toLowerCase() === clean(r["production_house"], 160).toLowerCase(),
+        ),
+    )
+    .map((r) => ({
+      id: Number(r["id"]),
+      invoice_number: r["invoice_number"],
+      doc_type: r["doc_type"],
+      client_id: Number(r["client_id"] ?? 0),
+      client_name: r["client_name"] ?? "",
+      client_phone: r["client_phone"] ?? "",
+      production_house: r["production_house"] ?? "",
+      shoot_location: r["shoot_location"] ?? "",
+      shoot_start_date: r["shoot_start_date"],
+      shoot_wrap_date: r["shoot_wrap_date"],
+      items: (r["items"] ?? []) as any[],
+      subtotal: num(r["subtotal"]),
+      discount: num(r["discount"]),
+      transport_charges: num(r["transport_charges"]),
+      gst_percent: num(r["gst_percent"]),
+      gst_amount: num(r["gst_amount"]),
+      security_deposit: num(r["security_deposit"]),
+      advance_received: num(r["advance_received"]),
+      balance_payable: num(r["balance_payable"]),
+      payment_status: r["payment_status"],
+      notes: r["notes"] ?? "",
+      created_at: r["created_at"],
+    })) as Invoice[];
+
+  const invoiceReceived = invoices.reduce((s, i) => s + i.advance_received, 0);
+  const invoiceOutstanding = invoices.reduce((s, i) => s + Math.max(0, i.balance_payable), 0);
+
+  return {
+    profile: {
+      ...profile,
+      received_total: profile.received_total + invoiceReceived,
+      outstanding_total: profile.outstanding_total + invoiceOutstanding,
+    },
+    quotes,
+    payments,
+    invoices,
+  } satisfies ClientDossier;
+}
