@@ -817,23 +817,14 @@ export async function listClientAccounts(): Promise<ClientAccountSummary[]> {
   ]);
 
   return ids
-    .map((id) =>
-      buildSummary(
-        (profilesRes.data ?? []).find((p: any) => String(p.user_id) === id),
-        id,
-        quotes.filter((q) => q.user_id === id),
-        payments.filter((p) => p.user_id_match !== false && true),
-      ),
-    )
-    .map((summary, idx) => {
-      const id = ids[idx]!;
-      const mine = quotes.filter((q) => q.user_id === id).map((q) => q.id);
-      const pays = payments.filter((p) => mine.includes(p.quote_id));
+    .map((id) => {
+      const mine = quotes.filter((q) => q.user_id === id);
+      const mineIds = mine.map((q) => q.id);
       return buildSummary(
         (profilesRes.data ?? []).find((p: any) => String(p.user_id) === id),
         id,
-        quotes.filter((q) => q.user_id === id),
-        pays,
+        mine,
+        payments.filter((p) => mineIds.includes(p.quote_id)),
       );
     })
     .sort((a, b) => (b.last_activity_at ?? "").localeCompare(a.last_activity_at ?? ""));
