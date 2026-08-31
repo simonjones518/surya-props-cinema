@@ -172,6 +172,7 @@ function WorkerPortal() {
       </section>
 
       {mode && (
+        <div className="lg:col-span-2">
         <FieldForm
           mode={mode}
           onClose={() => setMode(null)}
@@ -181,6 +182,7 @@ function WorkerPortal() {
             void qc.invalidateQueries({ queryKey: staffKeys.damageReports });
           }}
         />
+        </div>
       )}
 
       <section className="mt-8 lg:mt-10" aria-label="My recent logs">
