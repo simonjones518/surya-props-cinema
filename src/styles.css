@@ -232,18 +232,45 @@
   html,
   body {
     background: #fff !important;
+    color: #000 !important;
+    color-scheme: light !important;
   }
-  #print-area {
+  /* The app UI is dark-themed; on paper every element must be readable, so
+     force ink-on-white for the printable document and its descendants. */
+  #print-area,
+  #print-area * {
+    background-image: none !important;
+    background-color: transparent !important;
+    color: #000 !important;
+    text-shadow: none !important;
     box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  #print-area *,
+  #print-area *::before,
+  #print-area *::after {
+    border-color: #999 !important;
+  }
+  #print-area img,
+  #print-area svg,
+  #print-area canvas {
+    filter: none !important;
   }
   #print-area .text-gradient-gold {
     background: none !important;
+    -webkit-text-fill-color: #000 !important;
     color: #000 !important;
+  }
+  #print-area thead tr,
+  #print-area th {
+    background-color: #f1f1f1 !important;
   }
   @page {
     margin: 12mm;
   }
 }
+
 
 /* Hides the scrollbar on mobile swipe-scroll rails (tabs, stat carousels). */
 @utility no-scrollbar {
