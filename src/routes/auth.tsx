@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { clearPendingQuote, readPendingQuote } from "@/lib/pending-quote";
+import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
+import type { QuoteRequest } from "@/lib/types";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
