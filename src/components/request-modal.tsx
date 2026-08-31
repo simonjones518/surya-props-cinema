@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
@@ -17,11 +17,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { savePendingQuote } from "@/lib/pending-quote";
 import { shootDays } from "@/lib/format";
 import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
-import type { Prop, QuoteRequest } from "@/lib/types";
+import type { Prop, QuoteRequest, QuoteRequestDraft } from "@/lib/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
+
 
 /**
  * Single-prop rental request. Writes a real `quote_requested` record into the
@@ -37,6 +39,7 @@ export function RequestModal({
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const session = useQuery({ queryKey: portalKeys.session, queryFn: portal.session });
   const [productionHouse, setProductionHouse] = useState("");
   const [movie, setMovie] = useState("");
@@ -49,19 +52,21 @@ export function RequestModal({
   const days = shootDays(start, wrap);
   const signedIn = Boolean(session.data);
 
+  const draft = (): QuoteRequestDraft => {
+    if (!prop) throw new Error("No prop selected");
+    return {
+      production_house: productionHouse,
+      movie_name: movie,
+      shoot_location: shootLocation,
+      shoot_start_date: start,
+      estimated_return_date: wrap,
+      client_notes: notes,
+      items: [{ prop_id: prop.id, quantity }],
+    };
+  };
+
   const { mutate, isPending } = useMutation({
-    mutationFn: () => {
-      if (!prop) throw new Error("No prop selected");
-      return portal.requestQuote({
-        production_house: productionHouse,
-        movie_name: movie,
-        shoot_location: shootLocation,
-        shoot_start_date: start,
-        estimated_return_date: wrap,
-        client_notes: notes,
-        items: [{ prop_id: prop.id, quantity }],
-      });
-    },
+    mutationFn: () => portal.requestQuote(draft()),
     onSuccess: (res) => {
       qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => {
         const withoutSaved = (current ?? []).filter((quote) => quote.id !== res.id);
@@ -80,15 +85,21 @@ export function RequestModal({
     onError: (e: Error) => toast.error("Request failed", { description: e.message }),
   });
 
+  function handleSubmit() {
+    if (!signedIn) {
+      savePendingQuote(draft());
+      toast.info("Please sign in to raise this rental quote request");
+      onOpenChange(false);
+      void navigate({ to: "/auth" });
+      return;
+    }
+    mutate();
+  }
+
   const valid = Boolean(
-    prop &&
-      signedIn &&
-      productionHouse.trim() &&
-      movie.trim() &&
-      shootLocation.trim() &&
-      start &&
-      wrap,
+    prop && productionHouse.trim() && movie.trim() && shootLocation.trim() && start && wrap,
   );
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,10 +172,11 @@ export function RequestModal({
 
         {!signedIn && (
           <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-muted-foreground">
+            You'll be asked to{" "}
             <Link to="/auth" className="font-semibold text-primary underline">
-              Sign in or create a production account
+              sign in or create a production account
             </Link>{" "}
-            to submit this request and track the quotation in your portal.
+            — this request is submitted automatically right after login.
           </p>
         )}
 
@@ -172,9 +184,9 @@ export function RequestModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={!valid || isPending} onClick={() => mutate()}>
+          <Button disabled={!valid || isPending} onClick={handleSubmit}>
             <MessageCircle className="size-4" />
-            {isPending ? "Sending…" : "Submit Quote Request"}
+            {isPending ? "Sending…" : signedIn ? "Submit Quote Request" : "Sign In & Submit Request"}
           </Button>
         </DialogFooter>
       </DialogContent>

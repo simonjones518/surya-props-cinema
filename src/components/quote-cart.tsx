@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
@@ -16,14 +16,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { savePendingQuote } from "@/lib/pending-quote";
 import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
 import { useWishlist } from "@/lib/wishlist";
-import type { QuoteRequest } from "@/lib/types";
+import type { QuoteRequest, QuoteRequestDraft } from "@/lib/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { lines, setQuantity, remove, clear, count } = useWishlist();
   const session = useQuery({ queryKey: portalKeys.session, queryFn: portal.session });
   const [banner, setBanner] = useState("");
@@ -33,17 +35,18 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [ret, setRet] = useState(today);
   const [notes, setNotes] = useState("");
 
+  const draft = (): QuoteRequestDraft => ({
+    production_house: banner,
+    movie_name: movie,
+    shoot_location: location,
+    shoot_start_date: start,
+    estimated_return_date: ret,
+    client_notes: notes,
+    items: lines.map((l) => ({ prop_id: l.prop_id, quantity: l.quantity })),
+  });
+
   const submit = useMutation({
-    mutationFn: () =>
-      portal.requestQuote({
-        production_house: banner,
-        movie_name: movie,
-        shoot_location: location,
-        shoot_start_date: start,
-        estimated_return_date: ret,
-        client_notes: notes,
-        items: lines.map((l) => ({ prop_id: l.prop_id, quantity: l.quantity })),
-      }),
+    mutationFn: () => portal.requestQuote(draft()),
     onSuccess: (res) => {
       qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => {
         const withoutSaved = (current ?? []).filter((quote) => quote.id !== res.id);
@@ -70,8 +73,20 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
     movie.trim() !== "" &&
     location.trim() !== "" &&
     start !== "" &&
-    ret !== "" &&
-    signedIn;
+    ret !== "";
+
+  /** Signed out → park the draft and ask for login; it auto-submits after sign-in. */
+  function handleSubmit() {
+    if (!signedIn) {
+      savePendingQuote(draft());
+      toast.info("Please sign in to raise this rental quote request");
+      onOpenChange(false);
+      void navigate({ to: "/auth" });
+      return;
+    }
+    submit.mutate();
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,21 +193,23 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
 
         {!signedIn && (
           <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-muted-foreground">
+            You'll be asked to{" "}
             <Link to="/auth" className="font-semibold text-primary underline">
-              Sign in or create a production account
+              sign in or create a production account
             </Link>{" "}
-            to submit this wishlist and track your quotations.
+            — your request is submitted automatically right after login.
           </p>
         )}
 
-        <Button
-          className="w-full"
-          disabled={!ready || submit.isPending}
-          onClick={() => submit.mutate()}
-        >
+        <Button className="w-full" disabled={!ready || submit.isPending} onClick={handleSubmit}>
           <ShoppingBag className="size-4" />
-          {submit.isPending ? "Sending…" : "Request Rental Quote"}
+          {submit.isPending
+            ? "Sending…"
+            : signedIn
+              ? "Request Rental Quote"
+              : "Sign In & Request Rental Quote"}
         </Button>
+
       </DialogContent>
     </Dialog>
   );

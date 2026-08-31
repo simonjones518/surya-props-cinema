@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { clearPendingQuote, readPendingQuote } from "@/lib/pending-quote";
+import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
+import type { QuoteRequest } from "@/lib/types";
+
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -44,11 +48,45 @@ function AuthPage() {
     if (session.data) void navigate({ to: "/client/portal", replace: true });
   }, [session.data, navigate]);
 
+  /**
+   * Submits a quote request parked before sign-in, so both actions fire:
+   * the lifecycle record lands in the admin/manager queue and the WhatsApp
+   * alert opens for the production desk.
+   */
+  async function submitPendingQuote() {
+    const draft = readPendingQuote();
+    if (!draft) return;
+    try {
+      const res = await portal.requestQuote(draft);
+      clearPendingQuote();
+      try {
+        window.localStorage.removeItem("scp-shoot-wishlist");
+        window.dispatchEvent(new Event("scp-wishlist-change"));
+      } catch {
+        /* ignore */
+      }
+      qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => [
+        res,
+        ...(current ?? []).filter((q) => q.id !== res.id),
+      ]);
+      toast.success(`Quote request ${res.quote_code} raised`, {
+        description: "Our production desk has it — track the quotation in your portal.",
+      });
+      openWhatsApp(newQuoteRequestMessage(res));
+    } catch (e) {
+      toast.error("Your request could not be submitted", {
+        description: e instanceof Error ? e.message : "Please resend it from your wishlist.",
+      });
+    }
+  }
+
   async function land() {
     await qc.invalidateQueries({ queryKey: portalKeys.session });
     await router.invalidate();
+    await submitPendingQuote();
     await navigate({ to: "/client/portal", replace: true });
   }
+
 
   const signIn = useMutation({
     mutationFn: () => portal.signIn(email, password),
