@@ -7,6 +7,7 @@ import {
   HardHat,
   Inbox,
   Truck,
+  UserRound,
   Users,
   Warehouse,
 } from "lucide-react";
@@ -20,6 +21,7 @@ export type AdminSectionKey =
   | "requests"
   | "inventory"
   | "billing"
+  | "clients"
   | "staff"
   | "field"
   | "finance";
@@ -105,6 +107,14 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     icon: Banknote,
     group: "Finance",
     hint: "Expense ledger and profitability",
+  },
+  {
+    key: "clients",
+    label: "Client Profiles",
+    short: "Clients",
+    icon: UserRound,
+    group: "People",
+    hint: "Registered clients, service history and money received",
   },
   {
     key: "staff",
