@@ -175,103 +175,81 @@ function AdminPage() {
     setScanOpen(false);
   }
 
+  async function handleSignOut() {
+    await logout();
+    qc.clear();
+    await router.navigate({ to: "/admin-login", replace: true });
+  }
+
+  const current = sectionOf(tab);
+
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="flex flex-wrap items-end justify-between gap-4 print:hidden">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.38em] text-primary">Admin ERP</p>
-          <h1 className="mt-2 text-4xl sm:text-5xl">
-            <span className="text-gradient-gold">Rental Command Center</span>
-          </h1>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => setOrderOpen(true)}>
-            <Truck className="size-4" /> New Rental Order / Challan
-          </Button>
-          <Button onClick={() => setCartOpen(true)}>
-            <Receipt className="size-4" /> Quick Quotation
-          </Button>
-          <Button variant="outline" onClick={() => setStockOpen(true)}>
-            <Plus className="size-4" /> Add New Prop
-          </Button>
-          <Button variant="outline" onClick={() => setScanOpen(true)}>
-            <ScanLine className="size-4" /> Scan Prop Return
-          </Button>
-          <Button
-            variant="outline"
-            onClick={async () => {
-              await logout();
-              qc.clear();
-              await router.navigate({ to: "/admin-login", replace: true });
-            }}
-          >
-            <LogOut className="size-4" /> Sign Out
-          </Button>
-        </div>
-      </div>
+    <div className="flex min-h-screen bg-background print:block">
+      <AdminSidebar
+        active={tab}
+        onSelect={setTab}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed((v) => !v)}
+        onSignOut={handleSignOut}
+      />
 
-      <section aria-label="Key metrics" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 print:hidden">
-        {kpi.isLoading || !k
-          ? [0, 1, 2, 3, 4, 5, 6, 7].map((i) => <Skeleton key={i} className="h-28 rounded-xl" />)
-          : [
-              { label: "Gross Revenue Today", value: inr(k.gross_revenue_today), icon: IndianRupee, hero: true },
-              { label: "Net Profit Today", value: inr(k.net_profit_today), icon: TrendingUp, hero: true },
-              { label: "Active Shoots", value: String(k.active_rentals), icon: Truck },
-              { label: "Overdue Rentals", value: String(k.overdue_rentals), icon: AlertTriangle },
-              { label: "On-Set Inventory Value", value: inrCompact(k.on_set_inventory_value), icon: Boxes },
-              { label: "Warehouse Valuation", value: inrCompact(k.warehouse_valuation), icon: Vault },
-              { label: "Advances Collected", value: inr(k.advances_collected), icon: HandCoins },
-              { label: "Outstanding Balances", value: inr(k.outstanding_balances), icon: Wallet },
-              { label: "Held Security Deposits", value: inr(k.held_deposits), icon: PackageCheck },
-            ].map((m) => (
-              <div
-                key={m.label}
-                className={`rounded-xl border p-4 transition-colors ${
-                  m.hero
-                    ? "border-primary/45 surface-metal glow-gold"
-                    : "border-primary/20 bg-card hover:border-primary/50"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    {m.label}
-                  </p>
-                  <m.icon className="size-4 text-primary" />
-                </div>
-                <p className="mt-3 font-display text-3xl tracking-wide text-foreground">{m.value}</p>
-              </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AdminMobileHeader active={tab} onOpenMenu={() => setMenuOpen(true)} />
+
+        <header className="hidden items-end justify-between gap-4 border-b border-border px-8 py-6 lg:flex print:hidden">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.38em] text-primary">Admin ERP</p>
+            <h1 className="mt-1.5 font-display text-4xl tracking-wide">
+              <span className="text-gradient-gold">{current.label}</span>
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">{current.hint}</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button size="sm" onClick={() => setOrderOpen(true)}>
+              <Truck className="size-4" /> New Challan
+            </Button>
+            <Button size="sm" onClick={() => setCartOpen(true)}>
+              <Receipt className="size-4" /> Quick Quotation
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setStockOpen(true)}>
+              <Plus className="size-4" /> Add Prop
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setScanOpen(true)}>
+              <ScanLine className="size-4" /> Scan Return
+            </Button>
+          </div>
+        </header>
+
+        <main className="min-w-0 flex-1 px-4 pb-28 pt-4 lg:px-8 lg:pb-14 lg:pt-6 print:p-0">
+          <div className="lg:hidden print:hidden">
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">Admin ERP</p>
+            <h1 className="mt-1 font-display text-3xl tracking-wide text-gradient-gold">{current.label}</h1>
+            <p className="mb-4 mt-1 text-xs text-muted-foreground">{current.hint}</p>
+          </div>
+
+          {tab === "overview" &&
+            (isMobile ? (
+              <OverviewMobile
+                kpi={k}
+                loading={kpi.isLoading}
+                orders={orders.data ?? []}
+                props={props.data ?? []}
+                onSelect={setTab}
+                onNewOrder={() => setOrderOpen(true)}
+                onQuickQuote={() => setCartOpen(true)}
+                onAddProp={() => setStockOpen(true)}
+                onScan={() => setScanOpen(true)}
+              />
+            ) : (
+              <OverviewDesktop
+                kpi={k}
+                loading={kpi.isLoading}
+                orders={orders.data ?? []}
+                invoices={invoices.data ?? []}
+                props={props.data ?? []}
+              />
             ))}
-      </section>
 
-      <nav aria-label="Dashboard sections" className="mt-10 flex flex-wrap gap-2 print:hidden">
-        {([
-          ["quotes", "Quote Approvals"],
-          ["orders", "Rental Orders & Settlement"],
-          ["warehouse", "Warehouse Matrix"],
-          ["pipeline", "Rental Pipeline"],
-          ["requests", "Customer Requests"],
-          ["inventory", "Inventory & Stock"],
-          ["billing", "Invoices & Quotations"],
-          ["staff", "Staff & Roles"],
-          ["field", "Field Operations"],
-          ["finance", "Finance & KPIs"],
-        ] as const).map(([key, label]) => (
-
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTab(key)}
-            aria-current={tab === key}
-            className={`rounded-full border px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-              tab === key
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-secondary/50 text-muted-foreground hover:border-primary/60 hover:text-foreground"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </nav>
 
       {tab === "quotes" && <QuoteApprovals />}
 
