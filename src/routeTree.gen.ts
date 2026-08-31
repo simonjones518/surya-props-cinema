@@ -14,7 +14,9 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AdminLoginRouteImport } from './routes/admin-login'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CatalogRouteImport } from './routes/catalog'
+import { Route as StaffLoginRouteImport } from './routes/staff-login'
 import { Route as ClientPortalRouteImport } from './routes/client.portal'
+import { Route as WorkerPortalRouteImport } from './routes/worker.portal'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,9 +43,19 @@ const CatalogRoute = CatalogRouteImport.update({
   path: '/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StaffLoginRoute = StaffLoginRouteImport.update({
+  id: '/staff-login',
+  path: '/staff-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClientPortalRoute = ClientPortalRouteImport.update({
   id: '/client/portal',
   path: '/client/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkerPortalRoute = WorkerPortalRouteImport.update({
+  id: '/worker/portal',
+  path: '/worker/portal',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -53,7 +65,9 @@ export interface FileRoutesByFullPath {
   '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
   '/catalog': typeof CatalogRoute
+  '/staff-login': typeof StaffLoginRoute
   '/client/portal': typeof ClientPortalRoute
+  '/worker/portal': typeof WorkerPortalRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -61,7 +75,9 @@ export interface FileRoutesByTo {
   '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
   '/catalog': typeof CatalogRoute
+  '/staff-login': typeof StaffLoginRoute
   '/client/portal': typeof ClientPortalRoute
+  '/worker/portal': typeof WorkerPortalRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -70,14 +86,31 @@ export interface FileRoutesById {
   '/admin-login': typeof AdminLoginRoute
   '/auth': typeof AuthRoute
   '/catalog': typeof CatalogRoute
+  '/staff-login': typeof StaffLoginRoute
   '/client/portal': typeof ClientPortalRoute
+  '/worker/portal': typeof WorkerPortalRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/admin-login' | '/auth' | '/catalog' | '/client/portal'
+    | '/'
+    | '/admin'
+    | '/admin-login'
+    | '/auth'
+    | '/catalog'
+    | '/staff-login'
+    | '/client/portal'
+    | '/worker/portal'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/admin-login' | '/auth' | '/catalog' | '/client/portal'
+  to:
+    | '/'
+    | '/admin'
+    | '/admin-login'
+    | '/auth'
+    | '/catalog'
+    | '/staff-login'
+    | '/client/portal'
+    | '/worker/portal'
   id:
     | '__root__'
     | '/'
@@ -85,7 +118,9 @@ export interface FileRouteTypes {
     | '/admin-login'
     | '/auth'
     | '/catalog'
+    | '/staff-login'
     | '/client/portal'
+    | '/worker/portal'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -94,7 +129,9 @@ export interface RootRouteChildren {
   AdminLoginRoute: typeof AdminLoginRoute
   AuthRoute: typeof AuthRoute
   CatalogRoute: typeof CatalogRoute
+  StaffLoginRoute: typeof StaffLoginRoute
   ClientPortalRoute: typeof ClientPortalRoute
+  WorkerPortalRoute: typeof WorkerPortalRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -134,11 +171,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/staff-login': {
+      id: '/staff-login'
+      path: '/staff-login'
+      fullPath: '/staff-login'
+      preLoaderRoute: typeof StaffLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/client/portal': {
       id: '/client/portal'
       path: '/client/portal'
       fullPath: '/client/portal'
       preLoaderRoute: typeof ClientPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/worker/portal': {
+      id: '/worker/portal'
+      path: '/worker/portal'
+      fullPath: '/worker/portal'
+      preLoaderRoute: typeof WorkerPortalRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -150,7 +201,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminLoginRoute: AdminLoginRoute,
   AuthRoute: AuthRoute,
   CatalogRoute: CatalogRoute,
+  StaffLoginRoute: StaffLoginRoute,
   ClientPortalRoute: ClientPortalRoute,
+  WorkerPortalRoute: WorkerPortalRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
