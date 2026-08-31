@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { QuoteTimeline } from "@/components/quote-timeline";
+import { ClientSummaryMobile } from "@/components/portal/client-summary-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
 import type { ClientProfile, QuoteRequest } from "@/lib/types";
@@ -82,6 +84,7 @@ function ClientPortal() {
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
   const [banner, setBanner] = useState("all");
   const [search, setSearch] = useState("");
+  const isMobile = useIsMobile();
 
   const signOut = useMutation({
     mutationFn: () => portal.signOut(),
@@ -126,33 +129,67 @@ function ClientPortal() {
   const settled = matches.filter((q) => q.status === "settled" || q.status === "closed");
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-[11px] font-bold uppercase tracking-[0.38em] text-primary">
-            Client Portal
-          </p>
-          <h1 className="mt-2 text-4xl sm:text-5xl">
-            <span className="text-gradient-gold">Your Shoots</span> &amp; Quotations
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">{session.data.email}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" asChild>
-            <Link to="/catalog">Browse Catalog</Link>
-          </Button>
-          <Button variant="outline" onClick={() => signOut.mutate()} disabled={signOut.isPending}>
-            <LogOut className="size-4" /> Sign Out
-          </Button>
-        </div>
-      </header>
+    <main className="mx-auto max-w-6xl px-4 pb-28 pt-6 sm:px-6 sm:py-14 md:pb-14">
+      {isMobile ? (
+        <>
+          <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary">
+                Client Dashboard
+              </p>
+              <h1 className="mt-1 truncate text-2xl">Your Shoots</h1>
+              <p className="truncate text-xs text-muted-foreground">{session.data.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => signOut.mutate()}
+              disabled={signOut.isPending}
+              aria-label="Sign out"
+              className="grid size-10 shrink-0 place-items-center rounded-lg border border-border text-muted-foreground"
+            >
+              <LogOut className="size-4" />
+            </button>
+          </header>
+          <div className="mt-4">
+            <ClientSummaryMobile quotes={all} />
+          </div>
+        </>
+      ) : (
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.38em] text-primary">
+              Client Portal
+            </p>
+            <h1 className="mt-2 text-4xl sm:text-5xl">
+              <span className="text-gradient-gold">Your Shoots</span> &amp; Quotations
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">{session.data.email}</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/catalog">Browse Catalog</Link>
+            </Button>
+            <Button variant="outline" onClick={() => signOut.mutate()} disabled={signOut.isPending}>
+              <LogOut className="size-4" /> Sign Out
+            </Button>
+          </div>
+        </header>
+      )}
 
-      <Tabs defaultValue="shoots" className="mt-8">
-        <TabsList className="flex-wrap">
-          <TabsTrigger value="shoots">Active Shoots &amp; Quotations</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices &amp; Receipts</TabsTrigger>
-          <TabsTrigger value="ledger">Payment Ledger</TabsTrigger>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
+      <Tabs defaultValue="shoots" className="mt-6 sm:mt-8">
+        <TabsList className="no-scrollbar -mx-4 flex w-[calc(100%+2rem)] justify-start gap-1 overflow-x-auto px-4 md:mx-0 md:w-auto md:flex-wrap md:px-1">
+          <TabsTrigger value="shoots" className="shrink-0">
+            {isMobile ? "Shoots" : "Active Shoots & Quotations"}
+          </TabsTrigger>
+          <TabsTrigger value="invoices" className="shrink-0">
+            {isMobile ? "Documents" : "Invoices & Receipts"}
+          </TabsTrigger>
+          <TabsTrigger value="ledger" className="shrink-0">
+            {isMobile ? "Ledger" : "Payment Ledger"}
+          </TabsTrigger>
+          <TabsTrigger value="profile" className="shrink-0">
+            Profile
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="shoots" className="mt-6 space-y-4">
@@ -198,7 +235,7 @@ function ClientPortal() {
             [...active, ...settled].map((quote) => (
               <div
                 key={quote.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-card p-4"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-card p-4"
               >
                 <div>
                   <p className="font-display text-lg tracking-wide">{quote.quote_code}</p>
@@ -206,7 +243,7 @@ function ClientPortal() {
                     {quote.shoot_start_date} → {quote.actual_return_date ?? quote.estimated_return_date}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
                   {quote.status !== "quote_requested" && (
                     <Button
                       size="sm"
@@ -461,7 +498,7 @@ function QuoteCard({
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
         {quote.status === "quote_sent" && (
           <Button onClick={onAccept} disabled={accepting}>
             <CheckCircle2 className="size-4" /> Accept Quotation
