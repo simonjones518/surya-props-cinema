@@ -29,7 +29,7 @@ export function OverviewDesktop({
   invoices,
   props,
 }: {
-  kpi?: KpiAnalytics;
+  kpi: KpiAnalytics | undefined;
   loading: boolean;
   orders: RentalOrder[];
   invoices: Invoice[];

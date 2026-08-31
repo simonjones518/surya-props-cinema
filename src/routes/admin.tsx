@@ -84,18 +84,11 @@ function AdminPage() {
   const [orderOpen, setOrderOpen] = useState(false);
   const [settleId, setSettleId] = useState<number | null>(null);
   const [returnDate, setReturnDate] = useState(() => new Date().toISOString().slice(0, 10));
-  const [tab, setTab] = useState<
-    | "pipeline"
-    | "orders"
-    | "quotes"
-    | "warehouse"
-    | "requests"
-    | "inventory"
-    | "billing"
-    | "staff"
-    | "field"
-    | "finance"
-  >("quotes");
+  const [tab, setTab] = useState<AdminSectionKey>("overview");
+  const [collapsed, setCollapsed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+
 
   const kpi = useQuery({ queryKey: queryKeys.kpi, queryFn: api.getKpi });
   const bookings = useQuery({ queryKey: queryKeys.bookings, queryFn: api.getBookings });

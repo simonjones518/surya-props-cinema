@@ -16,7 +16,7 @@ export function OverviewMobile({
   onAddProp,
   onScan,
 }: {
-  kpi?: KpiAnalytics;
+  kpi: KpiAnalytics | undefined;
   loading: boolean;
   orders: RentalOrder[];
   props: Prop[];
