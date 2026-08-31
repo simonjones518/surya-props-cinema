@@ -2,6 +2,9 @@
 import { useSession } from "@tanstack/react-start/server";
 import { suryaAuth, suryaDb } from "./surya-supabase.server";
 import type {
+  ClientAccountSummary,
+  ClientDossier,
+  Invoice,
   ClientProfile,
   ProductionHouse,
   QuoteItem,
