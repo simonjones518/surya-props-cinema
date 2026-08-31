@@ -35,18 +35,18 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [ret, setRet] = useState(today);
   const [notes, setNotes] = useState("");
 
+  const draft = (): QuoteRequestDraft => ({
+    production_house: banner,
+    movie_name: movie,
+    shoot_location: location,
+    shoot_start_date: start,
+    estimated_return_date: ret,
+    client_notes: notes,
+    items: lines.map((l) => ({ prop_id: l.prop_id, quantity: l.quantity })),
+  });
 
   const submit = useMutation({
-    mutationFn: () =>
-      portal.requestQuote({
-        production_house: banner,
-        movie_name: movie,
-        shoot_location: location,
-        shoot_start_date: start,
-        estimated_return_date: ret,
-        client_notes: notes,
-        items: lines.map((l) => ({ prop_id: l.prop_id, quantity: l.quantity })),
-      }),
+    mutationFn: () => portal.requestQuote(draft()),
     onSuccess: (res) => {
       qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => {
         const withoutSaved = (current ?? []).filter((quote) => quote.id !== res.id);
@@ -73,8 +73,20 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
     movie.trim() !== "" &&
     location.trim() !== "" &&
     start !== "" &&
-    ret !== "" &&
-    signedIn;
+    ret !== "";
+
+  /** Signed out → park the draft and ask for login; it auto-submits after sign-in. */
+  function handleSubmit() {
+    if (!signedIn) {
+      savePendingQuote(draft());
+      toast.info("Please sign in to raise this rental quote request");
+      onOpenChange(false);
+      void navigate({ to: "/auth" });
+      return;
+    }
+    submit.mutate();
+  }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
