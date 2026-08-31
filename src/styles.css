@@ -244,3 +244,12 @@
     margin: 12mm;
   }
 }
+
+/* Hides the scrollbar on mobile swipe-scroll rails (tabs, stat carousels). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

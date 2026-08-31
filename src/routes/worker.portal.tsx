@@ -79,28 +79,31 @@ function WorkerPortal() {
   const me = session.data;
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+    <main className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6 lg:pb-14 lg:pt-12">
+      <header className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border border-primary/20 bg-card p-4 lg:flex lg:flex-wrap lg:justify-between lg:border-0 lg:bg-transparent lg:p-0">
+        <div className="min-w-0">
           <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-primary">
             {me.staff_role === "inventory" ? "Inventory Staff" : "Field Operations"}
           </p>
-          <h1 className="mt-1 text-3xl">{me.full_name}</h1>
+          <h1 className="mt-1 truncate text-2xl lg:text-3xl">{me.full_name}</h1>
           <p className="font-mono text-xs text-muted-foreground">{me.staff_code}</p>
         </div>
         <Button
           variant="outline"
+          size="icon"
+          className="shrink-0 lg:size-auto lg:px-4"
           onClick={async () => {
             await staffApi.signOut();
             qc.clear();
             await router.navigate({ to: "/staff-login", replace: true });
           }}
         >
-          <LogOut className="size-4" /> Sign Out
+          <LogOut className="size-4" /> <span className="hidden lg:inline">Sign Out</span>
         </Button>
       </header>
 
-      <section className="mt-8 space-y-4" aria-label="My assignments">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:items-start">
+      <section className="mt-6 space-y-4 lg:mt-10" aria-label="My assignments">
         <h2 className="text-2xl">Active Shoot Assignments</h2>
         {assignments.isLoading ? (
           <Skeleton className="h-40 w-full rounded-xl" />
@@ -144,7 +147,7 @@ function WorkerPortal() {
                 ))}
               </ul>
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 grid gap-2 sm:flex sm:flex-wrap">
                 <Button size="sm" onClick={() => setMode({ assignment: a, kind: "dispatch" })}>
                   <Truck className="size-4" /> Log Dispatch
                 </Button>
@@ -169,6 +172,7 @@ function WorkerPortal() {
       </section>
 
       {mode && (
+        <div className="lg:col-span-2">
         <FieldForm
           mode={mode}
           onClose={() => setMode(null)}
@@ -178,9 +182,10 @@ function WorkerPortal() {
             void qc.invalidateQueries({ queryKey: staffKeys.damageReports });
           }}
         />
+        </div>
       )}
 
-      <section className="mt-10" aria-label="My recent logs">
+      <section className="mt-8 lg:mt-10" aria-label="My recent logs">
         <h2 className="text-2xl">Recent Field Logs</h2>
         <ul className="mt-4 space-y-2">
           {(logs.data ?? []).slice(0, 8).map((l) => (
@@ -202,6 +207,7 @@ function WorkerPortal() {
           )}
         </ul>
       </section>
+      </div>
     </main>
   );
 }

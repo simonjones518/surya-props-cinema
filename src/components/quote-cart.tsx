@@ -75,7 +75,7 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
+      <DialogContent className="max-h-[100dvh] w-full max-w-2xl overflow-y-auto rounded-none border-primary/25 bg-card p-4 sm:max-h-[92vh] sm:rounded-lg sm:p-6 max-sm:h-[100dvh] max-sm:top-0 max-sm:translate-y-0">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
             Shoot Wishlist
