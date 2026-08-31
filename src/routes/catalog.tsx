@@ -9,6 +9,8 @@ import { CustomRequestModal } from "@/components/custom-request-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CatalogMobile } from "@/components/catalog/catalog-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { Prop } from "@/lib/types";
 
 export const Route = createFileRoute("/catalog")({
@@ -52,6 +54,31 @@ function CatalogPage() {
           `${p.title} ${p.serial_number} ${p.description}`.toLowerCase().includes(search.toLowerCase())),
     );
   }, [props.data, category, genre, search]);
+
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <>
+        <CatalogMobile
+          categories={categories.data ?? []}
+          genres={GENRES}
+          category={category}
+          onCategory={setCategory}
+          genre={genre}
+          onGenre={setGenre}
+          search={search}
+          onSearch={setSearch}
+          results={filtered}
+          loading={props.isLoading}
+          onRent={setSelected}
+          onCustomRequest={() => setCustomOpen(true)}
+        />
+        <RequestModal prop={selected} open={selected !== null} onOpenChange={(v) => !v && setSelected(null)} />
+        <CustomRequestModal open={customOpen} onOpenChange={setCustomOpen} />
+      </>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">

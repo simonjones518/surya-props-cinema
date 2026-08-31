@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { CinematicHero } from "@/components/cinematic-hero";
+import { HomeMobile } from "@/components/home/home-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { PropCard } from "@/components/prop-card";
 import { RentModal } from "@/components/rent-modal";
 import { api, queryKeys } from "@/lib/api";
@@ -31,6 +33,16 @@ function Index() {
   const [selected, setSelected] = useState<Prop | null>(null);
   const props = useQuery({ queryKey: queryKeys.props, queryFn: api.getProps });
   const featured = (props.data ?? []).filter((p) => p.status === "In-Stock").slice(0, 3);
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <>
+        <HomeMobile featured={featured} loading={props.isLoading} onRent={setSelected} />
+        <RentModal prop={selected} open={selected !== null} onOpenChange={(v) => !v && setSelected(null)} />
+      </>
+    );
+  }
 
   return (
     <>
