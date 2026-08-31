@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -129,18 +130,23 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // The Admin ERP ships its own sidebar shell, so the public site chrome is hidden there.
+  const chrome = !pathname.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SiteHeader />
+      {chrome && <SiteHeader />}
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      {chrome && (
       <footer className="border-t border-border bg-card">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:px-6">
           <p>© {new Date().getFullYear()} Surya Cine Special Props · Chennai, India</p>
           <p className="uppercase tracking-[0.25em]">Where real props bring stories to life</p>
         </div>
       </footer>
+      )}
       <Toaster />
     </QueryClientProvider>
   );
