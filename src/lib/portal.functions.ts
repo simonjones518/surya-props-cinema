@@ -142,3 +142,17 @@ export const closeSettlementFn = createServerFn({ method: "POST" })
     return (await db()).closeSettlement(data.id);
   });
 
+
+/* ---------- admin: client accounts directory ---------- */
+
+export const fetchClientAccounts = createServerFn({ method: "GET" }).handler(async () => {
+  await (await admin()).assertAdmin();
+  return (await db()).listClientAccounts();
+});
+
+export const fetchClientDossier = createServerFn({ method: "GET" })
+  .inputValidator((data: { userId: string }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).getClientDossier(data.userId);
+  });
