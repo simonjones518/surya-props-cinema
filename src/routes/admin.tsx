@@ -483,8 +483,21 @@ function AdminPage() {
           </div>
         </section>
       )}
+        </main>
+
+        <AdminMobileTabBar active={tab} onSelect={setTab} onOpenMenu={() => setMenuOpen(true)} />
+      </div>
+
+      <AdminMobileMenu
+        open={menuOpen}
+        active={tab}
+        onClose={() => setMenuOpen(false)}
+        onSelect={setTab}
+        onSignOut={handleSignOut}
+      />
 
       <DirectInvoiceModal open={directOpen} onOpenChange={setDirectOpen} />
+
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />
       <RentalOrderModal
         open={orderOpen}
@@ -578,7 +591,8 @@ function AdminPage() {
           <RentalOrderDocument order={viewOrder} onClose={() => setViewOrder(null)} />
         </div>
       )}
-    </main>
+    </div>
+
   );
 }
 
