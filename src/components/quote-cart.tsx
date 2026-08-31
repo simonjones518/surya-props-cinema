@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
@@ -16,14 +16,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { savePendingQuote } from "@/lib/pending-quote";
 import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
 import { useWishlist } from "@/lib/wishlist";
-import type { QuoteRequest } from "@/lib/types";
+import type { QuoteRequest, QuoteRequestDraft } from "@/lib/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
 export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const { lines, setQuantity, remove, clear, count } = useWishlist();
   const session = useQuery({ queryKey: portalKeys.session, queryFn: portal.session });
   const [banner, setBanner] = useState("");
@@ -32,6 +34,7 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
   const [start, setStart] = useState(today);
   const [ret, setRet] = useState(today);
   const [notes, setNotes] = useState("");
+
 
   const submit = useMutation({
     mutationFn: () =>
