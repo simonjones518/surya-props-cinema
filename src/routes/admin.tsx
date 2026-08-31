@@ -3,21 +3,18 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Plus, Receipt, ScanLine, Truck } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import {
-  AlertTriangle,
-  Boxes,
-  HandCoins,
-  IndianRupee,
-  PackageCheck,
-  Plus,
-  Receipt,
-  ScanLine,
-  TrendingUp,
-  Truck,
-  Vault,
-  Wallet,
-  LogOut,
-} from "lucide-react";
+  AdminMobileHeader,
+  AdminMobileMenu,
+  AdminMobileTabBar,
+} from "@/components/admin/admin-mobile-nav";
+import { OverviewDesktop } from "@/components/admin/overview-desktop";
+import { OverviewMobile } from "@/components/admin/overview-mobile";
+import { sectionOf, type AdminSectionKey } from "@/components/admin/admin-nav";
+
 import { api, queryKeys } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
