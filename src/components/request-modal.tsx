@@ -39,6 +39,7 @@ export function RequestModal({
   onOpenChange: (v: boolean) => void;
 }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const session = useQuery({ queryKey: portalKeys.session, queryFn: portal.session });
   const [productionHouse, setProductionHouse] = useState("");
   const [movie, setMovie] = useState("");
@@ -51,19 +52,21 @@ export function RequestModal({
   const days = shootDays(start, wrap);
   const signedIn = Boolean(session.data);
 
+  const draft = (): QuoteRequestDraft => {
+    if (!prop) throw new Error("No prop selected");
+    return {
+      production_house: productionHouse,
+      movie_name: movie,
+      shoot_location: shootLocation,
+      shoot_start_date: start,
+      estimated_return_date: wrap,
+      client_notes: notes,
+      items: [{ prop_id: prop.id, quantity }],
+    };
+  };
+
   const { mutate, isPending } = useMutation({
-    mutationFn: () => {
-      if (!prop) throw new Error("No prop selected");
-      return portal.requestQuote({
-        production_house: productionHouse,
-        movie_name: movie,
-        shoot_location: shootLocation,
-        shoot_start_date: start,
-        estimated_return_date: wrap,
-        client_notes: notes,
-        items: [{ prop_id: prop.id, quantity }],
-      });
-    },
+    mutationFn: () => portal.requestQuote(draft()),
     onSuccess: (res) => {
       qc.setQueryData<QuoteRequest[]>(portalKeys.myQuotes, (current) => {
         const withoutSaved = (current ?? []).filter((quote) => quote.id !== res.id);
@@ -82,15 +85,21 @@ export function RequestModal({
     onError: (e: Error) => toast.error("Request failed", { description: e.message }),
   });
 
+  function handleSubmit() {
+    if (!signedIn) {
+      savePendingQuote(draft());
+      toast.info("Please sign in to raise this rental quote request");
+      onOpenChange(false);
+      void navigate({ to: "/auth" });
+      return;
+    }
+    mutate();
+  }
+
   const valid = Boolean(
-    prop &&
-      signedIn &&
-      productionHouse.trim() &&
-      movie.trim() &&
-      shootLocation.trim() &&
-      start &&
-      wrap,
+    prop && productionHouse.trim() && movie.trim() && shootLocation.trim() && start && wrap,
   );
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
