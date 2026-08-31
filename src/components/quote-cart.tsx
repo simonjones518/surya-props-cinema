@@ -193,21 +193,23 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
 
         {!signedIn && (
           <p className="rounded-lg border border-primary/30 bg-primary/10 p-3 text-xs text-muted-foreground">
+            You'll be asked to{" "}
             <Link to="/auth" className="font-semibold text-primary underline">
-              Sign in or create a production account
+              sign in or create a production account
             </Link>{" "}
-            to submit this wishlist and track your quotations.
+            — your request is submitted automatically right after login.
           </p>
         )}
 
-        <Button
-          className="w-full"
-          disabled={!ready || submit.isPending}
-          onClick={() => submit.mutate()}
-        >
+        <Button className="w-full" disabled={!ready || submit.isPending} onClick={handleSubmit}>
           <ShoppingBag className="size-4" />
-          {submit.isPending ? "Sending…" : "Request Rental Quote"}
+          {submit.isPending
+            ? "Sending…"
+            : signedIn
+              ? "Request Rental Quote"
+              : "Sign In & Request Rental Quote"}
         </Button>
+
       </DialogContent>
     </Dialog>
   );
