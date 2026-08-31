@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { MessageCircle } from "lucide-react";
@@ -17,11 +17,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductionHouseSelect } from "@/components/production-house-select";
 import { portal, portalKeys } from "@/lib/portal-api";
+import { savePendingQuote } from "@/lib/pending-quote";
 import { shootDays } from "@/lib/format";
 import { newQuoteRequestMessage, openWhatsApp } from "@/lib/whatsapp";
-import type { Prop, QuoteRequest } from "@/lib/types";
+import type { Prop, QuoteRequest, QuoteRequestDraft } from "@/lib/types";
 
 const today = () => new Date().toISOString().slice(0, 10);
+
 
 /**
  * Single-prop rental request. Writes a real `quote_requested` record into the
