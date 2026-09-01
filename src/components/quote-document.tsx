@@ -426,51 +426,80 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         </table>
 
         {priced ? (
-          <section className="ml-auto w-full max-w-sm space-y-1.5 text-sm">
-            {receipt ? (
-              <>
-                <Row label="Rental Estimate" value={inr(rentTotal)} />
-                <Row label="Security Deposit" value={inr(quote.security_deposit)} />
-                <Total label="Advance Received" value={inr(advancePaid)} />
-                <Row label="Balance Payable Later" value={inr(balance)} />
-              </>
-            ) : advanceNote ? (
-              <>
-                <Row label={`Rental Estimate (${billedDays} day(s))`} value={inr(rentTotal)} />
-                <Row label="Security Deposit" value={inr(quote.security_deposit)} />
-                <Total label="Advance Payable Now" value={inr(advanceDue)} />
-              </>
-            ) : (
-              <>
-                <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(rentTotal)} />
-                <Row label="Security Deposit" value={inr(quote.security_deposit)} />
-                <Row
-                  label={settlement ? "Advance Adjusted" : "Advance Required"}
-                  value={`− ${inr(settlement ? advancePaid : advanceDue)}`}
-                />
-                <Total
-                  label={settlement ? "Net Balance Due" : "Estimated Balance"}
-                  value={inr(balance)}
-                />
-                {settlement && quote.status === "closed" && (
-                  <>
-                    <Row label="Client-Issued Amount" value={inr(quote.settled_amount)} />
-                    <Row
-                      label="Concession Allowed"
-                      value={`− ${inr(quote.settlement_waived)}`}
-                    />
-                    <Total label="Amount Settled & Closed" value={inr(quote.settled_amount)} />
-                  </>
+          <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+            <div className="rounded-lg border border-primary/40 p-3 print:border-black">
+              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
+                Payment Details
+              </p>
+              <div className="mt-3 flex items-start gap-4">
+                {qr && (
+                  <img
+                    src={qr}
+                    alt="UPI payment QR code"
+                    className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
+                  />
                 )}
-              </>
+                <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
+                  <p className="font-mono text-foreground print:text-black">
+                    UPI: {COMPANY_INFO.upiId}
+                  </p>
+                  <p>{COMPANY_INFO.accountName}</p>
+                  <p>{COMPANY_INFO.bankName}</p>
+                  <p>
+                    A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
+                  </p>
+                  <p className="mt-1 font-semibold text-primary print:text-black">
+                    Pay {inr(qrAmount)} and share the UTR / screenshot in your portal.
+                  </p>
+                </div>
+              </div>
+            </div>
 
-            )}
-            <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
-              {amountInWords(receipt ? advancePaid : advanceNote ? advanceDue : balance)}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              Non-GST rental document
-            </p>
+            <div className="space-y-1.5 text-sm">
+              {receipt ? (
+                <>
+                  <Row label="Rental Estimate" value={inr(rentTotal)} />
+                  <Row label="Security Deposit" value={inr(quote.security_deposit)} />
+                  <Total label="Advance Received" value={inr(advancePaid)} />
+                  <Row label="Balance Payable Later" value={inr(balance)} />
+                </>
+              ) : advanceNote ? (
+                <>
+                  <Row label={`Rental Estimate (${billedDays} day(s))`} value={inr(rentTotal)} />
+                  <Row label="Security Deposit" value={inr(quote.security_deposit)} />
+                  <Total label="Advance Payable Now" value={inr(advanceDue)} />
+                </>
+              ) : (
+                <>
+                  <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(rentTotal)} />
+                  <Row label="Security Deposit" value={inr(quote.security_deposit)} />
+                  <Row
+                    label={settlement ? "Advance Adjusted" : "Advance Required"}
+                    value={`− ${inr(settlement ? advancePaid : advanceDue)}`}
+                  />
+                  <Total
+                    label={settlement ? "Net Balance Due" : "Estimated Balance"}
+                    value={inr(balance)}
+                  />
+                  {settlement && quote.status === "closed" && (
+                    <>
+                      <Row label="Client-Issued Amount" value={inr(quote.settled_amount)} />
+                      <Row
+                        label="Concession Allowed"
+                        value={`− ${inr(quote.settlement_waived)}`}
+                      />
+                      <Total label="Amount Settled & Closed" value={inr(quote.settled_amount)} />
+                    </>
+                  )}
+                </>
+              )}
+              <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
+                {amountInWords(receipt ? advancePaid : advanceNote ? advanceDue : balance)}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+                Non-GST rental document
+              </p>
+            </div>
           </section>
         ) : (
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground print:text-black">
@@ -478,28 +507,6 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
           </p>
         )}
 
-        {(advanceNote || settlement) && (
-          <section className="flex flex-wrap items-center gap-5 border-t border-border pt-4">
-            {qr && (
-              <img
-                src={qr}
-                alt="UPI payment QR code"
-                className="size-28 rounded-lg border border-primary/40 bg-white p-1 print:border-black"
-              />
-            )}
-            <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
-              <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
-              <p>{COMPANY_INFO.accountName}</p>
-              <p>
-                {COMPANY_INFO.bankName} · A/C {COMPANY_INFO.accountNumber} · IFSC{" "}
-                {COMPANY_INFO.ifsc}
-              </p>
-              <p className="mt-1 font-semibold text-primary print:text-black">
-                Pay {inr(payNow)} and share the UTR / screenshot in your portal.
-              </p>
-            </div>
-          </section>
-        )}
 
         {quote.admin_notes && (
           <p className="border-t border-border pt-3 text-xs text-muted-foreground print:text-black">
