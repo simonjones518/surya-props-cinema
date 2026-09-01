@@ -276,7 +276,9 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
     : rentTotal + quote.security_deposit - (advancePaid || advanceDue);
 
   const payNow = receipt ? advancePaid : advanceNote ? advanceDue : settlement ? quote.balance_due : 0;
-  const qr = useUpiQr(payNow, `${quote.quote_code} ${DOC_LABEL[kind]}`, advanceNote || settlement);
+  const qrAmount = payNow > 0 ? payNow : balance;
+  const qr = useUpiQr(qrAmount, `${quote.quote_code} ${DOC_LABEL[kind]}`, priced);
+
 
   const docNo =
     receipt && quote.advance_receipt_no
