@@ -363,6 +363,18 @@ export interface QuoteRequest {
   dispatch_vehicle: string | null;
   dispatch_notes: string | null;
   balance_cleared_at: string | null;
+  /* ---- crew deployment + daily labour invoice + client-issued closing ---- */
+  crew_assignments: CrewMember[];
+  labour_days: LabourDay[];
+  labour_total: number;
+  labour_settled_amount: number;
+  labour_status: "pending" | "closed";
+  labour_cleared_at: string | null;
+  labour_invoice_no: string | null;
+  /** Amount the client's manager finally agreed to pay on the settlement invoice. */
+  settled_amount: number;
+  /** Difference conceded between the system settlement and the client-issued amount. */
+  settlement_waived: number;
 }
 
 
