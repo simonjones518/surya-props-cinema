@@ -114,7 +114,9 @@ export const portal = {
   recordReturn: (id: number, actual_return_date: string) =>
     recordReturnFn({ data: { id, actual_return_date } }),
   closeSettlement: (id: number, settled_amount?: number) =>
-    closeSettlementFn({ data: { id, settled_amount } }),
+    closeSettlementFn({
+      data: settled_amount == null ? { id } : { id, settled_amount },
+    }),
 };
 
 
