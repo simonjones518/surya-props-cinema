@@ -190,6 +190,88 @@ async function resolveProductionHouse(name: string, userId: string) {
   return { id: Number(data["id"]), name: data["name"] as string };
 }
 
+/* ---------- crew & labour sidecar ----------
+ * The live database has not been upgraded with the Phase 3 columns
+ * (crew_assignments, labour_days, settled_amount …). Until it is, this state is
+ * persisted as a JSON payload on a dedicated `dispatch_logs` row per order
+ * (kind = 'crew_labour'), which keeps every crew / labour feature working
+ * without any schema change.
+ */
+
+const SIDECAR_KIND = "crew_labour";
+
+type Phase3State = {
+  crew_assignments: QuoteRequest["crew_assignments"];
+  labour_days: QuoteRequest["labour_days"];
+  labour_total: number;
+  labour_settled_amount: number;
+  labour_status: "pending" | "closed";
+  labour_cleared_at: string | null;
+  labour_invoice_no: string | null;
+  settled_amount: number;
+  settlement_waived: number;
+};
+
+async function readSidecar(quoteId: number): Promise<Partial<Phase3State>> {
+  const { data } = await suryaDb
+    .from("dispatch_logs")
+    .select("id, notes")
+    .eq("quote_id", quoteId)
+    .eq("kind", SIDECAR_KIND)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data?.["notes"]) return {};
+  try {
+    return JSON.parse(String(data["notes"])) as Partial<Phase3State>;
+  } catch {
+    return {};
+  }
+}
+
+async function writeSidecar(quoteId: number, patch: Partial<Phase3State>) {
+  const { data } = await suryaDb
+    .from("dispatch_logs")
+    .select("id, notes")
+    .eq("quote_id", quoteId)
+    .eq("kind", SIDECAR_KIND)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  let current: Partial<Phase3State> = {};
+  if (data?.["notes"]) {
+    try {
+      current = JSON.parse(String(data["notes"])) as Partial<Phase3State>;
+    } catch {
+      current = {};
+    }
+  }
+  const notes = JSON.stringify({ ...current, ...patch });
+  if (data?.["id"]) {
+    const { error } = await suryaDb
+      .from("dispatch_logs")
+      .update({ notes })
+      .eq("id", Number(data["id"]));
+    if (error) throw new Error(error.message);
+  } else {
+    const { data: q } = await suryaDb
+      .from("quote_requests")
+      .select("quote_code")
+      .eq("id", quoteId)
+      .maybeSingle();
+    const { error } = await suryaDb.from("dispatch_logs").insert({
+      quote_id: quoteId,
+      quote_code: (q?.["quote_code"] as string) ?? "",
+      kind: SIDECAR_KIND,
+      vehicle_number: "",
+      notes,
+      staff_name: "system",
+    });
+    if (error) throw new Error(error.message);
+  }
+  return { ...current, ...patch };
+}
+
 /* ---------- mapping ---------- */
 
 async function signOne(path: string | null): Promise<string | null> {
@@ -198,6 +280,7 @@ async function signOne(path: string | null): Promise<string | null> {
   const { data } = await suryaDb.storage.from(BUCKET).createSignedUrl(path, SIGNED_TTL);
   return data?.signedUrl ?? null;
 }
+
 
 async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
   return {
