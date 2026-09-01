@@ -183,7 +183,7 @@ export function StaffManager() {
                 <th className="px-4 py-3">Staff</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Username</th>
-                <th className="px-4 py-3">Daily Wage</th>
+                <th className="px-4 py-3">Wage</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
