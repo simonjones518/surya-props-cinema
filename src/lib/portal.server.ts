@@ -239,6 +239,15 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     dispatch_vehicle: row["dispatch_vehicle"] ?? null,
     dispatch_notes: row["dispatch_notes"] ?? null,
     balance_cleared_at: row["balance_cleared_at"] ?? null,
+    crew_assignments: (row["crew_assignments"] ?? []) as QuoteRequest["crew_assignments"],
+    labour_days: (row["labour_days"] ?? []) as QuoteRequest["labour_days"],
+    labour_total: num(row["labour_total"]),
+    labour_settled_amount: num(row["labour_settled_amount"]),
+    labour_status: (row["labour_status"] ?? "pending") as "pending" | "closed",
+    labour_cleared_at: row["labour_cleared_at"] ?? null,
+    labour_invoice_no: row["labour_invoice_no"] ?? null,
+    settled_amount: num(row["settled_amount"]),
+    settlement_waived: num(row["settlement_waived"]),
   };
 
 }
