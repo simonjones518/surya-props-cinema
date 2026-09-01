@@ -5,6 +5,7 @@ import {
   clientSignInFn,
   clientSignOutFn,
   clientSignUpFn,
+  closeLabourInvoiceFn,
   closeSettlementFn,
   createQuoteRequestFn,
   dispatchQuoteFn,
@@ -18,6 +19,7 @@ import {
   priceQuoteFn,
   recordReturnFn,
   rejectQuoteFn,
+  saveLabourSheetFn,
   saveMyProfileFn,
   setAdvanceRequiredFn,
   uploadPaymentProofFn,
@@ -97,11 +99,24 @@ export const portal = {
   }) => priceQuoteFn({ data }),
   verifyAdvance: (data: { id: number; amount_received?: number; mode?: string; utr?: string }) =>
     verifyAdvanceFn({ data }),
-  dispatchQuote: (data: { id: number; vehicle?: string; notes?: string }) =>
-    dispatchQuoteFn({ data }),
+  dispatchQuote: (data: {
+    id: number;
+    vehicle?: string;
+    notes?: string;
+    crew_ids?: number[];
+  }) => dispatchQuoteFn({ data }),
+  saveLabourSheet: (
+    id: number,
+    days: { date: string; workers: number; rate: number; note?: string }[],
+  ) => saveLabourSheetFn({ data: { id, days } }),
+  closeLabourInvoice: (id: number, amount: number) =>
+    closeLabourInvoiceFn({ data: { id, amount } }),
   recordReturn: (id: number, actual_return_date: string) =>
     recordReturnFn({ data: { id, actual_return_date } }),
-  closeSettlement: (id: number) => closeSettlementFn({ data: { id } }),
+  closeSettlement: (id: number, settled_amount?: number) =>
+    closeSettlementFn({
+      data: settled_amount == null ? { id } : { id, settled_amount },
+    }),
 };
 
 

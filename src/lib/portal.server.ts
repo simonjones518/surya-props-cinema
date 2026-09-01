@@ -239,6 +239,15 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     dispatch_vehicle: row["dispatch_vehicle"] ?? null,
     dispatch_notes: row["dispatch_notes"] ?? null,
     balance_cleared_at: row["balance_cleared_at"] ?? null,
+    crew_assignments: (row["crew_assignments"] ?? []) as QuoteRequest["crew_assignments"],
+    labour_days: (row["labour_days"] ?? []) as QuoteRequest["labour_days"],
+    labour_total: num(row["labour_total"]),
+    labour_settled_amount: num(row["labour_settled_amount"]),
+    labour_status: (row["labour_status"] ?? "pending") as "pending" | "closed",
+    labour_cleared_at: row["labour_cleared_at"] ?? null,
+    labour_invoice_no: row["labour_invoice_no"] ?? null,
+    settled_amount: num(row["settled_amount"]),
+    settlement_waived: num(row["settlement_waived"]),
   };
 
 }
@@ -589,7 +598,12 @@ export async function verifyAdvance(input: {
 }
 
 /** Stage 4 — props physically dispatched: rental clock starts, inventory locks. */
-export async function dispatchQuote(input: { id: number; vehicle?: string; notes?: string }) {
+export async function dispatchQuote(input: {
+  id: number;
+  vehicle?: string;
+  notes?: string;
+  crew_ids?: number[];
+}) {
   const id = Number(input.id);
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
@@ -610,6 +624,22 @@ export async function dispatchQuote(input: { id: number; vehicle?: string; notes
     );
   }
 
+  // Field-operations crew deployed with this consignment.
+  const crewIds = Array.from(new Set((input.crew_ids ?? []).map(Number).filter(Boolean)));
+  let crew: { staff_id: number; staff_code: string; staff_name: string; phone: string }[] = [];
+  if (crewIds.length > 0) {
+    const { data: staff } = await suryaDb
+      .from("staff_accounts")
+      .select("id, staff_code, full_name, phone")
+      .in("id", crewIds);
+    crew = (staff ?? []).map((s: Record<string, any>) => ({
+      staff_id: Number(s["id"]),
+      staff_code: s["staff_code"] ?? "",
+      staff_name: s["full_name"] ?? "",
+      phone: s["phone"] ?? "",
+    }));
+  }
+
   const now = new Date();
   const { error: upErr } = await suryaDb
     .from("quote_requests")
@@ -620,6 +650,9 @@ export async function dispatchQuote(input: { id: number; vehicle?: string; notes
       shoot_start_date: now.toISOString().slice(0, 10),
       dispatch_vehicle: clean(input.vehicle ?? "", 60) || null,
       dispatch_notes: clean(input.notes ?? "", 500) || null,
+      crew_assignments: crew as unknown as any,
+      assigned_staff_id: crew[0]?.staff_id ?? null,
+      assigned_staff_name: crew[0]?.staff_name ?? null,
     })
     .eq("id", id);
   if (upErr) throw new Error(upErr.message);
@@ -628,8 +661,69 @@ export async function dispatchQuote(input: { id: number; vehicle?: string; notes
   if (propIds.length > 0) {
     await suryaDb.from("props").update({ status: "On-Set" }).in("id", propIds);
   }
-  return { ok: true as const };
+  return { ok: true as const, crew_count: crew.length };
 }
+
+/**
+ * Crew labour charge sheet — day-wise worker charges billed on a separate
+ * labour invoice (never mixed with the prop rental invoice).
+ */
+export async function saveLabourSheet(input: {
+  id: number;
+  days: { date: string; workers: number; rate: number; note?: string }[];
+}) {
+  const id = Number(input.id);
+  const days = (input.days ?? [])
+    .filter((d) => d.date)
+    .map((d) => {
+      const workers = Math.max(1, Math.round(Number(d.workers) || 1));
+      const rate = Math.max(0, Number(d.rate) || 0);
+      return {
+        date: String(d.date).slice(0, 10),
+        workers,
+        rate,
+        amount: workers * rate,
+        note: clean(d.note ?? "", 200),
+      };
+    });
+  const labour_total = days.reduce((s, d) => s + d.amount, 0);
+
+  const { data: quote } = await suryaDb
+    .from("quote_requests")
+    .select("labour_invoice_no")
+    .eq("id", id)
+    .maybeSingle();
+  const labour_invoice_no =
+    quote?.["labour_invoice_no"] ?? `SCP/LAB/${new Date().getFullYear()}/${String(id).padStart(4, "0")}`;
+
+  const { error } = await suryaDb
+    .from("quote_requests")
+    .update({
+      labour_days: days as unknown as any,
+      labour_total,
+      labour_invoice_no,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true as const, labour_total, labour_invoice_no };
+}
+
+/** Client's manager fixes how much of the labour invoice they will actually pay. */
+export async function closeLabourInvoice(input: { id: number; amount: number }) {
+  const id = Number(input.id);
+  const amount = Math.max(0, Number(input.amount) || 0);
+  const { error } = await suryaDb
+    .from("quote_requests")
+    .update({
+      labour_settled_amount: amount,
+      labour_status: "closed",
+      labour_cleared_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true as const, amount };
+}
+
 
 /** Stage 5 — record return, recompute on actual days used, release inventory. */
 export async function recordReturn(input: { id: number; actual_return_date: string }) {
@@ -682,12 +776,17 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
   return { ok: true as const, actual_days_used, final_total, balance_due };
 }
 
-/** Stage 5b — client clears the final balance: invoice flips to "Paid & Order Closed". */
-export async function closeSettlement(id: number) {
+/**
+ * Stage 5b — closing the order on the amount the client's manager issued.
+ * The system settlement (e.g. ₹5,500) can be closed against a lower
+ * client-issued amount (e.g. ₹5,000); the difference is recorded as conceded.
+ */
+export async function closeSettlement(input: { id: number; settled_amount?: number }) {
+  const id = Number(input.id);
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
     .select("*")
-    .eq("id", Number(id))
+    .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
@@ -695,23 +794,38 @@ export async function closeSettlement(id: number) {
     throw new Error("Record the return and generate the settlement invoice first.");
   }
 
+  const invoiced = num(quote["balance_due"]);
+  const settled_amount =
+    input.settled_amount == null ? invoiced : Math.max(0, Number(input.settled_amount) || 0);
+  const settlement_waived = Math.max(0, invoiced - settled_amount);
+
   const { error: upErr } = await suryaDb
     .from("quote_requests")
     .update({
       status: "closed",
+      settled_amount,
+      settlement_waived,
+      production_approved_amount: settled_amount,
       balance_due: 0,
       balance_cleared_at: new Date().toISOString(),
     })
-    .eq("id", Number(id));
+    .eq("id", id);
   if (upErr) throw new Error(upErr.message);
 
   await suryaDb
     .from("quote_payments")
-    .update({ status: "verified" })
-    .eq("quote_id", Number(id))
+    .update({ amount: settled_amount, reference: `Client-issued settlement · closed` })
+    .eq("quote_id", id)
     .eq("kind", "settlement");
 
-  return { ok: true as const };
+
+  await suryaDb
+    .from("quote_payments")
+    .update({ status: "verified" })
+    .eq("quote_id", id)
+    .eq("kind", "settlement");
+
+  return { ok: true as const, settled_amount, settlement_waived };
 }
 
 

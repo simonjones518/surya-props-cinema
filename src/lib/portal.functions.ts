@@ -129,18 +129,40 @@ export const recordReturnFn = createServerFn({ method: "POST" })
   });
 
 export const dispatchQuoteFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: number; vehicle?: string; notes?: string }) => data)
+  .inputValidator(
+    (data: { id: number; vehicle?: string; notes?: string; crew_ids?: number[] }) => data,
+  )
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();
     return (await db()).dispatchQuote(data);
   });
 
-export const closeSettlementFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: number }) => data)
+export const saveLabourSheetFn = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      id: number;
+      days: { date: string; workers: number; rate: number; note?: string }[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();
-    return (await db()).closeSettlement(data.id);
+    return (await db()).saveLabourSheet(data);
   });
+
+export const closeLabourInvoiceFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; amount: number }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).closeLabourInvoice(data);
+  });
+
+export const closeSettlementFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; settled_amount?: number }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).closeSettlement(data);
+  });
+
 
 
 /* ---------- admin: client accounts directory ---------- */

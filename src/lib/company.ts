@@ -26,7 +26,7 @@ export const RENTAL_TERMS = [
 
 /** SCP-QTN-2026-0042 style references, derived from the quote id (stable). */
 export function docNumber(
-  prefix: "QTN" | "APR" | "RCP" | "DC" | "INV",
+  prefix: "QTN" | "APR" | "RCP" | "DC" | "INV" | "LAB",
   id: number,
   createdAt?: string,
 ) {

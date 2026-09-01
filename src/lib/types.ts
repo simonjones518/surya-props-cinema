@@ -324,6 +324,24 @@ export interface QuotePayment {
   created_at: string;
 }
 
+/** A field-operations worker deployed with the props on dispatch. */
+export interface CrewMember {
+  staff_id: number;
+  staff_code: string;
+  staff_name: string;
+  phone: string;
+}
+
+/** One day of the crew labour charge sheet. Rates can differ per day. */
+export interface LabourDay {
+  date: string;
+  workers: number;
+  /** Charge per worker for that day. */
+  rate: number;
+  amount: number;
+  note: string;
+}
+
 export interface QuoteRequest {
   id: number;
   quote_code: string;
@@ -363,6 +381,18 @@ export interface QuoteRequest {
   dispatch_vehicle: string | null;
   dispatch_notes: string | null;
   balance_cleared_at: string | null;
+  /* ---- crew deployment + daily labour invoice + client-issued closing ---- */
+  crew_assignments: CrewMember[];
+  labour_days: LabourDay[];
+  labour_total: number;
+  labour_settled_amount: number;
+  labour_status: "pending" | "closed";
+  labour_cleared_at: string | null;
+  labour_invoice_no: string | null;
+  /** Amount the client's manager finally agreed to pay on the settlement invoice. */
+  settled_amount: number;
+  /** Difference conceded between the system settlement and the client-issued amount. */
+  settlement_waived: number;
 }
 
 

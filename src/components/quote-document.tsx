@@ -8,14 +8,24 @@ import { COMPANY_INFO, RENTAL_TERMS, amountInWords, docNumber, upiPayload } from
 import type { QuoteRequest } from "@/lib/types";
 
 /** The five standardised rental documents. */
-export type QuoteDocKind = "quotation" | "advance-request" | "receipt" | "challan" | "settlement";
+export type QuoteDocKind =
+  | "quotation"
+  | "advance-request"
+  | "receipt"
+  | "challan"
+  | "settlement"
+  | "labour";
 
-const META: Record<QuoteDocKind, { title: string; prefix: "QTN" | "APR" | "RCP" | "DC" | "INV" }> = {
+const META: Record<
+  QuoteDocKind,
+  { title: string; prefix: "QTN" | "APR" | "RCP" | "DC" | "INV" | "LAB" }
+> = {
   quotation: { title: "Rental Estimate Quotation", prefix: "QTN" },
   "advance-request": { title: "Advance Payment Request Note", prefix: "APR" },
   receipt: { title: "Advance Money Receipt", prefix: "RCP" },
   challan: { title: "Dispatch & Delivery Challan", prefix: "DC" },
   settlement: { title: "Final Return & Settlement Invoice", prefix: "INV" },
+  labour: { title: "Crew Daily Labour Invoice", prefix: "LAB" },
 };
 
 export const DOC_LABEL: Record<QuoteDocKind, string> = {
@@ -24,6 +34,7 @@ export const DOC_LABEL: Record<QuoteDocKind, string> = {
   receipt: "Advance Receipt",
   challan: "Delivery Challan",
   settlement: "Settlement Invoice",
+  labour: "Labour Invoice",
 };
 
 function useUpiQr(amount: number, note: string, enabled: boolean) {
@@ -44,8 +55,192 @@ function useUpiQr(amount: number, note: string, enabled: boolean) {
   return src;
 }
 
+/**
+ * Crew daily labour invoice — billed completely separately from the prop
+ * rental invoice, day one to closing day, with a per-day worker rate.
+ */
+function LabourInvoice({ quote }: { quote: QuoteRequest }) {
+  const closed = quote.labour_status === "closed";
+  const payable = closed ? quote.labour_settled_amount : quote.labour_total;
+  const qr = useUpiQr(payable, `${quote.quote_code} Labour`, true);
+  const docNo =
+    quote.labour_invoice_no ?? docNumber("LAB", quote.id, quote.dispatch_at ?? quote.created_at);
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
+          Crew Daily Labour Invoice
+        </p>
+        <Button variant="outline" size="sm" onClick={() => window.print()}>
+          <Printer className="size-4" /> Print / Save PDF
+        </Button>
+      </div>
+
+      <article
+        id="print-area"
+        className="space-y-5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+      >
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-4">
+          <div>
+            <BrandLogo className="h-16" />
+            <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
+              {COMPANY_INFO.tagline}
+            </p>
+            <p className="mt-2 max-w-xs text-[11px] leading-relaxed text-muted-foreground print:text-black">
+              {COMPANY_INFO.warehouse}
+            </p>
+            <p className="text-[11px] text-muted-foreground print:text-black">
+              {COMPANY_INFO.phone} · {COMPANY_INFO.email}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-display text-xl tracking-wide text-primary print:text-black">
+              Crew Daily Labour Invoice
+            </p>
+            <p className="font-mono text-xs text-foreground print:text-black">{docNo}</p>
+            <p className="text-xs text-muted-foreground print:text-black">
+              Dated {prettyDate(quote.actual_return_date ?? quote.created_at)}
+            </p>
+            <p className="font-mono text-[10px] text-muted-foreground print:text-black">
+              Ref {quote.quote_code}
+            </p>
+          </div>
+        </header>
+
+        <section className="grid gap-4 text-sm sm:grid-cols-2">
+          <div>
+            <Field label="Movie / Project" value={quote.movie_name || "—"} />
+            <Field label="Production House" value={quote.production_house} />
+            <Field
+              label="Attn"
+              value={
+                quote.client_designation
+                  ? `${quote.contact_person} — ${quote.client_designation}`
+                  : quote.contact_person
+              }
+            />
+            <Field label="Phone" value={quote.phone} />
+          </div>
+          <div>
+            <Field label="Shoot Location" value={quote.shoot_location || "—"} />
+            <Field
+              label="Deployment From"
+              value={prettyDate(quote.dispatch_at ?? quote.shoot_start_date)}
+            />
+            <Field
+              label="Closing Day"
+              value={prettyDate(quote.actual_return_date ?? quote.estimated_return_date)}
+            />
+            <Field
+              label="Crew Deployed"
+              value={
+                quote.crew_assignments.length > 0
+                  ? quote.crew_assignments.map((c) => c.staff_name).join(", ")
+                  : "—"
+              }
+            />
+          </div>
+        </section>
+
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+              <th className="py-2">Date</th>
+              <th className="py-2 text-center">Workers</th>
+              <th className="py-2 text-right">Charge / Worker</th>
+              <th className="py-2 text-right">Day Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quote.labour_days.map((d) => (
+              <tr key={d.date} className="border-b border-border/60">
+                <td className="py-2">
+                  {prettyDate(d.date)}
+                  {d.note && (
+                    <span className="block text-[10px] text-muted-foreground print:text-black">
+                      {d.note}
+                    </span>
+                  )}
+                </td>
+                <td className="py-2 text-center">{d.workers}</td>
+                <td className="py-2 text-right">{inr(d.rate)}</td>
+                <td className="py-2 text-right font-semibold">{inr(d.amount)}</td>
+              </tr>
+            ))}
+            {quote.labour_days.length === 0 && (
+              <tr>
+                <td colSpan={4} className="py-4 text-center text-xs text-muted-foreground">
+                  No labour days entered yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+
+        <section className="ml-auto w-full max-w-sm space-y-1.5 text-sm">
+          <Row label="Labour Charges Raised" value={inr(quote.labour_total)} />
+          {closed && (
+            <>
+              <Row
+                label="Production Approved"
+                value={inr(quote.labour_settled_amount)}
+              />
+              <Row
+                label="Concession Allowed"
+                value={`− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`}
+              />
+            </>
+          )}
+          <Total label={closed ? "Amount Settled" : "Labour Payable"} value={inr(payable)} />
+          <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
+            {amountInWords(payable)}
+          </p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+            Labour / manpower charges only — prop rental billed separately
+          </p>
+        </section>
+
+        {qr && (
+          <section className="flex flex-wrap items-center gap-5 border-t border-border pt-4">
+            <img
+              src={qr}
+              alt="UPI payment QR code"
+              className="size-28 rounded-lg border border-primary/40 bg-white p-1 print:border-black"
+            />
+            <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
+              <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
+              <p>{COMPANY_INFO.accountName}</p>
+              <p>
+                {COMPANY_INFO.bankName} · A/C {COMPANY_INFO.accountNumber} · IFSC{" "}
+                {COMPANY_INFO.ifsc}
+              </p>
+            </div>
+          </section>
+        )}
+
+        <section className="grid gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
+          <p className="text-[10px] leading-relaxed text-muted-foreground print:text-black">
+            Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew
+            for the dates listed above. Overtime beyond 12 hours a day is chargeable separately.
+          </p>
+          <div className="flex flex-col justify-end gap-6 text-center text-[11px] text-muted-foreground print:text-black">
+            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
+              Client Acknowledgement
+            </div>
+            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
+              For {COMPANY_INFO.name}
+            </div>
+          </div>
+        </section>
+      </article>
+    </div>
+  );
+}
+
 /** Print-ready non-GST cinema document. `challan` hides all pricing. */
 export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: QuoteDocKind }) {
+  if (kind === "labour") return <LabourInvoice quote={quote} />;
   const meta = META[kind];
   const priced = kind !== "challan";
   const settlement = kind === "settlement";
@@ -222,7 +417,18 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                   label={settlement ? "Net Balance Due" : "Estimated Balance"}
                   value={inr(balance)}
                 />
+                {settlement && quote.status === "closed" && (
+                  <>
+                    <Row label="Client-Issued Amount" value={inr(quote.settled_amount)} />
+                    <Row
+                      label="Concession Allowed"
+                      value={`− ${inr(quote.settlement_waived)}`}
+                    />
+                    <Total label="Amount Settled & Closed" value={inr(quote.settled_amount)} />
+                  </>
+                )}
               </>
+
             )}
             <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
               {amountInWords(receipt ? advancePaid : advanceNote ? advanceDue : balance)}
