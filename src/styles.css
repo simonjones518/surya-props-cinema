@@ -256,18 +256,27 @@
   .sticky {
     position: static !important;
   }
-  /* Print only the document: everything else is hidden but layout-safe. */
-  body * {
-    visibility: hidden !important;
+  /* Print only the document. Collapse every branch that does not contain it so
+     no blank leading page is generated. */
+  body *:not(:has(#print-area)):not(#print-area):not(#print-area *) {
+    display: none !important;
   }
-  #print-area,
-  #print-area * {
-    visibility: visible !important;
+  body *:has(#print-area) {
+    display: block !important;
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    transform: none !important;
+    overflow: visible !important;
   }
   #print-area {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     margin: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
@@ -277,6 +286,7 @@
     padding: 0 !important;
     box-shadow: none !important;
   }
+
   /* The app UI is dark-themed; on paper every element must be readable, so
      force ink-on-white for the printable document and its descendants. */
   #print-area,

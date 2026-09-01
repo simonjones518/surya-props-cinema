@@ -195,37 +195,39 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
 
 
-        <section className="ml-auto w-full max-w-sm space-y-1.5 text-sm">
-          <Row label="Labour Charges Raised" value={inr(quote.labour_total)} />
-          {closed && (
-            <>
-              <Row
-                label="Production Approved"
-                value={inr(quote.labour_settled_amount)}
-              />
-              <Row
-                label="Concession Allowed"
-                value={`− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`}
-              />
-            </>
-          )}
-          <Total label={closed ? "Amount Settled" : "Labour Payable"} value={inr(payable)} />
-          <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
-            {amountInWords(payable)}
-          </p>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-            Labour / manpower charges only — prop rental billed separately
-          </p>
-        </section>
+        <section className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">
+          <div className="space-y-1.5 text-sm">
+            <Row label="Labour Charges Raised" value={inr(quote.labour_total)} />
+            {closed && (
+              <>
+                <Row label="Production Approved" value={inr(quote.labour_settled_amount)} />
+                <Row
+                  label="Concession Allowed"
+                  value={`− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`}
+                />
+              </>
+            )}
+            <Total label={closed ? "Amount Settled" : "Labour Payable"} value={inr(payable)} />
+            <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
+              {amountInWords(payable)}
+            </p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+              Labour / manpower charges only — prop rental billed separately
+            </p>
+          </div>
 
-        {qr && (
-          <section className="flex flex-wrap items-center gap-5 border-t border-border pt-4">
-            <img
-              src={qr}
-              alt="UPI payment QR code"
-              className="size-28 rounded-lg border border-primary/40 bg-white p-1 print:border-black"
-            />
+          <div className="flex items-start gap-4 rounded-lg border border-primary/40 p-3 print:border-black">
+            {qr && (
+              <img
+                src={qr}
+                alt="UPI payment QR code"
+                className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
+              />
+            )}
             <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary print:text-black">
+                Payment Details
+              </p>
               <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
               <p>{COMPANY_INFO.accountName}</p>
               <p>
@@ -233,23 +235,24 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
                 {COMPANY_INFO.ifsc}
               </p>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        <section className="grid gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
+        <section className="mt-4 grid items-end gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
           <p className="text-[10px] leading-relaxed text-muted-foreground print:text-black">
             Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew
             for the dates listed above. Overtime beyond 12 hours a day is chargeable separately.
           </p>
-          <div className="flex flex-col justify-end gap-6 text-center text-[11px] text-muted-foreground print:text-black">
-            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
+          <div className="flex gap-8 text-center text-[11px] text-muted-foreground print:text-black">
+            <div className="w-40 border-t border-dashed border-primary/50 pt-2 print:border-black">
               Client Acknowledgement
             </div>
-            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
+            <div className="w-40 border-t border-dashed border-primary/50 pt-2 print:border-black">
               For {COMPANY_INFO.name}
             </div>
           </div>
         </section>
+
       </article>
     </div>
   );
