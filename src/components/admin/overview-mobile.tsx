@@ -41,10 +41,15 @@ export function OverviewMobile({
   }
 
   const tiles = [
+    { label: "Monthly Revenue", value: inrCompact(kpi.monthly_revenue), tone: "text-foreground" },
+    { label: "Yearly Revenue", value: inrCompact(kpi.yearly_revenue), tone: "text-foreground" },
+    { label: "Received (Month)", value: inrCompact(kpi.monthly_received), tone: "text-primary" },
+    { label: "Received (Year)", value: inrCompact(kpi.yearly_received), tone: "text-primary" },
     { label: "Active Shoots", value: String(kpi.active_rentals), tone: "text-foreground" },
     { label: "Overdue", value: String(kpi.overdue_rentals), tone: "text-amber-neon" },
     { label: "Advances", value: inrCompact(kpi.advances_collected), tone: "text-foreground" },
     { label: "Outstanding", value: inrCompact(kpi.outstanding_balances), tone: "text-amber-neon" },
+    { label: "Held Deposits", value: inrCompact(kpi.held_deposits), tone: "text-foreground" },
     { label: "On-Set Value", value: inrCompact(kpi.on_set_inventory_value), tone: "text-foreground" },
     { label: "Warehouse", value: inrCompact(kpi.warehouse_valuation), tone: "text-foreground" },
   ];
