@@ -143,9 +143,16 @@ export const saveLabourSheetFn = createServerFn({ method: "POST" })
       id: number;
       days: {
         date: string;
-        crew?: { staff_id: number; staff_code?: string; staff_name: string; daily_wage: number }[];
+        crew?: {
+          staff_id: number;
+          staff_code?: string;
+          staff_name: string;
+          daily_wage: number;
+          shift?: "day" | "night";
+        }[];
         workers?: number;
         rate?: number;
+        extra?: number;
         note?: string;
       }[];
     }) => data,
@@ -154,6 +161,7 @@ export const saveLabourSheetFn = createServerFn({ method: "POST" })
     await (await admin()).assertAdmin();
     return (await db()).saveLabourSheet(data);
   });
+
 
 export const closeLabourInvoiceFn = createServerFn({ method: "POST" })
   .inputValidator((data: { id: number; amount: number }) => data)
