@@ -275,9 +275,11 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
     ? quote.balance_due
     : rentTotal + quote.security_deposit - (advancePaid || advanceDue);
 
-  const payNow = receipt ? advancePaid : advanceNote ? advanceDue : settlement ? quote.balance_due : 0;
+  const payNow = advanceNote ? advanceDue : settlement ? quote.balance_due : 0;
   const qrAmount = payNow > 0 ? payNow : balance;
-  const qr = useUpiQr(qrAmount, `${quote.quote_code} ${DOC_LABEL[kind]}`, priced);
+  /** A receipt acknowledges money already received — it must never ask for payment. */
+  const qr = useUpiQr(qrAmount, `${quote.quote_code} ${DOC_LABEL[kind]}`, priced && !receipt);
+
 
 
   const docNo =
