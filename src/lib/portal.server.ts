@@ -776,12 +776,17 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
   return { ok: true as const, actual_days_used, final_total, balance_due };
 }
 
-/** Stage 5b — client clears the final balance: invoice flips to "Paid & Order Closed". */
-export async function closeSettlement(id: number) {
+/**
+ * Stage 5b — closing the order on the amount the client's manager issued.
+ * The system settlement (e.g. ₹5,500) can be closed against a lower
+ * client-issued amount (e.g. ₹5,000); the difference is recorded as conceded.
+ */
+export async function closeSettlement(input: { id: number; settled_amount?: number }) {
+  const id = Number(input.id);
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
     .select("*")
-    .eq("id", Number(id))
+    .eq("id", id)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!quote) throw new Error("Quotation not found.");
@@ -789,15 +794,30 @@ export async function closeSettlement(id: number) {
     throw new Error("Record the return and generate the settlement invoice first.");
   }
 
+  const invoiced = num(quote["balance_due"]);
+  const settled_amount =
+    input.settled_amount == null ? invoiced : Math.max(0, Number(input.settled_amount) || 0);
+  const settlement_waived = Math.max(0, invoiced - settled_amount);
+
   const { error: upErr } = await suryaDb
     .from("quote_requests")
     .update({
       status: "closed",
+      settled_amount,
+      settlement_waived,
+      production_approved_amount: settled_amount,
       balance_due: 0,
       balance_cleared_at: new Date().toISOString(),
     })
-    .eq("id", Number(id));
+    .eq("id", id);
   if (upErr) throw new Error(upErr.message);
+
+  await suryaDb
+    .from("quote_payments")
+    .update({ amount: settled_amount, reference: `Client-issued settlement · closed` })
+    .eq("quote_id", id)
+    .eq("kind", "settlement");
+
 
   await suryaDb
     .from("quote_payments")
