@@ -603,6 +603,8 @@ export async function dispatchQuote(input: {
   vehicle?: string;
   notes?: string;
   crew_ids?: number[];
+  /** Per-project wage the admin enters for each selected worker at dispatch. */
+  crew_wages?: { staff_id: number; daily_wage: number }[];
 }) {
   const id = Number(input.id);
   const { data: quote, error } = await suryaDb
@@ -625,19 +627,24 @@ export async function dispatchQuote(input: {
   }
 
   // Field-operations crew deployed with this consignment.
-  const crewIds = Array.from(new Set((input.crew_ids ?? []).map(Number).filter(Boolean)));
+  const wageMap = new Map<number, number>(
+    (input.crew_wages ?? []).map((w) => [Number(w.staff_id), Math.max(0, Number(w.daily_wage) || 0)]),
+  );
+  const crewIds = Array.from(
+    new Set([...(input.crew_ids ?? []).map(Number), ...wageMap.keys()].filter(Boolean)),
+  );
   let crew: { staff_id: number; staff_code: string; staff_name: string; phone: string; daily_wage: number }[] = [];
   if (crewIds.length > 0) {
     const { data: staff } = await suryaDb
       .from("staff_accounts")
-      .select("id, staff_code, full_name, phone, daily_wage")
+      .select("id, staff_code, full_name, phone")
       .in("id", crewIds);
     crew = (staff ?? []).map((s: Record<string, any>) => ({
       staff_id: Number(s["id"]),
       staff_code: s["staff_code"] ?? "",
       staff_name: s["full_name"] ?? "",
       phone: s["phone"] ?? "",
-      daily_wage: Math.max(0, Number(s["daily_wage"] ?? 0)),
+      daily_wage: wageMap.get(Number(s["id"])) ?? 0,
     }));
   }
 

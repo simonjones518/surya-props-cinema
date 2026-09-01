@@ -22,7 +22,6 @@ export function StaffManager() {
     phone: "",
     username: "",
     password: "",
-    daily_wage: 0,
     staff_role: "field" as StaffRole,
   });
 
@@ -32,7 +31,7 @@ export function StaffManager() {
     mutationFn: () => staffApi.createStaff(form),
     onSuccess: (row) => {
       invalidate();
-      setForm({ full_name: "", phone: "", username: "", password: "", daily_wage: 0, staff_role: form.staff_role });
+      setForm({ full_name: "", phone: "", username: "", password: "", staff_role: form.staff_role });
       toast.success(`${row.full_name} can now sign in`, {
         description: `Staff code ${row.staff_code} · portal /staff-login`,
       });
@@ -46,14 +45,6 @@ export function StaffManager() {
     onError: (e: Error) => toast.error("Update failed", { description: e.message }),
   });
 
-  const wage = useMutation({
-    mutationFn: (v: { id: number; daily_wage: number }) => staffApi.setDailyWage(v.id, v.daily_wage),
-    onSuccess: () => {
-      invalidate();
-      toast.success("Daily wage updated");
-    },
-    onError: (e: Error) => toast.error("Wage update failed", { description: e.message }),
-  });
 
   const reset = useMutation({
     mutationFn: (v: { id: number; password: string }) => staffApi.resetPassword(v.id, v.password),
@@ -125,17 +116,10 @@ export function StaffManager() {
             </label>
           ))}
         </fieldset>
-        <div className="grid gap-2">
-          <Label htmlFor="sf-wage">Daily wage ₹</Label>
-          <Input
-            id="sf-wage"
-            type="number"
-            min={0}
-            value={form.daily_wage}
-            onChange={(e) => setForm({ ...form, daily_wage: Math.max(0, Number(e.target.value)) })}
-            placeholder="1000"
-          />
-        </div>
+        <p className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-[11px] text-muted-foreground">
+          Wages are not fixed here. Enter each worker's wage at dispatch time, per project.
+        </p>
+
         <div className="grid gap-2">
           <Label htmlFor="sf-user">Username</Label>
           <Input
@@ -183,7 +167,7 @@ export function StaffManager() {
                 <th className="px-4 py-3">Staff</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Username</th>
-                <th className="px-4 py-3">Daily Wage</th>
+                <th className="px-4 py-3">Wage</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -201,19 +185,10 @@ export function StaffManager() {
                     {s.staff_role === "inventory" ? "Inventory" : "Field Ops"}
                   </td>
                   <td className="px-4 py-3 font-mono text-xs">{s.username}</td>
-                  <td className="px-4 py-3">
-                    <Input
-                      className="w-28"
-                      type="number"
-                      min={0}
-                      aria-label={`Daily wage for ${s.full_name}`}
-                      defaultValue={s.daily_wage}
-                      onBlur={(e) => {
-                        const next = Math.max(0, Number(e.target.value));
-                        if (next !== s.daily_wage) wage.mutate({ id: s.id, daily_wage: next });
-                      }}
-                    />
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    Set per dispatch
                   </td>
+
                   <td className="px-4 py-3 text-xs">
                     {s.active ? (
                       <span className="text-success">Active</span>

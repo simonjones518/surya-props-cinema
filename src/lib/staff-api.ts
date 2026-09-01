@@ -15,7 +15,6 @@ import {
   resetStaffPasswordFn,
   resolveDamageFn,
   setStaffActiveFn,
-  setStaffDailyWageFn,
   staffSessionFn,
   staffSignInFn,
   staffSignOutFn,
@@ -50,13 +49,10 @@ export const staffApi = {
     full_name: string;
     phone: string;
     staff_role: StaffRole;
-    daily_wage: number;
     username: string;
     password: string;
   }) => createStaffFn({ data }),
   setActive: (id: number, active: boolean) => setStaffActiveFn({ data: { id, active } }),
-  setDailyWage: (id: number, daily_wage: number) =>
-    setStaffDailyWageFn({ data: { id, daily_wage } }),
   resetPassword: (id: number, password: string) => resetStaffPasswordFn({ data: { id, password } }),
   deleteStaff: (id: number) => deleteStaffFn({ data: { id } }),
   assignStaff: (quote_id: number, staff_id: number | null) =>

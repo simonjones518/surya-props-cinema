@@ -68,6 +68,8 @@ export function QuoteApprovals() {
       vehicle?: string;
       notes?: string;
       crew_ids?: number[];
+      crew_wages?: { staff_id: number; daily_wage: number }[];
+
     }) => portal.dispatchQuote(payload),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
@@ -459,24 +461,29 @@ function DispatchDialog({
     vehicle?: string;
     notes?: string;
     crew_ids?: number[];
+    crew_wages?: { staff_id: number; daily_wage: number }[];
   }) => void;
   pending: boolean;
 }) {
   const [vehicle, setVehicle] = useState("");
   const [notes, setNotes] = useState("");
-  const [crewIds, setCrewIds] = useState<number[]>([]);
+  /** Selected worker id -> wage agreed for this project (entered here, not fixed). */
+  const [crewWages, setCrewWages] = useState<Record<number, number>>({});
   const staff = useQuery({
     queryKey: staffKeys.staff,
     queryFn: staffApi.listStaff,
     enabled: quote !== null,
   });
   const crew = (staff.data ?? []).filter((s) => s.active && s.staff_role === "field");
+  const selected = crew.filter((c) => crewWages[c.id] !== undefined);
+  const wageTotal = selected.reduce((s, c) => s + (crewWages[c.id] || 0), 0);
 
   useEffect(() => {
     setVehicle("");
     setNotes("");
-    setCrewIds([]);
+    setCrewWages({});
   }, [quote?.id]);
+
 
   return (
     <Dialog open={quote !== null} onOpenChange={onOpenChange}>
@@ -506,7 +513,7 @@ function DispatchDialog({
             ) : (
               <div className="flex flex-wrap gap-2">
                 {crew.map((c) => {
-                  const on = crewIds.includes(c.id);
+                  const on = crewWages[c.id] !== undefined;
                   return (
                     <Button
                       key={c.id}
@@ -514,21 +521,56 @@ function DispatchDialog({
                       size="sm"
                       variant={on ? "default" : "outline"}
                       onClick={() =>
-                        setCrewIds((prev) =>
-                          on ? prev.filter((x) => x !== c.id) : [...prev, c.id],
-                        )
+                        setCrewWages((prev) => {
+                          const next = { ...prev };
+                          if (on) delete next[c.id];
+                          else next[c.id] = 0;
+                          return next;
+                        })
                       }
                     >
-                      <HardHat className="size-4" /> {c.full_name} · {inr(c.daily_wage)}/day
+                      <HardHat className="size-4" /> {c.full_name}
                     </Button>
                   );
                 })}
               </div>
             )}
-            <p className="text-[11px] text-muted-foreground">
-              {crewIds.length} worker(s) selected — their daily charges are billed on a separate
-              labour invoice.
-            </p>
+
+            {selected.length > 0 && (
+              <div className="space-y-2 rounded-lg border border-primary/20 bg-secondary/30 p-3">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Wage for this project (per worker, per day)
+                </p>
+                {selected.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between gap-3">
+                    <span className="text-xs">
+                      {c.full_name}
+                      <span className="block font-mono text-[10px] text-muted-foreground">
+                        {c.staff_code}
+                      </span>
+                    </span>
+                    <Input
+                      className="w-32"
+                      type="number"
+                      min={0}
+                      placeholder="₹ wage / day"
+                      aria-label={`Wage for ${c.full_name}`}
+                      value={crewWages[c.id] || ""}
+                      onChange={(e) =>
+                        setCrewWages((prev) => ({
+                          ...prev,
+                          [c.id]: Math.max(0, Number(e.target.value)),
+                        }))
+                      }
+                    />
+                  </div>
+                ))}
+                <p className="text-[11px] text-muted-foreground">
+                  {selected.length} worker(s) · {inr(wageTotal)} per day — billed on a separate
+                  labour invoice.
+                </p>
+              </div>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="dispatch-notes">Dispatch notes</Label>
@@ -542,8 +584,21 @@ function DispatchDialog({
           <Button
             className="w-full"
             disabled={pending || !quote}
-            onClick={() => quote && onSubmit({ id: quote.id, vehicle, notes, crew_ids: crewIds })}
+            onClick={() =>
+              quote &&
+              onSubmit({
+                id: quote.id,
+                vehicle,
+                notes,
+                crew_ids: selected.map((c) => c.id),
+                crew_wages: selected.map((c) => ({
+                  staff_id: c.id,
+                  daily_wage: crewWages[c.id] || 0,
+                })),
+              })
+            }
           >
+
             <Send className="size-4" /> Confirm Dispatch
           </Button>
         </div>
