@@ -8,14 +8,24 @@ import { COMPANY_INFO, RENTAL_TERMS, amountInWords, docNumber, upiPayload } from
 import type { QuoteRequest } from "@/lib/types";
 
 /** The five standardised rental documents. */
-export type QuoteDocKind = "quotation" | "advance-request" | "receipt" | "challan" | "settlement";
+export type QuoteDocKind =
+  | "quotation"
+  | "advance-request"
+  | "receipt"
+  | "challan"
+  | "settlement"
+  | "labour";
 
-const META: Record<QuoteDocKind, { title: string; prefix: "QTN" | "APR" | "RCP" | "DC" | "INV" }> = {
+const META: Record<
+  QuoteDocKind,
+  { title: string; prefix: "QTN" | "APR" | "RCP" | "DC" | "INV" | "LAB" }
+> = {
   quotation: { title: "Rental Estimate Quotation", prefix: "QTN" },
   "advance-request": { title: "Advance Payment Request Note", prefix: "APR" },
   receipt: { title: "Advance Money Receipt", prefix: "RCP" },
   challan: { title: "Dispatch & Delivery Challan", prefix: "DC" },
   settlement: { title: "Final Return & Settlement Invoice", prefix: "INV" },
+  labour: { title: "Crew Daily Labour Invoice", prefix: "LAB" },
 };
 
 export const DOC_LABEL: Record<QuoteDocKind, string> = {
@@ -24,6 +34,7 @@ export const DOC_LABEL: Record<QuoteDocKind, string> = {
   receipt: "Advance Receipt",
   challan: "Delivery Challan",
   settlement: "Settlement Invoice",
+  labour: "Labour Invoice",
 };
 
 function useUpiQr(amount: number, note: string, enabled: boolean) {
