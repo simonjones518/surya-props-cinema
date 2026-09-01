@@ -324,6 +324,24 @@ export interface QuotePayment {
   created_at: string;
 }
 
+/** A field-operations worker deployed with the props on dispatch. */
+export interface CrewMember {
+  staff_id: number;
+  staff_code: string;
+  staff_name: string;
+  phone: string;
+}
+
+/** One day of the crew labour charge sheet. Rates can differ per day. */
+export interface LabourDay {
+  date: string;
+  workers: number;
+  /** Charge per worker for that day. */
+  rate: number;
+  amount: number;
+  note: string;
+}
+
 export interface QuoteRequest {
   id: number;
   quote_code: string;
