@@ -31,7 +31,6 @@ export const createStaffFn = createServerFn({ method: "POST" })
       full_name: string;
       phone: string;
       staff_role: StaffRole;
-      daily_wage: number;
       username: string;
       password: string;
     }) => data,
@@ -46,13 +45,6 @@ export const setStaffActiveFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();
     return (await db()).setStaffActive(data);
-  });
-
-export const setStaffDailyWageFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: number; daily_wage: number }) => data)
-  .handler(async ({ data }) => {
-    await (await admin()).assertAdmin();
-    return (await db()).setStaffDailyWage(data);
   });
 
 export const resetStaffPasswordFn = createServerFn({ method: "POST" })
