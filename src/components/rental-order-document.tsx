@@ -18,7 +18,10 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
   const balance = total - order.advance_received;
 
   return (
-    <div className="mx-auto max-w-3xl rounded-xl border border-primary/25 bg-white p-8 text-black shadow-cine print:border-0 print:shadow-none">
+    <div
+      id="print-area"
+      className="mx-auto max-w-3xl rounded-xl border border-primary/25 bg-white p-8 text-black shadow-cine print:border-0 print:shadow-none"
+    >
       <div className="flex items-start justify-between gap-4 print:hidden">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-neutral-500">
           {settled ? "Final Settlement Invoice" : "Estimated Rental Delivery Slip"}
