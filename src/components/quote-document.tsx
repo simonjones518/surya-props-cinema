@@ -429,33 +429,77 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
         {priced ? (
           <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-            <div className="rounded-lg border border-primary/40 p-3 print:border-black">
-              <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
-                Payment Details
-              </p>
-              <div className="mt-3 flex items-start gap-4">
-                {qr && (
-                  <img
-                    src={qr}
-                    alt="UPI payment QR code"
-                    className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
-                  />
-                )}
-                <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
-                  <p className="font-mono text-foreground print:text-black">
-                    UPI: {COMPANY_INFO.upiId}
-                  </p>
-                  <p>{COMPANY_INFO.accountName}</p>
-                  <p>{COMPANY_INFO.bankName}</p>
+            {receipt ? (
+              <div className="rounded-lg border border-primary/40 p-3 print:border-black">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
+                  Received With Thanks
+                </p>
+                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground print:text-black">
+                  We acknowledge receipt of the advance amount noted alongside, towards the above
+                  rental order. This receipt is issued against a verified payment — no further
+                  advance is due.
+                </p>
+                <div className="mt-3 space-y-1 text-[11px] text-muted-foreground print:text-black">
                   <p>
-                    A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
+                    <span className="font-semibold text-foreground print:text-black">Mode: </span>
+                    {quote.advance_mode ?? "UPI"}
                   </p>
-                  <p className="mt-1 font-semibold text-primary print:text-black">
-                    Pay {inr(qrAmount)} and share the UTR / screenshot in your portal.
+                  {quote.advance_utr && (
+                    <p className="font-mono">
+                      <span className="font-semibold text-foreground print:text-black">
+                        UTR / Ref:{" "}
+                      </span>
+                      {quote.advance_utr}
+                    </p>
+                  )}
+                  <p>
+                    <span className="font-semibold text-foreground print:text-black">
+                      Verified on:{" "}
+                    </span>
+                    {prettyDate(quote.advance_verified_at ?? quote.created_at)}
                   </p>
                 </div>
+                <p className="mt-3 inline-block rounded border border-primary/50 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:border-black print:text-black">
+                  Advance Paid
+                </p>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-lg border border-primary/40 p-3 print:border-black">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
+                  Payment Details
+                </p>
+                {advanceNote && (
+                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground print:text-black">
+                    This is a request for the advance payment shown alongside. Props are blocked for
+                    your shoot dates once the advance is received; an Advance Money Receipt is issued
+                    automatically after we verify the payment.
+                  </p>
+                )}
+                <div className="mt-3 flex items-start gap-4">
+                  {qr && (
+                    <img
+                      src={qr}
+                      alt="UPI payment QR code"
+                      className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
+                    />
+                  )}
+                  <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
+                    <p className="font-mono text-foreground print:text-black">
+                      UPI: {COMPANY_INFO.upiId}
+                    </p>
+                    <p>{COMPANY_INFO.accountName}</p>
+                    <p>{COMPANY_INFO.bankName}</p>
+                    <p>
+                      A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
+                    </p>
+                    <p className="mt-1 font-semibold text-primary print:text-black">
+                      Pay {inr(qrAmount)} and share the UTR / screenshot in your portal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
 
             <div className="space-y-1.5 text-sm">
               {receipt ? (
