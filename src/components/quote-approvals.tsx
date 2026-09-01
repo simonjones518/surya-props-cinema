@@ -467,19 +467,23 @@ function DispatchDialog({
 }) {
   const [vehicle, setVehicle] = useState("");
   const [notes, setNotes] = useState("");
-  const [crewIds, setCrewIds] = useState<number[]>([]);
+  /** Selected worker id -> wage agreed for this project (entered here, not fixed). */
+  const [crewWages, setCrewWages] = useState<Record<number, number>>({});
   const staff = useQuery({
     queryKey: staffKeys.staff,
     queryFn: staffApi.listStaff,
     enabled: quote !== null,
   });
   const crew = (staff.data ?? []).filter((s) => s.active && s.staff_role === "field");
+  const selected = crew.filter((c) => crewWages[c.id] !== undefined);
+  const wageTotal = selected.reduce((s, c) => s + (crewWages[c.id] || 0), 0);
 
   useEffect(() => {
     setVehicle("");
     setNotes("");
-    setCrewIds([]);
+    setCrewWages({});
   }, [quote?.id]);
+
 
   return (
     <Dialog open={quote !== null} onOpenChange={onOpenChange}>
