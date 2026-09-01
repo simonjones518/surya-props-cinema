@@ -105,6 +105,13 @@ export const priceQuoteFn = createServerFn({ method: "POST" })
     return (await db()).priceQuote(data);
   });
 
+export const adminAcceptQuotationFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; remark: string; channel?: string }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).adminAcceptQuotation(data);
+  });
+
 export const setAdvanceRequiredFn = createServerFn({ method: "POST" })
   .inputValidator((data: { id: number; advance_required: number }) => data)
   .handler(async ({ data }) => {
