@@ -141,7 +141,13 @@ export const saveLabourSheetFn = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       id: number;
-      days: { date: string; workers: number; rate: number; note?: string }[];
+      days: {
+        date: string;
+        crew?: { staff_id: number; staff_code?: string; staff_name: string; daily_wage: number }[];
+        workers?: number;
+        rate?: number;
+        note?: string;
+      }[];
     }) => data,
   )
   .handler(async ({ data }) => {
