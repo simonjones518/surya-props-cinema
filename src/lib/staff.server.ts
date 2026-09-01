@@ -135,6 +135,7 @@ function mapStaff(r: Record<string, any>): StaffAccount {
     full_name: r["full_name"] ?? "",
     phone: r["phone"] ?? "",
     staff_role: (r["staff_role"] ?? "field") as StaffRole,
+    daily_wage: Math.max(0, Number(r["daily_wage"] ?? 0)),
     username: r["username"] ?? "",
     active: r["active"] !== false,
     created_at: r["created_at"],
@@ -154,6 +155,7 @@ export async function createStaff(input: {
   full_name: string;
   phone: string;
   staff_role: StaffRole;
+  daily_wage: number;
   username: string;
   password: string;
 }) {
@@ -176,6 +178,7 @@ export async function createStaff(input: {
       full_name,
       phone: clean(input.phone, 24),
       staff_role: role,
+      daily_wage: Math.max(0, Number(input.daily_wage) || 0),
       username,
       password_hash: await hashPassword(password),
     })
@@ -189,6 +192,16 @@ export async function createStaff(input: {
     );
   }
   return mapStaff(data as Record<string, any>);
+}
+
+export async function setStaffDailyWage(input: { id: number; daily_wage: number }) {
+  const daily_wage = Math.max(0, Number(input.daily_wage) || 0);
+  const { error } = await suryaDb
+    .from("staff_accounts")
+    .update({ daily_wage, updated_at: new Date().toISOString() })
+    .eq("id", Number(input.id));
+  if (error) throw new Error(error.message);
+  return { ok: true as const, daily_wage };
 }
 
 export async function setStaffActive(input: { id: number; active: boolean }) {

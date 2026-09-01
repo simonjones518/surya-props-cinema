@@ -8,6 +8,7 @@ export type StaffAccount = {
   full_name: string;
   phone: string;
   staff_role: StaffRole;
+  daily_wage: number;
   username: string;
   active: boolean;
   created_at: string;

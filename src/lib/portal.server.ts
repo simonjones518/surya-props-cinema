@@ -626,17 +626,18 @@ export async function dispatchQuote(input: {
 
   // Field-operations crew deployed with this consignment.
   const crewIds = Array.from(new Set((input.crew_ids ?? []).map(Number).filter(Boolean)));
-  let crew: { staff_id: number; staff_code: string; staff_name: string; phone: string }[] = [];
+  let crew: { staff_id: number; staff_code: string; staff_name: string; phone: string; daily_wage: number }[] = [];
   if (crewIds.length > 0) {
     const { data: staff } = await suryaDb
       .from("staff_accounts")
-      .select("id, staff_code, full_name, phone")
+      .select("id, staff_code, full_name, phone, daily_wage")
       .in("id", crewIds);
     crew = (staff ?? []).map((s: Record<string, any>) => ({
       staff_id: Number(s["id"]),
       staff_code: s["staff_code"] ?? "",
       staff_name: s["full_name"] ?? "",
       phone: s["phone"] ?? "",
+      daily_wage: Math.max(0, Number(s["daily_wage"] ?? 0)),
     }));
   }
 

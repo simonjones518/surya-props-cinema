@@ -519,7 +519,7 @@ function DispatchDialog({
                         )
                       }
                     >
-                      <HardHat className="size-4" /> {c.full_name}
+                      <HardHat className="size-4" /> {c.full_name} · {inr(c.daily_wage)}/day
                     </Button>
                   );
                 })}
@@ -585,7 +585,11 @@ function LabourDialog({
             {
               date: (quote.dispatch_at ?? new Date().toISOString()).slice(0, 10),
               workers: Math.max(1, quote.crew_assignments.length || 1),
-              rate: 0,
+              rate:
+                quote.crew_assignments.length > 0
+                  ? quote.crew_assignments.reduce((sum, worker) => sum + worker.daily_wage, 0) /
+                    quote.crew_assignments.length
+                  : 0,
               amount: 0,
               note: "",
             },
