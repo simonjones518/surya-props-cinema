@@ -553,6 +553,239 @@ function DispatchDialog({
 }
 
 
+/**
+ * Day-wise crew labour charge sheet. Rates can differ per day (₹1,000 one day,
+ * ₹1,800 the next). Billed on a separate labour invoice, never mixed with the
+ * prop rental invoice. The client's manager then fixes what they will pay.
+ */
+function LabourDialog({
+  quote,
+  onOpenChange,
+  onSave,
+  onClose,
+  pending,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+  onSave: (days: LabourDay[]) => void;
+  onClose: (amount: number) => void;
+  pending: boolean;
+}) {
+  const [days, setDays] = useState<LabourDay[]>([]);
+  const [issued, setIssued] = useState(0);
+
+  const total = days.reduce((s, d) => s + d.workers * d.rate, 0);
+
+  useEffect(() => {
+    if (!quote) return;
+    setDays(
+      quote.labour_days.length > 0
+        ? quote.labour_days
+        : [
+            {
+              date: (quote.dispatch_at ?? new Date().toISOString()).slice(0, 10),
+              workers: Math.max(1, quote.crew_assignments.length || 1),
+              rate: 0,
+              amount: 0,
+              note: "",
+            },
+          ],
+    );
+    setIssued(quote.labour_settled_amount || quote.labour_total || 0);
+  }, [quote?.id]);
+
+  function patch(idx: number, next: Partial<LabourDay>) {
+    setDays((prev) =>
+      prev.map((d, i) => {
+        if (i !== idx) return d;
+        const merged = { ...d, ...next };
+        return { ...merged, amount: merged.workers * merged.rate };
+      }),
+    );
+  }
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">
+            Crew Daily Labour Sheet
+          </DialogTitle>
+          <DialogDescription>
+            Day one to closing day. Charges are raised on a separate labour invoice — not on the prop
+            rental invoice.
+          </DialogDescription>
+        </DialogHeader>
+
+        {quote && quote.crew_assignments.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            Deployed crew: {quote.crew_assignments.map((c) => c.staff_name).join(", ")}
+          </p>
+        )}
+
+        <div className="space-y-2">
+          {days.map((d, idx) => (
+            <div key={idx} className="grid gap-2 border-t border-border/60 pt-2 sm:grid-cols-[1fr_auto]">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Input
+                  type="date"
+                  value={d.date}
+                  onChange={(e) => patch(idx, { date: e.target.value })}
+                />
+                <Input
+                  placeholder="Note (loading, night shift…)"
+                  value={d.note}
+                  onChange={(e) => patch(idx, { note: e.target.value })}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  className="w-20"
+                  type="number"
+                  min={1}
+                  aria-label="Workers"
+                  value={d.workers}
+                  onChange={(e) => patch(idx, { workers: Math.max(1, Number(e.target.value)) })}
+                />
+                <Input
+                  className="w-28"
+                  type="number"
+                  min={0}
+                  aria-label="Charge per worker"
+                  value={d.rate}
+                  onChange={(e) => patch(idx, { rate: Math.max(0, Number(e.target.value)) })}
+                />
+                <span className="w-24 text-right font-display text-lg tracking-wide text-primary">
+                  {inr(d.workers * d.rate)}
+                </span>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  aria-label="Remove day"
+                  disabled={days.length === 1}
+                  onClick={() => setDays(days.filter((_, i) => i !== idx))}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() =>
+              setDays([
+                ...days,
+                {
+                  date: new Date().toISOString().slice(0, 10),
+                  workers: days[days.length - 1]?.workers ?? 1,
+                  rate: days[days.length - 1]?.rate ?? 0,
+                  amount: 0,
+                  note: "",
+                },
+              ])
+            }
+          >
+            <Plus className="size-4" /> Add day
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between border-t border-border pt-3">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">Labour Total</p>
+          <p className="font-display text-2xl tracking-wide text-primary">{inr(total)}</p>
+        </div>
+
+        <Button className="w-full" disabled={pending} onClick={() => onSave(days)}>
+          <HardHat className="size-4" /> Save Labour Sheet
+        </Button>
+
+        <div className="space-y-1.5 rounded-xl border border-primary/20 p-3">
+          <Label htmlFor="labour-issued">Client-issued labour amount ₹</Label>
+          <Input
+            id="labour-issued"
+            type="number"
+            min={0}
+            value={issued}
+            onChange={(e) => setIssued(Math.max(0, Number(e.target.value)))}
+          />
+          <p className="text-[11px] text-muted-foreground">
+            Whatever the production finally agrees to pay for manpower. The difference is recorded as
+            a concession on the labour invoice.
+          </p>
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={pending || quote?.labour_status === "closed"}
+            onClick={() => onClose(issued)}
+          >
+            <BadgeCheck className="size-4" />{" "}
+            {quote?.labour_status === "closed" ? "Labour Invoice Closed" : "Close Labour Invoice"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Closing the props settlement on the amount the client's manager issued —
+ * e.g. a ₹5,500 settlement invoice closed at ₹5,000, with ₹500 conceded.
+ */
+function CloseSettlementDialog({
+  quote,
+  onOpenChange,
+  onSubmit,
+  pending,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+  onSubmit: (amount: number) => void;
+  pending: boolean;
+}) {
+  const [amount, setAmount] = useState(0);
+  useEffect(() => {
+    setAmount(quote?.balance_due ?? 0);
+  }, [quote?.id]);
+  const invoiced = quote?.balance_due ?? 0;
+  const waived = Math.max(0, invoiced - amount);
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">Close Settlement</DialogTitle>
+          <DialogDescription>
+            Enter the amount the client actually issued against this settlement invoice.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Settlement invoice raised</span>
+            <span className="font-display text-xl tracking-wide">{inr(invoiced)}</span>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="issued-amount">Client-issued amount ₹</Label>
+            <Input
+              id="issued-amount"
+              type="number"
+              min={0}
+              value={amount}
+              onChange={(e) => setAmount(Math.max(0, Number(e.target.value)))}
+            />
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Concession allowed</span>
+            <span className="font-display text-xl tracking-wide text-primary">{inr(waived)}</span>
+          </div>
+          <Button className="w-full" disabled={pending || !quote} onClick={() => onSubmit(amount)}>
+            <BadgeCheck className="size-4" /> Close Order at {inr(amount)}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Stat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
     <div>
