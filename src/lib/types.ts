@@ -333,13 +333,18 @@ export interface CrewMember {
   daily_wage: number;
 }
 
+/** Day shift vs overnight shift — overnight is usually charged higher. */
+export type LabourShift = "day" | "night";
+
 /** A worker rostered on one specific labour day, at the wage fixed on dispatch. */
 export interface LabourWorker {
   staff_id: number;
   staff_code: string;
   staff_name: string;
-  /** Wage fixed for this worker on this order at dispatch time. */
+  /** Wage fixed for this worker on this order at dispatch time (overridable per day). */
   daily_wage: number;
+  /** Shift worked that day. Defaults to the regular day shift. */
+  shift: LabourShift;
 }
 
 /** One day of the crew labour charge sheet. Different workers can go each day. */
@@ -351,9 +356,12 @@ export interface LabourDay {
   workers: number;
   /** Charge per worker for that day (average when wages differ). */
   rate: number;
+  /** Overtime / food / conveyance adjustment added to that day. */
+  extra: number;
   amount: number;
   note: string;
 }
+
 
 
 export interface QuoteRequest {

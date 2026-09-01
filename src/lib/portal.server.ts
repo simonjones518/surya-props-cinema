@@ -773,9 +773,16 @@ export async function saveLabourSheet(input: {
   id: number;
   days: {
     date: string;
-    crew?: { staff_id: number; staff_code?: string; staff_name: string; daily_wage: number }[];
+    crew?: {
+      staff_id: number;
+      staff_code?: string;
+      staff_name: string;
+      daily_wage: number;
+      shift?: "day" | "night";
+    }[];
     workers?: number;
     rate?: number;
+    extra?: number;
     note?: string;
   }[];
 }) {
@@ -783,20 +790,23 @@ export async function saveLabourSheet(input: {
   const days = (input.days ?? [])
     .filter((d) => d.date)
     .map((d) => {
+      const extra = Math.max(0, Number(d.extra) || 0);
       const crew = (d.crew ?? []).map((w) => ({
         staff_id: Number(w.staff_id) || 0,
         staff_code: clean(w.staff_code ?? "", 40),
         staff_name: clean(w.staff_name ?? "", 120),
         daily_wage: Math.max(0, Number(w.daily_wage) || 0),
+        shift: (w.shift === "night" ? "night" : "day") as "day" | "night",
       }));
       if (crew.length > 0) {
-        const amount = crew.reduce((s, w) => s + w.daily_wage, 0);
+        const base = crew.reduce((s, w) => s + w.daily_wage, 0);
         return {
           date: String(d.date).slice(0, 10),
           crew,
           workers: crew.length,
-          rate: Math.round(amount / crew.length),
-          amount,
+          rate: Math.round(base / crew.length),
+          extra,
+          amount: base + extra,
           note: clean(d.note ?? "", 200),
         };
       }
@@ -808,11 +818,13 @@ export async function saveLabourSheet(input: {
         crew,
         workers,
         rate,
-        amount: workers * rate,
+        extra,
+        amount: workers * rate + extra,
         note: clean(d.note ?? "", 200),
       };
     });
   const labour_total = days.reduce((s, d) => s + d.amount, 0);
+
 
   const existing = await readSidecar(id);
   const labour_invoice_no =

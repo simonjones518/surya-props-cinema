@@ -147,7 +147,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
           <thead>
             <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
               <th className="py-2">Date</th>
-              <th className="py-2">Workers On Field</th>
+              <th className="py-2">Workers On Field / Shift / Rate</th>
               <th className="py-2 text-center">Head-count</th>
               <th className="py-2 text-right">Day Total</th>
             </tr>
@@ -170,10 +170,14 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
                   {(d.crew ?? []).length > 0
                     ? (d.crew ?? []).map((w) => (
                         <span key={w.staff_id} className="block">
-                          {w.staff_name} — {inr(w.daily_wage)}
+                          {w.staff_name} — {w.shift === "night" ? "Overnight Shift" : "Regular Shift"}{" "}
+                          — {inr(w.daily_wage)}
                         </span>
                       ))
                     : `${d.workers} × ${inr(d.rate)}`}
+                  {Number(d.extra) > 0 && (
+                    <span className="block">Overtime / extra — {inr(Number(d.extra))}</span>
+                  )}
                 </td>
                 <td className="py-2 text-center">{d.workers}</td>
                 <td className="py-2 text-right font-semibold">{inr(d.amount)}</td>
@@ -188,6 +192,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
             )}
           </tbody>
         </table>
+
 
 
         <section className="ml-auto w-full max-w-sm space-y-1.5 text-sm">
