@@ -22,7 +22,6 @@ export function StaffManager() {
     phone: "",
     username: "",
     password: "",
-    daily_wage: 0,
     staff_role: "field" as StaffRole,
   });
 
@@ -32,7 +31,7 @@ export function StaffManager() {
     mutationFn: () => staffApi.createStaff(form),
     onSuccess: (row) => {
       invalidate();
-      setForm({ full_name: "", phone: "", username: "", password: "", daily_wage: 0, staff_role: form.staff_role });
+      setForm({ full_name: "", phone: "", username: "", password: "", staff_role: form.staff_role });
       toast.success(`${row.full_name} can now sign in`, {
         description: `Staff code ${row.staff_code} · portal /staff-login`,
       });
@@ -46,14 +45,6 @@ export function StaffManager() {
     onError: (e: Error) => toast.error("Update failed", { description: e.message }),
   });
 
-  const wage = useMutation({
-    mutationFn: (v: { id: number; daily_wage: number }) => staffApi.setDailyWage(v.id, v.daily_wage),
-    onSuccess: () => {
-      invalidate();
-      toast.success("Daily wage updated");
-    },
-    onError: (e: Error) => toast.error("Wage update failed", { description: e.message }),
-  });
 
   const reset = useMutation({
     mutationFn: (v: { id: number; password: string }) => staffApi.resetPassword(v.id, v.password),
