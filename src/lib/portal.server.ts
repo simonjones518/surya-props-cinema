@@ -749,12 +749,12 @@ export async function dispatchQuote(input: {
     assigned_staff_id: crew[0]?.staff_id ?? null,
     assigned_staff_name: crew[0]?.staff_name ?? null,
   };
-  // The live database still uses the Phase 2 assignment columns. Do not send
-  // `crew_assignments` here: PostgREST rejects the entire dispatch update when
-  // that optional Phase 3 column is absent from its schema cache. The primary
-  // worker remains recorded in the legacy fields until the schema is upgraded.
+  // The live database still uses the Phase 2 assignment columns, so the full
+  // crew roster (with the wage fixed for this order) is persisted in the
+  // crew/labour sidecar instead of a `crew_assignments` column.
   const { error: upErr } = await suryaDb.from("quote_requests").update(dispatchUpdate).eq("id", id);
   if (upErr) throw new Error(upErr.message);
+  await writeSidecar(id, { crew_assignments: crew });
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
   if (propIds.length > 0) {
@@ -764,21 +764,48 @@ export async function dispatchQuote(input: {
 }
 
 /**
- * Crew labour charge sheet — day-wise worker charges billed on a separate
- * labour invoice (never mixed with the prop rental invoice).
+ * Crew labour charge sheet — day-wise worker roster billed on a separate labour
+ * invoice (never mixed with the prop rental invoice). Each day carries its own
+ * set of workers: day 1 can be two workers, day 2 a different worker, and the
+ * charge for each is the wage fixed for them at dispatch.
  */
 export async function saveLabourSheet(input: {
   id: number;
-  days: { date: string; workers: number; rate: number; note?: string }[];
+  days: {
+    date: string;
+    crew?: { staff_id: number; staff_code?: string; staff_name: string; daily_wage: number }[];
+    workers?: number;
+    rate?: number;
+    note?: string;
+  }[];
 }) {
   const id = Number(input.id);
   const days = (input.days ?? [])
     .filter((d) => d.date)
     .map((d) => {
+      const crew = (d.crew ?? []).map((w) => ({
+        staff_id: Number(w.staff_id) || 0,
+        staff_code: clean(w.staff_code ?? "", 40),
+        staff_name: clean(w.staff_name ?? "", 120),
+        daily_wage: Math.max(0, Number(w.daily_wage) || 0),
+      }));
+      if (crew.length > 0) {
+        const amount = crew.reduce((s, w) => s + w.daily_wage, 0);
+        return {
+          date: String(d.date).slice(0, 10),
+          crew,
+          workers: crew.length,
+          rate: Math.round(amount / crew.length),
+          amount,
+          note: clean(d.note ?? "", 200),
+        };
+      }
+      // Manual fallback when no rostered worker is picked for that day.
       const workers = Math.max(1, Math.round(Number(d.workers) || 1));
       const rate = Math.max(0, Number(d.rate) || 0);
       return {
         date: String(d.date).slice(0, 10),
+        crew,
         workers,
         rate,
         amount: workers * rate,
@@ -787,23 +814,16 @@ export async function saveLabourSheet(input: {
     });
   const labour_total = days.reduce((s, d) => s + d.amount, 0);
 
-  const { data: quote } = await suryaDb
-    .from("quote_requests")
-    .select("labour_invoice_no")
-    .eq("id", id)
-    .maybeSingle();
+  const existing = await readSidecar(id);
   const labour_invoice_no =
-    quote?.["labour_invoice_no"] ?? `SCP/LAB/${new Date().getFullYear()}/${String(id).padStart(4, "0")}`;
+    existing.labour_invoice_no ??
+    `SCP/LAB/${new Date().getFullYear()}/${String(id).padStart(4, "0")}`;
 
-  const { error } = await suryaDb
-    .from("quote_requests")
-    .update({
-      labour_days: days as unknown as any,
-      labour_total,
-      labour_invoice_no,
-    })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  await writeSidecar(id, {
+    labour_days: days as unknown as QuoteRequest["labour_days"],
+    labour_total,
+    labour_invoice_no,
+  });
   return { ok: true as const, labour_total, labour_invoice_no };
 }
 
@@ -811,17 +831,14 @@ export async function saveLabourSheet(input: {
 export async function closeLabourInvoice(input: { id: number; amount: number }) {
   const id = Number(input.id);
   const amount = Math.max(0, Number(input.amount) || 0);
-  const { error } = await suryaDb
-    .from("quote_requests")
-    .update({
-      labour_settled_amount: amount,
-      labour_status: "closed",
-      labour_cleared_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  await writeSidecar(id, {
+    labour_settled_amount: amount,
+    labour_status: "closed",
+    labour_cleared_at: new Date().toISOString(),
+  });
   return { ok: true as const, amount };
 }
+
 
 
 /** Stage 5 — record return, recompute on actual days used, release inventory. */
