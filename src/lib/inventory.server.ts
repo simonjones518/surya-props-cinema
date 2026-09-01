@@ -175,42 +175,132 @@ export async function listInvoices(): Promise<Invoice[]> {
   })) as Invoice[];
 }
 
+/** Rental lifecycle rows read straight from the live quote engine. */
+type QuoteRow = Record<string, any>;
+
+const RECOGNISED = new Set(["dispatched", "on_set", "settled", "closed"]);
+const OPEN = new Set([
+  "quote_accepted",
+  "advance_submitted",
+  "payment_received",
+  "dispatched",
+  "on_set",
+  "settled",
+]);
+
+function quoteRevenue(q: QuoteRow) {
+  const settled = num(q["settled_amount"]);
+  if (settled > 0) return settled;
+  const final = num(q["final_total"]);
+  return final > 0 ? final : num(q["estimated_total"]);
+}
+
+/** Revenue recognition date: dispatch date when it exists, else creation date. */
+function quoteDate(q: QuoteRow): string {
+  return String(q["dispatch_at"] ?? q["created_at"] ?? "").slice(0, 10);
+}
+
 export async function computeKpi(): Promise<KpiAnalytics> {
-  const [props, bookings, invoices] = await Promise.all([listProps(), listBookings(), listInvoices()]);
-  const today = new Date().toISOString().slice(0, 10);
-  const active = bookings.filter((b) => b.rental_status === "On-Set" || b.rental_status === "Reserved");
-  const revenueToday = invoices
-    .filter((i) => i.doc_type === "INVOICE" && i.created_at?.slice(0, 10) === today)
-    .reduce((s, i) => s + i.subtotal, 0);
+  const [props, bookings, invoices, quoteRes, payRes] = await Promise.all([
+    listProps(),
+    listBookings(),
+    listInvoices(),
+    suryaDb.from("quote_requests").select("*"),
+    suryaDb.from("quote_payments").select("*"),
+  ]);
+
+  const quotes: QuoteRow[] = (quoteRes.data ?? []) as QuoteRow[];
+  const payments: QuoteRow[] = (payRes.data ?? []) as QuoteRow[];
+
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const thisMonth = today.slice(0, 7);
+  const thisYear = today.slice(0, 4);
+
+  const earned = quotes.filter((q) => RECOGNISED.has(String(q["status"])));
+  const revenueOn = (predicate: (d: string) => boolean) =>
+    earned.filter((q) => predicate(quoteDate(q))).reduce((s, q) => s + quoteRevenue(q), 0);
+
+  const legacyRevenueOn = (predicate: (d: string) => boolean) =>
+    invoices
+      .filter((i) => i.doc_type === "INVOICE" && predicate((i.created_at ?? "").slice(0, 10)))
+      .reduce((s, i) => s + i.subtotal, 0);
+
+  const costOn = (predicate: (d: string) => boolean) =>
+    earned
+      .filter((q) => predicate(quoteDate(q)))
+      .reduce((s, q) => s + num(q["labour_total"]) + num(q["settlement_waived"]), 0);
+
+  /* ---- cash actually received (verified payments + legacy advances) ---- */
+  const verified = payments.filter((p) => String(p["status"]) === "verified");
+  const receivedOn = (predicate: (d: string) => boolean) =>
+    verified
+      .filter((p) => predicate(String(p["created_at"] ?? "").slice(0, 10)))
+      .reduce((s, p) => s + num(p["amount"]), 0) +
+    invoices
+      .filter((i) => predicate((i.created_at ?? "").slice(0, 10)))
+      .reduce((s, i) => s + i.advance_received, 0);
+
+  const isToday = (d: string) => d === today;
+  const inMonth = (d: string) => d.slice(0, 7) === thisMonth;
+  const inYear = (d: string) => d.slice(0, 4) === thisYear;
+
+  const revenueToday = revenueOn(isToday) + legacyRevenueOn(isToday);
+  const profitToday = Math.max(revenueToday - costOn(isToday), 0);
 
   const months = Array.from({ length: 6 }, (_, k) => {
     const d = new Date();
     d.setMonth(d.getMonth() - (5 - k));
-    return { key: d.toISOString().slice(0, 7), label: d.toLocaleDateString("en-IN", { month: "short" }) };
+    return {
+      key: d.toISOString().slice(0, 7),
+      label: d.toLocaleDateString("en-IN", { month: "short" }),
+    };
   });
   const revenue_trend = months.map(({ key, label }) => {
-    const revenue = invoices
-      .filter((i) => i.doc_type === "INVOICE" && i.created_at?.slice(0, 7) === key)
-      .reduce((s, i) => s + i.subtotal, 0);
-    return { label, revenue, profit: Math.round(revenue * 0.62) };
+    const match = (d: string) => d.slice(0, 7) === key;
+    const revenue = revenueOn(match) + legacyRevenueOn(match);
+    return { label, revenue, profit: Math.max(revenue - costOn(match), 0) };
   });
+
+  /* ---- open exposure across the live pipeline ---- */
+  const openQuotes = quotes.filter((q) => OPEN.has(String(q["status"])));
 
   return {
     gross_revenue_today: revenueToday,
-    net_profit_today: Math.round(revenueToday * 0.62),
-    active_rentals: active.length,
-    overdue_rentals: bookings.filter((b) => b.rental_status === "Overdue").length,
-    advances_collected: invoices.reduce((s, i) => s + i.advance_received, 0),
+    net_profit_today: profitToday,
+    active_rentals:
+      quotes.filter((q) => ["dispatched", "on_set"].includes(String(q["status"]))).length +
+      bookings.filter((b) => b.rental_status === "On-Set" || b.rental_status === "Reserved").length,
+    overdue_rentals:
+      quotes.filter(
+        (q) =>
+          ["dispatched", "on_set"].includes(String(q["status"])) &&
+          !q["actual_return_date"] &&
+          String(q["estimated_return_date"] ?? "") < today,
+      ).length + bookings.filter((b) => b.rental_status === "Overdue").length,
+    advances_collected:
+      quotes.reduce((s, q) => s + num(q["advance_paid"]), 0) +
+      invoices.reduce((s, i) => s + i.advance_received, 0),
     on_set_inventory_value: props
       .filter((p) => p.status === "On-Set")
       .reduce((s, p) => s + p.replacement_value, 0),
     warehouse_valuation: props.reduce((s, p) => s + p.replacement_value, 0),
-    outstanding_balances: invoices
-      .filter((i) => i.doc_type === "INVOICE")
-      .reduce((s, i) => s + i.balance_payable, 0),
-    held_deposits: bookings
-      .filter((b) => b.deposit_status === "Held")
-      .reduce((s, b) => s + b.security_deposit, 0),
+    outstanding_balances:
+      openQuotes.reduce((s, q) => s + Math.max(num(q["balance_due"]), 0), 0) +
+      invoices
+        .filter((i) => i.doc_type === "INVOICE")
+        .reduce((s, i) => s + i.balance_payable, 0),
+    held_deposits:
+      quotes
+        .filter((q) => OPEN.has(String(q["status"])) && String(q["status"]) !== "closed")
+        .reduce((s, q) => s + num(q["security_deposit"]), 0) +
+      bookings
+        .filter((b) => b.deposit_status === "Held")
+        .reduce((s, b) => s + b.security_deposit, 0),
+    monthly_revenue: revenueOn(inMonth) + legacyRevenueOn(inMonth),
+    yearly_revenue: revenueOn(inYear) + legacyRevenueOn(inYear),
+    monthly_received: receivedOn(inMonth),
+    yearly_received: receivedOn(inYear),
     revenue_trend,
   };
 }

@@ -150,6 +150,12 @@ export interface KpiAnalytics {
   warehouse_valuation: number;
   outstanding_balances: number;
   held_deposits: number;
+  /** Recognised rental revenue for the running calendar month / financial-year-to-date. */
+  monthly_revenue: number;
+  yearly_revenue: number;
+  /** Cash actually collected (verified advances, balances, settlements). */
+  monthly_received: number;
+  yearly_received: number;
   revenue_trend: { label: string; revenue: number; profit: number }[];
 }
 
