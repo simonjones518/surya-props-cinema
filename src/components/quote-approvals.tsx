@@ -69,7 +69,7 @@ export function QuoteApprovals() {
       notes?: string;
       crew_ids?: number[];
       crew_wages?: { staff_id: number; daily_wage: number }[];
-    crew_wages?: { staff_id: number; daily_wage: number }[];
+
     }) => portal.dispatchQuote(payload),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
