@@ -354,6 +354,19 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
             {kind === "challan" && quote.dispatch_vehicle && (
               <Field label="Vehicle" value={quote.dispatch_vehicle} />
             )}
+            {kind === "challan" && (
+              <Field
+                label="Crew Deployed"
+                value={
+                  quote.crew_assignments.length > 0
+                    ? quote.crew_assignments
+                        .map((c) => `${c.staff_name} (${c.staff_code})`)
+                        .join(", ")
+                    : "—"
+                }
+              />
+            )}
+
             {receipt && (
               <Field label="Payment Mode" value={`${quote.advance_mode ?? "UPI"}`} />
             )}
