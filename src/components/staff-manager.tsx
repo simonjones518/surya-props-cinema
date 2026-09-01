@@ -125,17 +125,10 @@ export function StaffManager() {
             </label>
           ))}
         </fieldset>
-        <div className="grid gap-2">
-          <Label htmlFor="sf-wage">Daily wage ₹</Label>
-          <Input
-            id="sf-wage"
-            type="number"
-            min={0}
-            value={form.daily_wage}
-            onChange={(e) => setForm({ ...form, daily_wage: Math.max(0, Number(e.target.value)) })}
-            placeholder="1000"
-          />
-        </div>
+        <p className="rounded-lg border border-border/60 bg-secondary/30 p-3 text-[11px] text-muted-foreground">
+          Wages are not fixed here. Enter each worker's wage at dispatch time, per project.
+        </p>
+
         <div className="grid gap-2">
           <Label htmlFor="sf-user">Username</Label>
           <Input
