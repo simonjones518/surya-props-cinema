@@ -609,9 +609,10 @@ function DispatchDialog({
 
 
 /**
- * Day-wise crew labour charge sheet. Rates can differ per day (₹1,000 one day,
- * ₹1,800 the next). Billed on a separate labour invoice, never mixed with the
- * prop rental invoice. The client's manager then fixes what they will pay.
+ * Day-wise crew labour roster. The workers deployed at dispatch are fetched
+ * automatically along with the wage fixed for them on this order; for every
+ * shoot day the admin ticks who actually went to the field, so day 1 can be two
+ * workers and day 2 a different one. Billed on a separate labour invoice.
  */
 function LabourDialog({
   quote,
@@ -629,37 +630,98 @@ function LabourDialog({
   const [days, setDays] = useState<LabourDay[]>([]);
   const [issued, setIssued] = useState(0);
 
-  const total = days.reduce((s, d) => s + d.workers * d.rate, 0);
+  const roster: LabourWorker[] = (quote?.crew_assignments ?? []).map((c) => ({
+    staff_id: c.staff_id,
+    staff_code: c.staff_code,
+    staff_name: c.staff_name,
+    daily_wage: c.daily_wage,
+  }));
+  const total = days.reduce((s, d) => s + d.amount, 0);
 
   useEffect(() => {
     if (!quote) return;
-    setDays(
-      quote.labour_days.length > 0
-        ? quote.labour_days
-        : [
-            {
-              date: (quote.dispatch_at ?? new Date().toISOString()).slice(0, 10),
-              workers: Math.max(1, quote.crew_assignments.length || 1),
-              rate:
-                quote.crew_assignments.length > 0
-                  ? quote.crew_assignments.reduce((sum, worker) => sum + worker.daily_wage, 0) /
-                    quote.crew_assignments.length
-                  : 0,
-              amount: 0,
-              note: "",
-            },
-          ],
-    );
+    if (quote.labour_days.length > 0) {
+      setDays(
+        quote.labour_days.map((d) => ({
+          ...d,
+          crew: d.crew ?? [],
+          amount:
+            (d.crew ?? []).length > 0
+              ? (d.crew ?? []).reduce((s, w) => s + w.daily_wage, 0)
+              : d.workers * d.rate,
+        })),
+      );
+    } else {
+      // Seed one row per shoot day, pre-rostered with the whole dispatch crew.
+      const start = (quote.dispatch_at ?? quote.shoot_start_date ?? new Date().toISOString()).slice(
+        0,
+        10,
+      );
+      const span = Math.max(
+        1,
+        quote.actual_days_used ?? shootDays(start, quote.estimated_return_date) || 1,
+      );
+      const crew = (quote.crew_assignments ?? []).map((c) => ({
+        staff_id: c.staff_id,
+        staff_code: c.staff_code,
+        staff_name: c.staff_name,
+        daily_wage: c.daily_wage,
+      }));
+      setDays(
+        Array.from({ length: span }, (_, i) => ({
+          date: addDays(start, i),
+          crew,
+          workers: crew.length,
+          rate: crew.length ? Math.round(crew.reduce((s, w) => s + w.daily_wage, 0) / crew.length) : 0,
+          amount: crew.reduce((s, w) => s + w.daily_wage, 0),
+          note: "",
+        })),
+      );
+    }
     setIssued(quote.labour_settled_amount || quote.labour_total || 0);
   }, [quote?.id]);
 
+  function recalc(day: LabourDay): LabourDay {
+    const amount = day.crew.length
+      ? day.crew.reduce((s, w) => s + w.daily_wage, 0)
+      : day.workers * day.rate;
+    return {
+      ...day,
+      workers: day.crew.length || day.workers,
+      rate: day.crew.length ? Math.round(amount / day.crew.length) : day.rate,
+      amount,
+    };
+  }
+
   function patch(idx: number, next: Partial<LabourDay>) {
+    setDays((prev) => prev.map((d, i) => (i === idx ? recalc({ ...d, ...next }) : d)));
+  }
+
+  function toggleWorker(idx: number, worker: LabourWorker) {
     setDays((prev) =>
       prev.map((d, i) => {
         if (i !== idx) return d;
-        const merged = { ...d, ...next };
-        return { ...merged, amount: merged.workers * merged.rate };
+        const on = d.crew.some((w) => w.staff_id === worker.staff_id);
+        return recalc({
+          ...d,
+          crew: on
+            ? d.crew.filter((w) => w.staff_id !== worker.staff_id)
+            : [...d.crew, { ...worker }],
+        });
       }),
+    );
+  }
+
+  function setWage(idx: number, staffId: number, wage: number) {
+    setDays((prev) =>
+      prev.map((d, i) =>
+        i === idx
+          ? recalc({
+              ...d,
+              crew: d.crew.map((w) => (w.staff_id === staffId ? { ...w, daily_wage: wage } : w)),
+            })
+          : d,
+      ),
     );
   }
 
@@ -671,51 +733,43 @@ function LabourDialog({
             Crew Daily Labour Sheet
           </DialogTitle>
           <DialogDescription>
-            Day one to closing day. Charges are raised on a separate labour invoice — not on the prop
-            rental invoice.
+            Tick the workers who actually went to the field each day. Wages are the amounts fixed for
+            them at dispatch. Charges are raised on a separate labour invoice.
           </DialogDescription>
         </DialogHeader>
 
-        {quote && quote.crew_assignments.length > 0 && (
+        {roster.length > 0 ? (
           <p className="text-xs text-muted-foreground">
-            Deployed crew: {quote.crew_assignments.map((c) => c.staff_name).join(", ")}
+            Dispatched crew:{" "}
+            {roster.map((c) => `${c.staff_name} · ${inr(c.daily_wage)}/day`).join("  |  ")}
+          </p>
+        ) : (
+          <p className="text-xs text-amber-500">
+            No crew was assigned at dispatch — enter the head-count and rate manually below.
           </p>
         )}
 
-        <div className="space-y-2">
+        <div className="space-y-3">
           {days.map((d, idx) => (
-            <div key={idx} className="grid gap-2 border-t border-border/60 pt-2 sm:grid-cols-[1fr_auto]">
-              <div className="grid gap-2 sm:grid-cols-2">
+            <div key={idx} className="space-y-2 rounded-xl border border-border/60 p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-display text-sm tracking-wide text-muted-foreground">
+                  Day {idx + 1}
+                </span>
                 <Input
+                  className="w-40"
                   type="date"
                   value={d.date}
                   onChange={(e) => patch(idx, { date: e.target.value })}
                 />
                 <Input
+                  className="min-w-40 flex-1"
                   placeholder="Note (loading, night shift…)"
                   value={d.note}
                   onChange={(e) => patch(idx, { note: e.target.value })}
                 />
-              </div>
-              <div className="flex items-center gap-2">
-                <Input
-                  className="w-20"
-                  type="number"
-                  min={1}
-                  aria-label="Workers"
-                  value={d.workers}
-                  onChange={(e) => patch(idx, { workers: Math.max(1, Number(e.target.value)) })}
-                />
-                <Input
-                  className="w-28"
-                  type="number"
-                  min={0}
-                  aria-label="Charge per worker"
-                  value={d.rate}
-                  onChange={(e) => patch(idx, { rate: Math.max(0, Number(e.target.value)) })}
-                />
                 <span className="w-24 text-right font-display text-lg tracking-wide text-primary">
-                  {inr(d.workers * d.rate)}
+                  {inr(d.amount)}
                 </span>
                 <Button
                   size="icon"
@@ -727,6 +781,66 @@ function LabourDialog({
                   <Trash2 className="size-4" />
                 </Button>
               </div>
+
+              {roster.length > 0 ? (
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {roster.map((w) => {
+                    const picked = d.crew.find((c) => c.staff_id === w.staff_id);
+                    return (
+                      <label
+                        key={w.staff_id}
+                        className={`flex items-center gap-2 rounded-lg border p-2 text-sm ${
+                          picked ? "border-primary/50 bg-primary/5" : "border-border/60"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="accent-primary"
+                          checked={Boolean(picked)}
+                          onChange={() => toggleWorker(idx, w)}
+                        />
+                        <span className="flex-1 truncate">
+                          {w.staff_name}
+                          <span className="ml-1 text-[11px] text-muted-foreground">
+                            {w.staff_code}
+                          </span>
+                        </span>
+                        {picked && (
+                          <Input
+                            className="h-8 w-24"
+                            type="number"
+                            min={0}
+                            aria-label={`Wage for ${w.staff_name}`}
+                            value={picked.daily_wage}
+                            onChange={(e) =>
+                              setWage(idx, w.staff_id, Math.max(0, Number(e.target.value)))
+                            }
+                          />
+                        )}
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    className="w-20"
+                    type="number"
+                    min={1}
+                    aria-label="Workers"
+                    value={d.workers}
+                    onChange={(e) => patch(idx, { workers: Math.max(1, Number(e.target.value)) })}
+                  />
+                  <Input
+                    className="w-28"
+                    type="number"
+                    min={0}
+                    aria-label="Charge per worker"
+                    value={d.rate}
+                    onChange={(e) => patch(idx, { rate: Math.max(0, Number(e.target.value)) })}
+                  />
+                </div>
+              )}
             </div>
           ))}
           <Button
@@ -735,13 +849,14 @@ function LabourDialog({
             onClick={() =>
               setDays([
                 ...days,
-                {
-                  date: new Date().toISOString().slice(0, 10),
+                recalc({
+                  date: addDays(days[days.length - 1]?.date ?? new Date().toISOString().slice(0, 10), 1),
+                  crew: days[days.length - 1]?.crew ?? roster.map((w) => ({ ...w })),
                   workers: days[days.length - 1]?.workers ?? 1,
                   rate: days[days.length - 1]?.rate ?? 0,
                   amount: 0,
                   note: "",
-                },
+                }),
               ])
             }
           >
@@ -750,7 +865,9 @@ function LabourDialog({
         </div>
 
         <div className="flex items-center justify-between border-t border-border pt-3">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Labour Total</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Labour Total · {days.length} day(s)
+          </p>
           <p className="font-display text-2xl tracking-wide text-primary">{inr(total)}</p>
         </div>
 
@@ -785,6 +902,7 @@ function LabourDialog({
     </Dialog>
   );
 }
+
 
 /**
  * Closing the props settlement on the amount the client's manager issued —
