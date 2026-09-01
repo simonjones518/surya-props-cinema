@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { BadgeCheck, FileText, IndianRupee, PackageCheck, Printer, Send, Truck } from "lucide-react";
+import {
+  BadgeCheck,
+  FileText,
+  HardHat,
+  IndianRupee,
+  PackageCheck,
+  Plus,
+  Printer,
+  Send,
+  Trash2,
+  Truck,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,8 +30,9 @@ import { DOC_LABEL, QuoteDocument, type QuoteDocKind } from "@/components/quote-
 import { QuoteTimeline } from "@/components/quote-timeline";
 import { inr } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
+import { staffApi, staffKeys } from "@/lib/staff-api";
 import { openWhatsAppTo, quotationReadyMessage } from "@/lib/whatsapp";
-import type { QuoteRequest } from "@/lib/types";
+import type { LabourDay, QuoteRequest } from "@/lib/types";
 
 /** Admin: review client quote requests, price them, verify advances, record returns. */
 export function QuoteApprovals() {
@@ -33,6 +46,8 @@ export function QuoteApprovals() {
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
   const [dispatchFor, setDispatchFor] = useState<QuoteRequest | null>(null);
   const [advanceFor, setAdvanceFor] = useState<QuoteRequest | null>(null);
+  const [labourFor, setLabourFor] = useState<QuoteRequest | null>(null);
+  const [closeFor, setCloseFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
   const qc = useQueryClient();
 
@@ -48,8 +63,12 @@ export function QuoteApprovals() {
   });
 
   const dispatchProps = useMutation({
-    mutationFn: (payload: { id: number; vehicle?: string; notes?: string }) =>
-      portal.dispatchQuote(payload),
+    mutationFn: (payload: {
+      id: number;
+      vehicle?: string;
+      notes?: string;
+      crew_ids?: number[];
+    }) => portal.dispatchQuote(payload),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
@@ -74,12 +93,35 @@ export function QuoteApprovals() {
   });
 
   const closeOrder = useMutation({
-    mutationFn: (id: number) => portal.closeSettlement(id),
-    onSuccess: () => {
-      toast.success("Balance cleared — order closed");
+    mutationFn: (payload: { id: number; amount: number }) =>
+      portal.closeSettlement(payload.id, payload.amount),
+    onSuccess: (_r, vars) => {
+      toast.success(`Order closed on the client-issued amount ${inr(vars.amount)}`);
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      setCloseFor(null);
     },
     onError: (e: Error) => toast.error("Could not close order", { description: e.message }),
+  });
+
+  const saveLabour = useMutation({
+    mutationFn: (payload: { id: number; days: LabourDay[] }) =>
+      portal.saveLabourSheet(payload.id, payload.days),
+    onSuccess: () => {
+      toast.success("Labour charge sheet saved");
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+    },
+    onError: (e: Error) => toast.error("Could not save labour sheet", { description: e.message }),
+  });
+
+  const closeLabour = useMutation({
+    mutationFn: (payload: { id: number; amount: number }) =>
+      portal.closeLabourInvoice(payload.id, payload.amount),
+    onSuccess: (_r, vars) => {
+      toast.success(`Labour invoice closed at ${inr(vars.amount)}`);
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      setLabourFor(null);
+    },
+    onError: (e: Error) => toast.error("Could not close labour invoice", { description: e.message }),
   });
 
 
@@ -221,13 +263,17 @@ export function QuoteApprovals() {
                 </Button>
               )}
               {quote.status === "settled" && (
-                <Button
-                  size="sm"
-                  onClick={() => closeOrder.mutate(quote.id)}
-                  disabled={closeOrder.isPending}
-                >
-                  <BadgeCheck className="size-4" /> Mark Balance Cleared
+                <Button size="sm" onClick={() => setCloseFor(quote)}>
+                  <BadgeCheck className="size-4" /> Close on Client-Issued Amount
                 </Button>
+              )}
+              {["dispatched", "on_set", "settled", "closed"].includes(quote.status) && (
+                <Button size="sm" variant="outline" onClick={() => setLabourFor(quote)}>
+                  <HardHat className="size-4" /> Labour Sheet
+                </Button>
+              )}
+              {quote.labour_total > 0 && (
+                <DocButton quote={quote} kind="labour" onOpen={setDoc} icon={Users} />
               )}
               {quote.status !== "quote_requested" && (
                 <>
@@ -254,6 +300,19 @@ export function QuoteApprovals() {
         onOpenChange={(v) => !v && setAdvanceFor(null)}
         onSubmit={(payload) => reviseAdvance.mutate(payload)}
         pending={reviseAdvance.isPending}
+      />
+      <LabourDialog
+        quote={labourFor}
+        onOpenChange={(v) => !v && setLabourFor(null)}
+        onSave={(days) => labourFor && saveLabour.mutate({ id: labourFor.id, days })}
+        onClose={(amount) => labourFor && closeLabour.mutate({ id: labourFor.id, amount })}
+        pending={saveLabour.isPending || closeLabour.isPending}
+      />
+      <CloseSettlementDialog
+        quote={closeFor}
+        onOpenChange={(v) => !v && setCloseFor(null)}
+        onSubmit={(amount) => closeFor && closeOrder.mutate({ id: closeFor.id, amount })}
+        pending={closeOrder.isPending}
       />
       <PricingDialog quote={priceFor} onOpenChange={(v) => !v && setPriceFor(null)} />
       <ReturnDialog quote={returnFor} onOpenChange={(v) => !v && setReturnFor(null)} />
