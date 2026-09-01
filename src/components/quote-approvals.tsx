@@ -212,6 +212,13 @@ export function QuoteApprovals() {
               </p>
             )}
 
+            {quote.admin_notes && (
+              <p className="mt-3 whitespace-pre-line text-xs text-muted-foreground">
+                <span className="font-semibold text-foreground">Internal remarks: </span>
+                {quote.admin_notes}
+              </p>
+            )}
+
             {quote.status !== "quote_requested" && (
               <div className="mt-4 grid gap-3 rounded-lg border border-border bg-secondary/40 p-3 text-sm sm:grid-cols-4">
                 <Stat
