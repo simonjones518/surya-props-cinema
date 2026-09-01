@@ -278,11 +278,13 @@ export function QuoteApprovals() {
                 <DocButton quote={quote} kind="labour" onOpen={setDoc} icon={Users} />
               )}
               {quote.status !== "quote_requested" && (
-                <>
-                  <DocButton quote={quote} kind="quotation" onOpen={setDoc} icon={FileText} />
-                  <DocButton quote={quote} kind="advance-request" onOpen={setDoc} icon={IndianRupee} />
-                </>
+                <DocButton quote={quote} kind="quotation" onOpen={setDoc} icon={FileText} />
               )}
+              {quote.advance_required > 0 &&
+                ["quote_sent", "quote_accepted", "advance_submitted"].includes(quote.status) && (
+                  <DocButton quote={quote} kind="advance-request" onOpen={setDoc} icon={IndianRupee} />
+                )}
+
               {["payment_received", "dispatched", "on_set", "settled", "closed"].includes(
                 quote.status,
               ) && <DocButton quote={quote} kind="receipt" onOpen={setDoc} icon={BadgeCheck} />}
