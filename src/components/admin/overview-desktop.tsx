@@ -50,6 +50,12 @@ export function OverviewDesktop({
     { label: "Gross Revenue Today", value: inr(kpi.gross_revenue_today), icon: IndianRupee },
     { label: "Net Profit Today", value: inr(kpi.net_profit_today), icon: TrendingUp },
   ];
+  const period = [
+    { label: "Revenue This Month", value: inr(kpi.monthly_revenue), icon: CalendarDays },
+    { label: "Revenue This Year", value: inr(kpi.yearly_revenue), icon: CalendarRange },
+    { label: "Received This Month", value: inr(kpi.monthly_received), icon: BadgeIndianRupee },
+    { label: "Received This Year", value: inr(kpi.yearly_received), icon: PiggyBank },
+  ];
   const stats = [
     { label: "Active Shoots", value: String(kpi.active_rentals), icon: Truck },
     { label: "Overdue Rentals", value: String(kpi.overdue_rentals), icon: AlertTriangle },
