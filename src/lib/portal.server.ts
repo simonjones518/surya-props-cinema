@@ -659,26 +659,15 @@ export async function dispatchQuote(input: {
     assigned_staff_id: crew[0]?.staff_id ?? null,
     assigned_staff_name: crew[0]?.staff_name ?? null,
   };
+  // The live database still uses the Phase 2 assignment columns. Do not send
+  // `crew_assignments` here: PostgREST rejects the entire dispatch update when
+  // that optional Phase 3 column is absent from its schema cache. The primary
+  // worker remains recorded in the legacy fields until the schema is upgraded.
   const { error: upErr } = await suryaDb
     .from("quote_requests")
-    .update({ ...dispatchUpdate, crew_assignments: crew as unknown as any })
+    .update(dispatchUpdate)
     .eq("id", id);
-
-  if (upErr) {
-    const missingCrewColumn =
-      upErr.message.includes("crew_assignments") &&
-      upErr.message.includes("schema cache");
-    if (!missingCrewColumn) throw new Error(upErr.message);
-
-    // Compatibility path for older deployments that have not received the
-    // Phase 3 crew_assignments column yet. Dispatch must remain operational;
-    // the first assigned worker is retained in the legacy assignment fields.
-    const { error: legacyErr } = await suryaDb
-      .from("quote_requests")
-      .update(dispatchUpdate)
-      .eq("id", id);
-    if (legacyErr) throw new Error(legacyErr.message);
-  }
+  if (upErr) throw new Error(upErr.message);
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
   if (propIds.length > 0) {
