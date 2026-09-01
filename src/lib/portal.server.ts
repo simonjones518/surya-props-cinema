@@ -919,14 +919,14 @@ export async function closeSettlement(input: { id: number; settled_amount?: numb
     .from("quote_requests")
     .update({
       status: "closed",
-      settled_amount,
-      settlement_waived,
       production_approved_amount: settled_amount,
       balance_due: 0,
       balance_cleared_at: new Date().toISOString(),
     })
     .eq("id", id);
   if (upErr) throw new Error(upErr.message);
+  await writeSidecar(id, { settled_amount, settlement_waived });
+
 
   await suryaDb
     .from("quote_payments")
