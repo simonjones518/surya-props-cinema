@@ -417,7 +417,18 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                   label={settlement ? "Net Balance Due" : "Estimated Balance"}
                   value={inr(balance)}
                 />
+                {settlement && quote.status === "closed" && (
+                  <>
+                    <Row label="Client-Issued Amount" value={inr(quote.settled_amount)} />
+                    <Row
+                      label="Concession Allowed"
+                      value={`− ${inr(quote.settlement_waived)}`}
+                    />
+                    <Total label="Amount Settled & Closed" value={inr(quote.settled_amount)} />
+                  </>
+                )}
               </>
+
             )}
             <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
               {amountInWords(receipt ? advancePaid : advanceNote ? advanceDue : balance)}
