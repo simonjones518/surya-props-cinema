@@ -630,17 +630,21 @@ function LabourDialog({
 }) {
   const [days, setDays] = useState<LabourDay[]>([]);
   const [issued, setIssued] = useState(0);
-  const [workerFilter, setWorkerFilter] = useState<number | "all">("all");
 
-  const roster: LabourWorker[] = (quote?.crew_assignments ?? []).map((c) => ({
-    staff_id: c.staff_id,
-    staff_code: c.staff_code,
-    staff_name: c.staff_name,
-    daily_wage: c.daily_wage,
-    shift: "day" as const,
-  }));
+  /** Every active field worker can be assigned to any day, exactly like dispatch. */
+  const staff = useQuery({
+    queryKey: staffKeys.staff,
+    queryFn: staffApi.listStaff,
+    enabled: quote !== null,
+  });
+  const pool = (staff.data ?? []).filter((s) => s.active && s.staff_role === "field");
+  /** Wage fixed at dispatch, used as the default when a worker is newly ticked. */
+  const dispatchWage = new Map(
+    (quote?.crew_assignments ?? []).map((c) => [c.staff_id, c.daily_wage] as const),
+  );
+
   const total = days.reduce((s, d) => s + d.amount, 0);
-  const manDays = days.reduce((s, d) => s + (d.crew.length || d.workers), 0);
+  const manDays = days.reduce((s, d) => s + d.crew.length, 0);
   const uniqueWorkers = new Set(days.flatMap((d) => d.crew.map((w) => w.staff_id))).size;
 
   useEffect(() => {
@@ -654,14 +658,15 @@ function LabourDialog({
             ...d,
             crew,
             extra,
-            amount:
-              (crew.length > 0 ? crew.reduce((s, w) => s + w.daily_wage, 0) : d.workers * d.rate) +
-              extra,
+            workers: crew.length,
+            rate: crew.length ? Math.round(crew.reduce((s, w) => s + w.daily_wage, 0) / crew.length) : 0,
+            amount: crew.reduce((s, w) => s + w.daily_wage, 0) + extra,
           };
         }),
       );
     } else {
-      // Seed one row per shoot day, pre-rostered with the whole dispatch crew.
+      // Seed one row per shoot day. Day 1 carries the crew fixed at dispatch;
+      // later days start empty so you assign whoever actually went.
       const start = (quote.dispatch_at ?? quote.shoot_start_date ?? new Date().toISOString()).slice(
         0,
         10,
@@ -678,30 +683,32 @@ function LabourDialog({
         shift: "day",
       }));
       setDays(
-        Array.from({ length: span }, (_, i) => ({
-          date: addDays(start, i),
-          crew: crew.map((w) => ({ ...w })),
-          workers: crew.length,
-          rate: crew.length ? Math.round(crew.reduce((s, w) => s + w.daily_wage, 0) / crew.length) : 0,
-          extra: 0,
-          amount: crew.reduce((s, w) => s + w.daily_wage, 0),
-          note: "",
-        })),
+        Array.from({ length: span }, (_, i) => {
+          const dayCrew = i === 0 ? crew.map((w) => ({ ...w })) : [];
+          const base = dayCrew.reduce((s, w) => s + w.daily_wage, 0);
+          return {
+            date: addDays(start, i),
+            crew: dayCrew,
+            workers: dayCrew.length,
+            rate: dayCrew.length ? Math.round(base / dayCrew.length) : 0,
+            extra: 0,
+            amount: base,
+            note: "",
+          };
+        }),
       );
     }
     setIssued(quote.labour_settled_amount || quote.labour_total || 0);
   }, [quote?.id]);
 
   function recalc(day: LabourDay): LabourDay {
-    const base = day.crew.length
-      ? day.crew.reduce((s, w) => s + w.daily_wage, 0)
-      : day.workers * day.rate;
+    const base = day.crew.reduce((s, w) => s + w.daily_wage, 0);
     const extra = Math.max(0, Number(day.extra) || 0);
     return {
       ...day,
       extra,
-      workers: day.crew.length || day.workers,
-      rate: day.crew.length ? Math.round(base / day.crew.length) : day.rate,
+      workers: day.crew.length,
+      rate: day.crew.length ? Math.round(base / day.crew.length) : 0,
       amount: base + extra,
     };
   }
@@ -710,16 +717,26 @@ function LabourDialog({
     setDays((prev) => prev.map((d, i) => (i === idx ? recalc({ ...d, ...next }) : d)));
   }
 
-  function toggleWorker(idx: number, worker: LabourWorker) {
+  function toggleWorker(idx: number, staffId: number) {
     setDays((prev) =>
       prev.map((d, i) => {
         if (i !== idx) return d;
-        const on = d.crew.some((w) => w.staff_id === worker.staff_id);
+        const on = d.crew.some((w) => w.staff_id === staffId);
+        if (on) return recalc({ ...d, crew: d.crew.filter((w) => w.staff_id !== staffId) });
+        const s = pool.find((p) => p.id === staffId);
+        if (!s) return d;
         return recalc({
           ...d,
-          crew: on
-            ? d.crew.filter((w) => w.staff_id !== worker.staff_id)
-            : [...d.crew, { ...worker }],
+          crew: [
+            ...d.crew,
+            {
+              staff_id: s.id,
+              staff_code: s.staff_code,
+              staff_name: s.full_name,
+              daily_wage: dispatchWage.get(s.id) ?? 0,
+              shift: "day",
+            },
+          ],
         });
       }),
     );
@@ -744,22 +761,10 @@ function LabourDialog({
       prev.map((d, i) => {
         const source = prev[i - 1];
         if (i !== idx || !source) return d;
-        return recalc({
-          ...d,
-          crew: source.crew.map((w) => ({ ...w })),
-          workers: source.workers,
-          rate: source.rate,
-          extra: source.extra,
-        });
+        return recalc({ ...d, crew: source.crew.map((w) => ({ ...w })), extra: source.extra });
       }),
     );
   }
-
-  const visible = days
-    .map((d, idx) => ({ d, idx }))
-    .filter(
-      ({ d }) => workerFilter === "all" || d.crew.some((w) => w.staff_id === workerFilter),
-    );
 
   return (
     <Dialog open={quote !== null} onOpenChange={onOpenChange}>
@@ -769,15 +774,15 @@ function LabourDialog({
             Crew Daily Labour Sheet
           </DialogTitle>
           <DialogDescription>
-            Tick the workers who actually went to the field each day, set the shift and rate, and add
-            any overtime. Charges are raised on a separate labour invoice.
+            Assign the workers day by day — exactly like dispatch. Pick the workers who went that
+            day and enter each one&apos;s wage for that day.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-3 gap-2">
           {[
             { label: "Total Labour Cost", value: inr(total) },
-            { label: "Workers Deployed", value: String(uniqueWorkers || roster.length) },
+            { label: "Workers Deployed", value: String(uniqueWorkers) },
             { label: "Man-days", value: String(manDays) },
           ].map((c) => (
             <div key={c.label} className="rounded-xl border border-border/60 p-3">
@@ -787,35 +792,14 @@ function LabourDialog({
           ))}
         </div>
 
-        {roster.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Label className="text-xs">Filter by worker</Label>
-            <select
-              className="h-8 rounded-md border border-border bg-background px-2 text-xs"
-              value={String(workerFilter)}
-              onChange={(e) =>
-                setWorkerFilter(e.target.value === "all" ? "all" : Number(e.target.value))
-              }
-            >
-              <option value="all">All workers</option>
-              {roster.map((w) => (
-                <option key={w.staff_id} value={w.staff_id}>
-                  {w.staff_name}
-                </option>
-              ))}
-            </select>
-            <span className="text-[11px] text-muted-foreground">
-              Dispatched crew: {roster.map((c) => `${c.staff_name} · ${inr(c.daily_wage)}`).join("  |  ")}
-            </span>
-          </div>
-        ) : (
+        {pool.length === 0 && (
           <p className="text-xs text-amber-500">
-            No crew was assigned at dispatch — enter the head-count and rate manually below.
+            No active field-operations staff yet — add them under Staff &amp; Roles.
           </p>
         )}
 
         <div className="space-y-3">
-          {visible.map(({ d, idx }) => (
+          {days.map((d, idx) => (
             <div key={idx} className="space-y-2 rounded-xl border border-border/60 p-3">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-display text-sm tracking-wide text-muted-foreground">
@@ -827,13 +811,7 @@ function LabourDialog({
                   value={d.date}
                   onChange={(e) => patch(idx, { date: e.target.value })}
                 />
-                <Input
-                  className="min-w-40 flex-1"
-                  placeholder="Note (loading, set-up…)"
-                  value={d.note}
-                  onChange={(e) => patch(idx, { note: e.target.value })}
-                />
-                <span className="w-24 text-right font-display text-lg tracking-wide text-primary">
+                <span className="ml-auto w-24 text-right font-display text-lg tracking-wide text-primary">
                   {inr(d.amount)}
                 </span>
                 {idx > 0 && (
@@ -857,97 +835,69 @@ function LabourDialog({
                 </Button>
               </div>
 
-              {roster.length > 0 ? (
-                <div className="grid gap-1.5 sm:grid-cols-2">
-                  {roster.map((w) => {
-                    const picked = d.crew.find((c) => c.staff_id === w.staff_id);
-                    return (
-                      <div
-                        key={w.staff_id}
-                        className={`flex flex-wrap items-center gap-2 rounded-lg border p-2 text-sm ${
-                          picked ? "border-primary/50 bg-primary/5" : "border-border/60"
+              {/* Worker picker — same interaction as the dispatch crew picker */}
+              <div className="flex flex-wrap gap-2">
+                {pool.map((s) => {
+                  const on = d.crew.some((w) => w.staff_id === s.id);
+                  return (
+                    <Button
+                      key={s.id}
+                      type="button"
+                      size="sm"
+                      variant={on ? "default" : "outline"}
+                      onClick={() => toggleWorker(idx, s.id)}
+                    >
+                      <HardHat className="size-4" /> {s.full_name}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {d.crew.length > 0 && (
+                <div className="space-y-2 rounded-lg border border-primary/20 bg-secondary/30 p-3">
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Wage for this day (per worker)
+                  </p>
+                  {d.crew.map((w) => (
+                    <div key={w.staff_id} className="flex items-center justify-between gap-2">
+                      <span className="flex-1 truncate text-xs">
+                        {w.staff_name}
+                        <span className="block font-mono text-[10px] text-muted-foreground">
+                          {w.staff_code}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          patchWorker(idx, w.staff_id, {
+                            shift: w.shift === "night" ? "day" : "night",
+                          })
+                        }
+                        className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${
+                          w.shift === "night"
+                            ? "border-amber-500/60 bg-amber-500/15 text-amber-400"
+                            : "border-border text-muted-foreground"
                         }`}
                       >
-                        <input
-                          type="checkbox"
-                          className="accent-primary"
-                          aria-label={`Deploy ${w.staff_name}`}
-                          checked={Boolean(picked)}
-                          onChange={() => toggleWorker(idx, w)}
-                        />
-                        <span className="flex-1 truncate">
-                          {w.staff_name}
-                          <span className="ml-1 text-[11px] text-muted-foreground">
-                            {w.staff_code}
-                          </span>
-                        </span>
-                        {picked && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                patchWorker(idx, w.staff_id, {
-                                  shift: picked.shift === "night" ? "day" : "night",
-                                })
-                              }
-                              className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wider ${
-                                picked.shift === "night"
-                                  ? "border-amber-500/60 bg-amber-500/15 text-amber-400"
-                                  : "border-border text-muted-foreground"
-                              }`}
-                            >
-                              {picked.shift === "night" ? "Overnight" : "Regular"}
-                            </button>
-                            <Input
-                              className="h-8 w-24"
-                              type="number"
-                              min={0}
-                              aria-label={`Wage for ${w.staff_name}`}
-                              value={picked.daily_wage}
-                              onChange={(e) =>
-                                patchWorker(idx, w.staff_id, {
-                                  daily_wage: Math.max(0, Number(e.target.value)),
-                                })
-                              }
-                            />
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Input
-                    className="w-20"
-                    type="number"
-                    min={1}
-                    aria-label="Workers"
-                    value={d.workers}
-                    onChange={(e) => patch(idx, { workers: Math.max(1, Number(e.target.value)) })}
-                  />
-                  <Input
-                    className="w-28"
-                    type="number"
-                    min={0}
-                    aria-label="Charge per worker"
-                    value={d.rate}
-                    onChange={(e) => patch(idx, { rate: Math.max(0, Number(e.target.value)) })}
-                  />
+                        {w.shift === "night" ? "Overnight" : "Regular"}
+                      </button>
+                      <Input
+                        className="h-8 w-28"
+                        type="number"
+                        min={0}
+                        placeholder="₹ wage"
+                        aria-label={`Wage for ${w.staff_name} on day ${idx + 1}`}
+                        value={w.daily_wage}
+                        onChange={(e) =>
+                          patchWorker(idx, w.staff_id, {
+                            daily_wage: Math.max(0, Number(e.target.value)),
+                          })
+                        }
+                      />
+                    </div>
+                  ))}
                 </div>
               )}
-
-              <div className="flex items-center gap-2">
-                <Label className="text-xs text-muted-foreground">Overtime / extra ₹</Label>
-                <Input
-                  className="h-8 w-28"
-                  type="number"
-                  min={0}
-                  aria-label={`Extra charges day ${idx + 1}`}
-                  value={d.extra}
-                  onChange={(e) => patch(idx, { extra: Math.max(0, Number(e.target.value)) })}
-                />
-              </div>
             </div>
           ))}
           <Button
@@ -957,10 +907,13 @@ function LabourDialog({
               setDays([
                 ...days,
                 recalc({
-                  date: addDays(days[days.length - 1]?.date ?? new Date().toISOString().slice(0, 10), 1),
-                  crew: (days[days.length - 1]?.crew ?? roster).map((w) => ({ ...w })),
-                  workers: days[days.length - 1]?.workers ?? 1,
-                  rate: days[days.length - 1]?.rate ?? 0,
+                  date: addDays(
+                    days[days.length - 1]?.date ?? new Date().toISOString().slice(0, 10),
+                    1,
+                  ),
+                  crew: [],
+                  workers: 0,
+                  rate: 0,
                   extra: 0,
                   amount: 0,
                   note: "",
@@ -1010,6 +963,7 @@ function LabourDialog({
     </Dialog>
   );
 }
+
 
 
 
