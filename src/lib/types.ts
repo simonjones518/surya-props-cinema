@@ -330,6 +330,7 @@ export interface CrewMember {
   staff_code: string;
   staff_name: string;
   phone: string;
+  daily_wage: number;
 }
 
 /** One day of the crew labour charge sheet. Rates can differ per day. */

@@ -246,6 +246,7 @@ CREATE TABLE IF NOT EXISTS public.staff_accounts (
   full_name TEXT NOT NULL,
   phone TEXT NOT NULL DEFAULT '',
   staff_role TEXT NOT NULL DEFAULT 'field',
+  daily_wage NUMERIC(12,2) NOT NULL DEFAULT 0,
   username TEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   active BOOLEAN NOT NULL DEFAULT TRUE,

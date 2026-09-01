@@ -24,4 +24,13 @@ ALTER TABLE public.quote_requests
   ADD COLUMN IF NOT EXISTS settled_amount        NUMERIC(12,2) NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS settlement_waived     NUMERIC(12,2) NOT NULL DEFAULT 0;
 
+-- Default wage fixed by the manager for each worker. It is copied into the
+-- crew assignment at dispatch, so historical invoices keep the agreed rate.
+ALTER TABLE public.staff_accounts
+  ADD COLUMN IF NOT EXISTS daily_wage NUMERIC(12,2) NOT NULL DEFAULT 0;
+
 GRANT ALL ON public.quote_requests TO service_role;
+GRANT ALL ON public.staff_accounts TO service_role;
+
+-- Ask the REST schema layer to refresh immediately after this migration.
+NOTIFY pgrst, 'reload schema';
