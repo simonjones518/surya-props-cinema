@@ -283,7 +283,9 @@ async function signOne(path: string | null): Promise<string | null> {
 
 
 async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
+  const side = await readSidecar(Number(row["id"]));
   return {
+
     id: Number(row["id"]),
     quote_code: row["quote_code"],
     user_id: row["user_id"],
