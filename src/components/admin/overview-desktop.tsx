@@ -92,6 +92,14 @@ export function OverviewDesktop({
         ))}
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {period.map((m) => (
+          <StatCard key={m.label} {...m} />
+        ))}
+      </div>
+
+
+
       <div className="grid items-start gap-6 xl:grid-cols-3">
         <section
           aria-label="Revenue trend"
