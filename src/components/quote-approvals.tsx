@@ -28,11 +28,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { DOC_LABEL, QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { QuoteTimeline } from "@/components/quote-timeline";
-import { inr } from "@/lib/format";
+import { addDays, inr, shootDays } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
 import { staffApi, staffKeys } from "@/lib/staff-api";
 import { openWhatsAppTo, quotationReadyMessage } from "@/lib/whatsapp";
-import type { LabourDay, QuoteRequest } from "@/lib/types";
+import type { LabourDay, LabourWorker, QuoteRequest } from "@/lib/types";
 
 /** Admin: review client quote requests, price them, verify advances, record returns. */
 export function QuoteApprovals() {
@@ -659,7 +659,7 @@ function LabourDialog({
       );
       const span = Math.max(
         1,
-        quote.actual_days_used ?? shootDays(start, quote.estimated_return_date) || 1,
+        quote.actual_days_used ?? (shootDays(start, quote.estimated_return_date) || 1),
       );
       const crew = (quote.crew_assignments ?? []).map((c) => ({
         staff_id: c.staff_id,
