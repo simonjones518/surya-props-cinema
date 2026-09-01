@@ -130,7 +130,7 @@ export const recordReturnFn = createServerFn({ method: "POST" })
 
 export const dispatchQuoteFn = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { id: number; vehicle?: string; notes?: string; crew_ids?: number[] }) => data,
+    (data: { id: number; vehicle?: string; notes?: string; crew_ids?: number[]; crew_wages?: { staff_id: number; daily_wage: number }[] }) => data,
   )
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();

@@ -104,6 +104,7 @@ export const portal = {
     vehicle?: string;
     notes?: string;
     crew_ids?: number[];
+    crew_wages?: { staff_id: number; daily_wage: number }[];
   }) => dispatchQuoteFn({ data }),
   saveLabourSheet: (
     id: number,

@@ -68,6 +68,8 @@ export function QuoteApprovals() {
       vehicle?: string;
       notes?: string;
       crew_ids?: number[];
+      crew_wages?: { staff_id: number; daily_wage: number }[];
+    crew_wages?: { staff_id: number; daily_wage: number }[];
     }) => portal.dispatchQuote(payload),
     onSuccess: () => {
       toast.success("Props dispatched — rental is now live on-set");
@@ -459,6 +461,7 @@ function DispatchDialog({
     vehicle?: string;
     notes?: string;
     crew_ids?: number[];
+    crew_wages?: { staff_id: number; daily_wage: number }[];
   }) => void;
   pending: boolean;
 }) {

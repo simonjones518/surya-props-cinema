@@ -15,7 +15,6 @@ import {
   resetStaffPasswordFn,
   resolveDamageFn,
   setStaffActiveFn,
-  setStaffDailyWageFn,
   staffSessionFn,
   staffSignInFn,
   staffSignOutFn,
