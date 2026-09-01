@@ -1,5 +1,6 @@
 import {
   acceptQuotationFn,
+  adminAcceptQuotationFn,
   acceptQuoteFn,
   clientSessionFn,
   clientSignInFn,
@@ -87,6 +88,8 @@ export const portal = {
   getClientAccounts: () => fetchClientAccounts() as Promise<ClientAccountSummary[]>,
   getClientDossier: (userId: string) =>
     fetchClientDossier({ data: { userId } }) as Promise<ClientDossier>,
+  adminAcceptQuotation: (data: { id: number; remark: string; channel?: string }) =>
+    adminAcceptQuotationFn({ data }),
   setAdvanceRequired: (id: number, advance_required: number) =>
     setAdvanceRequiredFn({ data: { id, advance_required } }),
   priceQuote: (data: {
