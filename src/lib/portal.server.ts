@@ -663,10 +663,7 @@ export async function dispatchQuote(input: {
   // `crew_assignments` here: PostgREST rejects the entire dispatch update when
   // that optional Phase 3 column is absent from its schema cache. The primary
   // worker remains recorded in the legacy fields until the schema is upgraded.
-  const { error: upErr } = await suryaDb
-    .from("quote_requests")
-    .update(dispatchUpdate)
-    .eq("id", id);
+  const { error: upErr } = await suryaDb.from("quote_requests").update(dispatchUpdate).eq("id", id);
   if (upErr) throw new Error(upErr.message);
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
