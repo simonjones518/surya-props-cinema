@@ -454,15 +454,28 @@ function DispatchDialog({
 }: {
   quote: QuoteRequest | null;
   onOpenChange: (v: boolean) => void;
-  onSubmit: (payload: { id: number; vehicle?: string; notes?: string }) => void;
+  onSubmit: (payload: {
+    id: number;
+    vehicle?: string;
+    notes?: string;
+    crew_ids?: number[];
+  }) => void;
   pending: boolean;
 }) {
   const [vehicle, setVehicle] = useState("");
   const [notes, setNotes] = useState("");
+  const [crewIds, setCrewIds] = useState<number[]>([]);
+  const staff = useQuery({
+    queryKey: staffKeys.staff,
+    queryFn: staffApi.listStaff,
+    enabled: quote !== null,
+  });
+  const crew = (staff.data ?? []).filter((s) => s.active && s.staff_role === "field");
 
   useEffect(() => {
     setVehicle("");
     setNotes("");
+    setCrewIds([]);
   }, [quote?.id]);
 
   return (
@@ -484,6 +497,39 @@ function DispatchDialog({
               placeholder="TN 09 AB 1234 — Tempo"
             />
           </div>
+          <div className="space-y-2">
+            <Label>Field operations crew deployed</Label>
+            {crew.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No active field-operations staff yet — add them under Staff &amp; Roles.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {crew.map((c) => {
+                  const on = crewIds.includes(c.id);
+                  return (
+                    <Button
+                      key={c.id}
+                      type="button"
+                      size="sm"
+                      variant={on ? "default" : "outline"}
+                      onClick={() =>
+                        setCrewIds((prev) =>
+                          on ? prev.filter((x) => x !== c.id) : [...prev, c.id],
+                        )
+                      }
+                    >
+                      <HardHat className="size-4" /> {c.full_name}
+                    </Button>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              {crewIds.length} worker(s) selected — their daily charges are billed on a separate
+              labour invoice.
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="dispatch-notes">Dispatch notes</Label>
             <Textarea
@@ -496,7 +542,7 @@ function DispatchDialog({
           <Button
             className="w-full"
             disabled={pending || !quote}
-            onClick={() => quote && onSubmit({ id: quote.id, vehicle, notes })}
+            onClick={() => quote && onSubmit({ id: quote.id, vehicle, notes, crew_ids: crewIds })}
           >
             <Send className="size-4" /> Confirm Dispatch
           </Button>
