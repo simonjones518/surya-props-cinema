@@ -384,6 +384,8 @@ export async function listDispatchLogs(): Promise<DispatchLog[]> {
   const { data, error } = await suryaDb
     .from("dispatch_logs")
     .select("*")
+    // 'crew_labour' rows carry the crew/labour JSON sidecar, not a field log.
+    .in("kind", ["dispatch", "return"])
     .order("id", { ascending: false })
     .limit(100);
   if (error) throw new Error(error.message);

@@ -333,15 +333,28 @@ export interface CrewMember {
   daily_wage: number;
 }
 
-/** One day of the crew labour charge sheet. Rates can differ per day. */
+/** A worker rostered on one specific labour day, at the wage fixed on dispatch. */
+export interface LabourWorker {
+  staff_id: number;
+  staff_code: string;
+  staff_name: string;
+  /** Wage fixed for this worker on this order at dispatch time. */
+  daily_wage: number;
+}
+
+/** One day of the crew labour charge sheet. Different workers can go each day. */
 export interface LabourDay {
   date: string;
+  /** Workers rostered for that day, auto-filled from the dispatch crew. */
+  crew: LabourWorker[];
+  /** Head-count for that day (derived from `crew` when present). */
   workers: number;
-  /** Charge per worker for that day. */
+  /** Charge per worker for that day (average when wages differ). */
   rate: number;
   amount: number;
   note: string;
 }
+
 
 export interface QuoteRequest {
   id: number;

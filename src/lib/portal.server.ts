@@ -190,6 +190,88 @@ async function resolveProductionHouse(name: string, userId: string) {
   return { id: Number(data["id"]), name: data["name"] as string };
 }
 
+/* ---------- crew & labour sidecar ----------
+ * The live database has not been upgraded with the Phase 3 columns
+ * (crew_assignments, labour_days, settled_amount …). Until it is, this state is
+ * persisted as a JSON payload on a dedicated `dispatch_logs` row per order
+ * (kind = 'crew_labour'), which keeps every crew / labour feature working
+ * without any schema change.
+ */
+
+const SIDECAR_KIND = "crew_labour";
+
+type Phase3State = {
+  crew_assignments: QuoteRequest["crew_assignments"];
+  labour_days: QuoteRequest["labour_days"];
+  labour_total: number;
+  labour_settled_amount: number;
+  labour_status: "pending" | "closed";
+  labour_cleared_at: string | null;
+  labour_invoice_no: string | null;
+  settled_amount: number;
+  settlement_waived: number;
+};
+
+async function readSidecar(quoteId: number): Promise<Partial<Phase3State>> {
+  const { data } = await suryaDb
+    .from("dispatch_logs")
+    .select("id, notes")
+    .eq("quote_id", quoteId)
+    .eq("kind", SIDECAR_KIND)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!data?.["notes"]) return {};
+  try {
+    return JSON.parse(String(data["notes"])) as Partial<Phase3State>;
+  } catch {
+    return {};
+  }
+}
+
+async function writeSidecar(quoteId: number, patch: Partial<Phase3State>) {
+  const { data } = await suryaDb
+    .from("dispatch_logs")
+    .select("id, notes")
+    .eq("quote_id", quoteId)
+    .eq("kind", SIDECAR_KIND)
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  let current: Partial<Phase3State> = {};
+  if (data?.["notes"]) {
+    try {
+      current = JSON.parse(String(data["notes"])) as Partial<Phase3State>;
+    } catch {
+      current = {};
+    }
+  }
+  const notes = JSON.stringify({ ...current, ...patch });
+  if (data?.["id"]) {
+    const { error } = await suryaDb
+      .from("dispatch_logs")
+      .update({ notes })
+      .eq("id", Number(data["id"]));
+    if (error) throw new Error(error.message);
+  } else {
+    const { data: q } = await suryaDb
+      .from("quote_requests")
+      .select("quote_code")
+      .eq("id", quoteId)
+      .maybeSingle();
+    const { error } = await suryaDb.from("dispatch_logs").insert({
+      quote_id: quoteId,
+      quote_code: (q?.["quote_code"] as string) ?? "",
+      kind: SIDECAR_KIND,
+      vehicle_number: "",
+      notes,
+      staff_name: "system",
+    });
+    if (error) throw new Error(error.message);
+  }
+  return { ...current, ...patch };
+}
+
 /* ---------- mapping ---------- */
 
 async function signOne(path: string | null): Promise<string | null> {
@@ -199,8 +281,11 @@ async function signOne(path: string | null): Promise<string | null> {
   return data?.signedUrl ?? null;
 }
 
+
 async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
+  const side = await readSidecar(Number(row["id"]));
   return {
+
     id: Number(row["id"]),
     quote_code: row["quote_code"],
     user_id: row["user_id"],
@@ -239,16 +324,21 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     dispatch_vehicle: row["dispatch_vehicle"] ?? null,
     dispatch_notes: row["dispatch_notes"] ?? null,
     balance_cleared_at: row["balance_cleared_at"] ?? null,
-    crew_assignments: (row["crew_assignments"] ?? []) as QuoteRequest["crew_assignments"],
-    labour_days: (row["labour_days"] ?? []) as QuoteRequest["labour_days"],
-    labour_total: num(row["labour_total"]),
-    labour_settled_amount: num(row["labour_settled_amount"]),
-    labour_status: (row["labour_status"] ?? "pending") as "pending" | "closed",
-    labour_cleared_at: row["labour_cleared_at"] ?? null,
-    labour_invoice_no: row["labour_invoice_no"] ?? null,
-    settled_amount: num(row["settled_amount"]),
-    settlement_waived: num(row["settlement_waived"]),
+    crew_assignments: (row["crew_assignments"] ??
+      side.crew_assignments ??
+      []) as QuoteRequest["crew_assignments"],
+    labour_days: (row["labour_days"] ?? side.labour_days ?? []) as QuoteRequest["labour_days"],
+    labour_total: num(row["labour_total"] ?? side.labour_total),
+    labour_settled_amount: num(row["labour_settled_amount"] ?? side.labour_settled_amount),
+    labour_status: (row["labour_status"] ?? side.labour_status ?? "pending") as
+      | "pending"
+      | "closed",
+    labour_cleared_at: row["labour_cleared_at"] ?? side.labour_cleared_at ?? null,
+    labour_invoice_no: row["labour_invoice_no"] ?? side.labour_invoice_no ?? null,
+    settled_amount: num(row["settled_amount"] ?? side.settled_amount),
+    settlement_waived: num(row["settlement_waived"] ?? side.settlement_waived),
   };
+
 
 }
 
@@ -659,12 +749,12 @@ export async function dispatchQuote(input: {
     assigned_staff_id: crew[0]?.staff_id ?? null,
     assigned_staff_name: crew[0]?.staff_name ?? null,
   };
-  // The live database still uses the Phase 2 assignment columns. Do not send
-  // `crew_assignments` here: PostgREST rejects the entire dispatch update when
-  // that optional Phase 3 column is absent from its schema cache. The primary
-  // worker remains recorded in the legacy fields until the schema is upgraded.
+  // The live database still uses the Phase 2 assignment columns, so the full
+  // crew roster (with the wage fixed for this order) is persisted in the
+  // crew/labour sidecar instead of a `crew_assignments` column.
   const { error: upErr } = await suryaDb.from("quote_requests").update(dispatchUpdate).eq("id", id);
   if (upErr) throw new Error(upErr.message);
+  await writeSidecar(id, { crew_assignments: crew });
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
   if (propIds.length > 0) {
@@ -674,21 +764,48 @@ export async function dispatchQuote(input: {
 }
 
 /**
- * Crew labour charge sheet — day-wise worker charges billed on a separate
- * labour invoice (never mixed with the prop rental invoice).
+ * Crew labour charge sheet — day-wise worker roster billed on a separate labour
+ * invoice (never mixed with the prop rental invoice). Each day carries its own
+ * set of workers: day 1 can be two workers, day 2 a different worker, and the
+ * charge for each is the wage fixed for them at dispatch.
  */
 export async function saveLabourSheet(input: {
   id: number;
-  days: { date: string; workers: number; rate: number; note?: string }[];
+  days: {
+    date: string;
+    crew?: { staff_id: number; staff_code?: string; staff_name: string; daily_wage: number }[];
+    workers?: number;
+    rate?: number;
+    note?: string;
+  }[];
 }) {
   const id = Number(input.id);
   const days = (input.days ?? [])
     .filter((d) => d.date)
     .map((d) => {
+      const crew = (d.crew ?? []).map((w) => ({
+        staff_id: Number(w.staff_id) || 0,
+        staff_code: clean(w.staff_code ?? "", 40),
+        staff_name: clean(w.staff_name ?? "", 120),
+        daily_wage: Math.max(0, Number(w.daily_wage) || 0),
+      }));
+      if (crew.length > 0) {
+        const amount = crew.reduce((s, w) => s + w.daily_wage, 0);
+        return {
+          date: String(d.date).slice(0, 10),
+          crew,
+          workers: crew.length,
+          rate: Math.round(amount / crew.length),
+          amount,
+          note: clean(d.note ?? "", 200),
+        };
+      }
+      // Manual fallback when no rostered worker is picked for that day.
       const workers = Math.max(1, Math.round(Number(d.workers) || 1));
       const rate = Math.max(0, Number(d.rate) || 0);
       return {
         date: String(d.date).slice(0, 10),
+        crew,
         workers,
         rate,
         amount: workers * rate,
@@ -697,23 +814,16 @@ export async function saveLabourSheet(input: {
     });
   const labour_total = days.reduce((s, d) => s + d.amount, 0);
 
-  const { data: quote } = await suryaDb
-    .from("quote_requests")
-    .select("labour_invoice_no")
-    .eq("id", id)
-    .maybeSingle();
+  const existing = await readSidecar(id);
   const labour_invoice_no =
-    quote?.["labour_invoice_no"] ?? `SCP/LAB/${new Date().getFullYear()}/${String(id).padStart(4, "0")}`;
+    existing.labour_invoice_no ??
+    `SCP/LAB/${new Date().getFullYear()}/${String(id).padStart(4, "0")}`;
 
-  const { error } = await suryaDb
-    .from("quote_requests")
-    .update({
-      labour_days: days as unknown as any,
-      labour_total,
-      labour_invoice_no,
-    })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  await writeSidecar(id, {
+    labour_days: days as unknown as QuoteRequest["labour_days"],
+    labour_total,
+    labour_invoice_no,
+  });
   return { ok: true as const, labour_total, labour_invoice_no };
 }
 
@@ -721,17 +831,14 @@ export async function saveLabourSheet(input: {
 export async function closeLabourInvoice(input: { id: number; amount: number }) {
   const id = Number(input.id);
   const amount = Math.max(0, Number(input.amount) || 0);
-  const { error } = await suryaDb
-    .from("quote_requests")
-    .update({
-      labour_settled_amount: amount,
-      labour_status: "closed",
-      labour_cleared_at: new Date().toISOString(),
-    })
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  await writeSidecar(id, {
+    labour_settled_amount: amount,
+    labour_status: "closed",
+    labour_cleared_at: new Date().toISOString(),
+  });
   return { ok: true as const, amount };
 }
+
 
 
 /** Stage 5 — record return, recompute on actual days used, release inventory. */
@@ -812,14 +919,14 @@ export async function closeSettlement(input: { id: number; settled_amount?: numb
     .from("quote_requests")
     .update({
       status: "closed",
-      settled_amount,
-      settlement_waived,
       production_approved_amount: settled_amount,
       balance_due: 0,
       balance_cleared_at: new Date().toISOString(),
     })
     .eq("id", id);
   if (upErr) throw new Error(upErr.message);
+  await writeSidecar(id, { settled_amount, settlement_waived });
+
 
   await suryaDb
     .from("quote_payments")

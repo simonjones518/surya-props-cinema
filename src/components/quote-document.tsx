@@ -147,24 +147,35 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
           <thead>
             <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
               <th className="py-2">Date</th>
-              <th className="py-2 text-center">Workers</th>
-              <th className="py-2 text-right">Charge / Worker</th>
+              <th className="py-2">Workers On Field</th>
+              <th className="py-2 text-center">Head-count</th>
               <th className="py-2 text-right">Day Total</th>
             </tr>
           </thead>
           <tbody>
-            {quote.labour_days.map((d) => (
-              <tr key={d.date} className="border-b border-border/60">
+            {quote.labour_days.map((d, i) => (
+              <tr key={`${d.date}-${i}`} className="border-b border-border/60 align-top">
                 <td className="py-2">
-                  {prettyDate(d.date)}
+                  Day {i + 1}
+                  <span className="block text-[10px] text-muted-foreground print:text-black">
+                    {prettyDate(d.date)}
+                  </span>
                   {d.note && (
                     <span className="block text-[10px] text-muted-foreground print:text-black">
                       {d.note}
                     </span>
                   )}
                 </td>
+                <td className="py-2 text-xs">
+                  {(d.crew ?? []).length > 0
+                    ? (d.crew ?? []).map((w) => (
+                        <span key={w.staff_id} className="block">
+                          {w.staff_name} — {inr(w.daily_wage)}
+                        </span>
+                      ))
+                    : `${d.workers} × ${inr(d.rate)}`}
+                </td>
                 <td className="py-2 text-center">{d.workers}</td>
-                <td className="py-2 text-right">{inr(d.rate)}</td>
                 <td className="py-2 text-right font-semibold">{inr(d.amount)}</td>
               </tr>
             ))}
@@ -177,6 +188,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
             )}
           </tbody>
         </table>
+
 
         <section className="ml-auto w-full max-w-sm space-y-1.5 text-sm">
           <Row label="Labour Charges Raised" value={inr(quote.labour_total)} />
@@ -342,6 +354,19 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
             {kind === "challan" && quote.dispatch_vehicle && (
               <Field label="Vehicle" value={quote.dispatch_vehicle} />
             )}
+            {kind === "challan" && (
+              <Field
+                label="Crew Deployed"
+                value={
+                  quote.crew_assignments.length > 0
+                    ? quote.crew_assignments
+                        .map((c) => `${c.staff_name} (${c.staff_code})`)
+                        .join(", ")
+                    : "—"
+                }
+              />
+            )}
+
             {receipt && (
               <Field label="Payment Mode" value={`${quote.advance_mode ?? "UPI"}`} />
             )}
