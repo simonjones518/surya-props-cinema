@@ -545,6 +545,44 @@ export async function rejectQuoteByClient(id: number) {
 
 /* ---------- admin side ---------- */
 
+/**
+ * Stage 2b (offline) — the client confirmed the quotation over a phone call or a
+ * WhatsApp message, so the admin / manager accepts it on their behalf and records
+ * a remark of how the confirmation came in.
+ */
+export async function adminAcceptQuotation(input: {
+  id: number;
+  remark: string;
+  channel?: string;
+}) {
+  const id = Number(input.id);
+  const remark = clean(input.remark, 500);
+  if (!remark) throw new Error("Add a remark describing how the client confirmed.");
+  const channel = clean(input.channel ?? "Phone call", 40) || "Phone call";
+
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("status, admin_notes")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+  if (quote["status"] !== "quote_sent") {
+    throw new Error("Only a sent quotation awaiting acceptance can be accepted manually.");
+  }
+
+  const stamp = new Date().toISOString();
+  const trail = `[${stamp.slice(0, 10)}] Accepted manually via ${channel}: ${remark}`;
+  const admin_notes = [quote["admin_notes"], trail].filter(Boolean).join("\n");
+
+  const { error: upErr } = await suryaDb
+    .from("quote_requests")
+    .update({ status: "quote_accepted", accepted_at: stamp, admin_notes })
+    .eq("id", id);
+  if (upErr) throw new Error(upErr.message);
+  return { ok: true as const };
+}
+
 export async function listAllQuotes(): Promise<QuoteRequest[]> {
   const { data, error } = await suryaDb
     .from("quote_requests")
