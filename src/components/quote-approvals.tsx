@@ -48,6 +48,7 @@ export function QuoteApprovals() {
   const [advanceFor, setAdvanceFor] = useState<QuoteRequest | null>(null);
   const [labourFor, setLabourFor] = useState<QuoteRequest | null>(null);
   const [closeFor, setCloseFor] = useState<QuoteRequest | null>(null);
+  const [manualAcceptFor, setManualAcceptFor] = useState<QuoteRequest | null>(null);
   const [doc, setDoc] = useState<{ quote: QuoteRequest; kind: QuoteDocKind } | null>(null);
   const qc = useQueryClient();
 
@@ -92,6 +93,18 @@ export function QuoteApprovals() {
       setAdvanceFor(null);
     },
     onError: (e: Error) => toast.error("Could not revise the advance", { description: e.message }),
+  });
+
+  const manualAccept = useMutation({
+    mutationFn: (payload: { id: number; remark: string; channel?: string }) =>
+      portal.adminAcceptQuotation(payload),
+    onSuccess: () => {
+      toast.success("Quotation accepted on the client's behalf");
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      setManualAcceptFor(null);
+    },
+    onError: (e: Error) =>
+      toast.error("Could not accept the quotation", { description: e.message }),
   });
 
   const closeOrder = useMutation({
@@ -238,6 +251,11 @@ export function QuoteApprovals() {
                   {quote.status === "quote_sent" ? "Revise Pricing" : "Set Rates & Approve"}
                 </Button>
               )}
+              {quote.status === "quote_sent" && (
+                <Button size="sm" variant="outline" onClick={() => setManualAcceptFor(quote)}>
+                  <BadgeCheck className="size-4" /> Accept for Client (Call / WhatsApp)
+                </Button>
+              )}
               {["quote_sent", "quote_accepted", "advance_submitted"].includes(quote.status) && (
                 <Button size="sm" variant="outline" onClick={() => setAdvanceFor(quote)}>
                   <IndianRupee className="size-4" /> Revise Advance
@@ -305,6 +323,14 @@ export function QuoteApprovals() {
         onSubmit={(payload) => reviseAdvance.mutate(payload)}
         pending={reviseAdvance.isPending}
       />
+      <ManualAcceptDialog
+        quote={manualAcceptFor}
+        onOpenChange={(v) => !v && setManualAcceptFor(null)}
+        onSubmit={(payload) =>
+          manualAcceptFor && manualAccept.mutate({ id: manualAcceptFor.id, ...payload })
+        }
+        pending={manualAccept.isPending}
+      />
       <LabourDialog
         quote={labourFor}
         onOpenChange={(v) => !v && setLabourFor(null)}
@@ -361,6 +387,81 @@ function DocButton({
     <Button size="sm" variant="outline" onClick={() => onOpen({ quote, kind })}>
       <Icon className="size-4" /> {DOC_LABEL[kind]}
     </Button>
+  );
+}
+
+/** Admin/manager accepts a quotation the client confirmed by phone or WhatsApp. */
+function ManualAcceptDialog({
+  quote,
+  onOpenChange,
+  onSubmit,
+  pending,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (payload: { remark: string; channel: string }) => void;
+  pending: boolean;
+}) {
+  const CHANNELS = ["Phone call", "WhatsApp message", "In person", "Email"];
+  const [channel, setChannel] = useState("Phone call");
+  const [remark, setRemark] = useState("");
+
+  useEffect(() => {
+    if (quote) {
+      setChannel("Phone call");
+      setRemark("");
+    }
+  }, [quote]);
+
+  return (
+    <Dialog open={!!quote} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide">
+            Accept Quotation for Client
+          </DialogTitle>
+          <DialogDescription>
+            {quote?.quote_code} — record the offline confirmation. The order moves to the advance
+            payment stage exactly as if the client accepted from their portal.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Confirmation received via</Label>
+            <div className="flex flex-wrap gap-2">
+              {CHANNELS.map((c) => (
+                <Button
+                  key={c}
+                  type="button"
+                  size="sm"
+                  variant={channel === c ? "default" : "outline"}
+                  onClick={() => setChannel(c)}
+                >
+                  {c}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="accept-remark">Remark</Label>
+            <Textarea
+              id="accept-remark"
+              rows={3}
+              value={remark}
+              onChange={(e) => setRemark(e.target.value)}
+              placeholder="e.g. Mr. Ravi (Production Manager) confirmed rates on call at 4:30 PM; advance to be paid tomorrow."
+            />
+          </div>
+          <Button
+            className="w-full"
+            disabled={pending || !remark.trim()}
+            onClick={() => onSubmit({ remark: remark.trim(), channel })}
+          >
+            <BadgeCheck className="size-4" /> Mark Quotation Accepted
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
