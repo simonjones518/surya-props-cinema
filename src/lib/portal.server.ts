@@ -822,10 +822,10 @@ export async function closeSettlement(input: { id: number; settled_amount?: numb
   await suryaDb
     .from("quote_payments")
     .update({ status: "verified" })
-    .eq("quote_id", Number(id))
+    .eq("quote_id", id)
     .eq("kind", "settlement");
 
-  return { ok: true as const };
+  return { ok: true as const, settled_amount, settlement_waived };
 }
 
 
