@@ -649,21 +649,36 @@ export async function dispatchQuote(input: {
   }
 
   const now = new Date();
+  const dispatchUpdate = {
+    status: "dispatched",
+    dispatch_at: now.toISOString(),
+    // The rental clock starts the day the props physically leave the warehouse.
+    shoot_start_date: now.toISOString().slice(0, 10),
+    dispatch_vehicle: clean(input.vehicle ?? "", 60) || null,
+    dispatch_notes: clean(input.notes ?? "", 500) || null,
+    assigned_staff_id: crew[0]?.staff_id ?? null,
+    assigned_staff_name: crew[0]?.staff_name ?? null,
+  };
   const { error: upErr } = await suryaDb
     .from("quote_requests")
-    .update({
-      status: "dispatched",
-      dispatch_at: now.toISOString(),
-      // The rental clock starts the day the props physically leave the warehouse.
-      shoot_start_date: now.toISOString().slice(0, 10),
-      dispatch_vehicle: clean(input.vehicle ?? "", 60) || null,
-      dispatch_notes: clean(input.notes ?? "", 500) || null,
-      crew_assignments: crew as unknown as any,
-      assigned_staff_id: crew[0]?.staff_id ?? null,
-      assigned_staff_name: crew[0]?.staff_name ?? null,
-    })
+    .update({ ...dispatchUpdate, crew_assignments: crew as unknown as any })
     .eq("id", id);
-  if (upErr) throw new Error(upErr.message);
+
+  if (upErr) {
+    const missingCrewColumn =
+      upErr.message.includes("crew_assignments") &&
+      upErr.message.includes("schema cache");
+    if (!missingCrewColumn) throw new Error(upErr.message);
+
+    // Compatibility path for older deployments that have not received the
+    // Phase 3 crew_assignments column yet. Dispatch must remain operational;
+    // the first assigned worker is retained in the legacy assignment fields.
+    const { error: legacyErr } = await suryaDb
+      .from("quote_requests")
+      .update(dispatchUpdate)
+      .eq("id", id);
+    if (legacyErr) throw new Error(legacyErr.message);
+  }
 
   const propIds = ((quote["items"] ?? []) as QuoteItem[]).map((i) => i.prop_id);
   if (propIds.length > 0) {
