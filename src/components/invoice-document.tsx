@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
 import { COMPANY_INFO, amountInWords, upiPayload } from "@/lib/company";
+import { readClientIssued } from "@/lib/invoice-settlement";
 import type { Invoice } from "@/lib/types";
 
 export const COMPANY = {
