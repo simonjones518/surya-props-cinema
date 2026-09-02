@@ -187,6 +187,9 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 <p>
                   A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
                 </p>
+                <p>Branch: {COMPANY_INFO.branch}</p>
+                <p>PhonePe / other UPI apps: {COMPANY_INFO.upiPhone}</p>
+                <p>PAN: {COMPANY_INFO.pan}</p>
                 {invoice.balance_payable > 0 && (
                   <p className="mt-1 font-semibold text-primary print:text-black">
                     Pay {inr(invoice.balance_payable)} and share the UTR / screenshot with us.
