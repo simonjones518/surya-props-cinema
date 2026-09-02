@@ -304,7 +304,7 @@ export function PosCart({
                 <Input
                   value={shootLocation}
                   onChange={(e) => setShootLocation(e.target.value)}
-                  placeholder="EVP Film City, Chennai"
+                  placeholder="Annapurna Studio, Hyderabad"
                 />
               </Field>
             </div>

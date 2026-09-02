@@ -151,7 +151,7 @@ export function RentalOrderModal({
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 98400 00000" />
           </Field>
           <Field label="Shoot Location">
-            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="EVP Film City" />
+            <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Annapurna Studio, Hyderabad" />
           </Field>
           <Field label="Dispatch Date">
             <Input type="date" value={dispatch} onChange={(e) => setDispatch(e.target.value)} />

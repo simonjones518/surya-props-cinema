@@ -343,7 +343,7 @@ export function DirectInvoiceModal({
               <Field label="Phone (WhatsApp)" value={phone} onChange={setPhone} placeholder="98490 05451" />
               <Field label="Production House" value={house} onChange={setHouse} placeholder="Sun Pictures" />
               <Field label="Movie / Project" value={movie} onChange={setMovie} placeholder="Project name" />
-              <Field label="Shoot Location" value={location} onChange={setLocation} placeholder="EVP Film City" />
+              <Field label="Shoot Location" value={location} onChange={setLocation} placeholder="Annapurna Studio, Hyderabad" />
               <div className="space-y-1.5">
                 <Label htmlFor="di-start">Dispatch Date (custody only)</Label>
                 <Input id="di-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />

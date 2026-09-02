@@ -166,7 +166,7 @@ export function QuoteCart({ open, onOpenChange }: { open: boolean; onOpenChange:
               id="wl-location"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              placeholder="EVP Film City, Chennai"
+              placeholder="Annapurna Studio, Hyderabad"
               maxLength={240}
             />
           </div>
