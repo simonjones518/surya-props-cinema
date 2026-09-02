@@ -168,7 +168,13 @@ export function QuoteApprovals() {
                 <p className="text-xs text-muted-foreground">
                   {quote.shoot_location || "Location TBC"} · {quote.shoot_start_date} →{" "}
                   {quote.actual_return_date ?? quote.estimated_return_date} ·{" "}
-                  {quote.actual_days_used ?? quote.estimated_days} day(s)
+                  {quote.actual_days_used ?? quote.estimated_days} day(s) in custody
+                </p>
+                <p className="text-xs text-primary">
+                  Billed shooting days: {quote.shoot_days.length}
+                  {quote.shoot_days.length > 0
+                    ? ` · ${quote.shoot_days.map((d) => d.date).join(", ")}`
+                    : " — not logged yet"}
                 </p>
               </div>
               <span
@@ -284,6 +290,11 @@ export function QuoteApprovals() {
                   <Send className="size-4" /> Dispatch Props
                 </Button>
               )}
+              {["dispatched", "on_set", "settled"].includes(quote.status) && (
+                <Button size="sm" variant="outline" onClick={() => setShootFor(quote)}>
+                  <CalendarPlus className="size-4" /> Shooting Days ({quote.shoot_days.length})
+                </Button>
+              )}
               {(quote.status === "dispatched" || quote.status === "on_set") && (
                 <Button size="sm" onClick={() => setReturnFor(quote)}>
                   <PackageCheck className="size-4" /> Record Return
@@ -353,6 +364,7 @@ export function QuoteApprovals() {
       />
       <PricingDialog quote={priceFor} onOpenChange={(v) => !v && setPriceFor(null)} />
       <ReturnDialog quote={returnFor} onOpenChange={(v) => !v && setReturnFor(null)} />
+      <ShootDaysDialog quote={shootFor} onOpenChange={(v) => !v && setShootFor(null)} />
       <DispatchDialog
         quote={dispatchFor}
         onOpenChange={(v) => !v && setDispatchFor(null)}
