@@ -1367,12 +1367,17 @@ function ReturnDialog({
 }) {
   const qc = useQueryClient();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [rows, setRows] = useState<ShootRow[]>([]);
+
+  useEffect(() => {
+    if (quote) setRows(toShootRows(quote.shoot_days));
+  }, [quote]);
 
   const record = useMutation({
-    mutationFn: () => portal.recordReturn(quote!.id, date),
+    mutationFn: () => portal.recordReturn(quote!.id, date, cleanShootRows(rows)),
     onSuccess: (res) => {
       toast.success("Return recorded & settlement generated", {
-        description: `${res.actual_days_used} day(s) billed · balance ${inr(res.balance_due)}`,
+        description: `${res.actual_days_used} shooting day(s) billed · balance ${inr(res.balance_due)}`,
       });
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
       void qc.invalidateQueries({ queryKey: ["props"] });
@@ -1383,22 +1388,31 @@ function ReturnDialog({
 
   return (
     <Dialog open={quote !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-primary/25 bg-card">
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
             Record Return &amp; Settle
           </DialogTitle>
           <DialogDescription>
-            The final amount is recalculated on actual days used, then the settlement invoice is
-            issued to the client portal.
+            The final amount is calculated on the logged shooting days only — the return date is
+            recorded for custody, not for billing.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="r-date">Actual Return Date</Label>
+            <Label htmlFor="r-date">Actual Return Date (custody only)</Label>
             <Input id="r-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <Button className="w-full" disabled={record.isPending} onClick={() => record.mutate()}>
+          <ShootDayEditor rows={rows} setRows={setRows} />
+          <p className="text-sm text-muted-foreground">
+            Billable shooting days:{" "}
+            <span className="font-display text-xl text-primary">{cleanShootRows(rows).length}</span>
+          </p>
+          <Button
+            className="w-full"
+            disabled={record.isPending || cleanShootRows(rows).length === 0}
+            onClick={() => record.mutate()}
+          >
             {record.isPending ? "Settling…" : "Recalculate & Issue Settlement"}
           </Button>
         </div>
