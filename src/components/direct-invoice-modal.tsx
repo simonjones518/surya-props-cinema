@@ -239,14 +239,18 @@ export function DirectInvoiceModal({
         advance_received: advance,
         balance_payable: balance,
         payment_status: balance <= 0 ? "Paid" : advance > 0 ? "Partial" : "Pending",
-        notes: [
-          notes,
-          shootDates.length > 0
-            ? `Shooting days billed (${shootDates.length}): ${shootDates.map((d) => d.date).join(", ")}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        notes: writeClientIssued(
+          [
+            notes,
+            shootDates.length > 0
+              ? `Shooting days billed (${shootDates.length}): ${shootDates.map((d) => d.date).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          // keep any negotiated client-issued figure already recorded on the record
+          invoice ? readClientIssued(invoice.notes).amount : null,
+        ),
       };
       if (invoice) {
         return api
