@@ -143,35 +143,6 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
           </div>
         </section>
 
-        {shootDays.length > 0 && (
-          <section className="rounded-lg border border-primary/25 p-3 print:border-black">
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
-              Shooting Days Chargeable ({shootDays.length})
-            </p>
-            <table className="mt-2 w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-                  <th className="py-1">Day</th>
-                  <th className="py-1">Shoot Date</th>
-                  <th className="py-1">Remark</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shootDays.map((d, i) => (
-                  <tr key={d.date} className="border-b border-border/40">
-                    <td className="py-1">Day {i + 1}</td>
-                    <td className="py-1">{prettyDate(d.date)}</td>
-                    <td className="py-1 text-muted-foreground print:text-black">{d.note || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-2 text-[10px] text-muted-foreground print:text-black">
-              Rental is charged on these {shootDays.length} shooting day(s) only. Dispatch and return
-              dates are recorded for custody of the props and are not billed.
-            </p>
-          </section>
-        )}
 
         <table className="w-full text-left text-sm">
           <thead>
