@@ -17,6 +17,7 @@ import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { api, queryKeys } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { openWhatsAppTo } from "@/lib/whatsapp";
+import { readClientIssued, writeClientIssued } from "@/lib/invoice-settlement";
 import type { Invoice, InvoiceDraft, QuoteRequest } from "@/lib/types";
 
 type ManualLine = {
