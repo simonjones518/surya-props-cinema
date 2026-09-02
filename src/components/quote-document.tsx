@@ -24,7 +24,7 @@ const META: Record<
   "advance-request": { title: "Advance Payment Request Note", prefix: "APR" },
   receipt: { title: "Advance Money Receipt", prefix: "RCP" },
   challan: { title: "Dispatch & Delivery Challan", prefix: "DC" },
-  settlement: { title: "Final Return & Settlement Invoice", prefix: "INV" },
+  settlement: { title: "Props Rental Invoice", prefix: "INV" },
   labour: { title: "Crew Daily Labour Invoice", prefix: "LAB" },
 };
 
@@ -33,7 +33,7 @@ export const DOC_LABEL: Record<QuoteDocKind, string> = {
   "advance-request": "Advance Request",
   receipt: "Advance Receipt",
   challan: "Delivery Challan",
-  settlement: "Settlement Invoice",
+  settlement: "Props Rental Invoice",
   labour: "Labour Invoice",
 };
 
