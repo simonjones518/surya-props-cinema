@@ -457,6 +457,7 @@ function AdminPage() {
                   <Th>Shoot Dates</Th>
                   <Th>Items</Th>
                   <Th>Balance Payable</Th>
+                  <Th>Client Issued</Th>
                   <Th>Payment</Th>
                   <Th>Actions</Th>
                 </tr>
