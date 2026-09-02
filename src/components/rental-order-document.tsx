@@ -96,7 +96,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
                 <td className="py-2 pr-2">{itemDays}</td>
                 <td className="py-2 pr-2">{inr(item.manual_daily_rate)}</td>
                 <td className="py-2 text-right font-semibold">
-                  {inr(item.manual_daily_rate * item.quantity * itemDays)}
+                  {inr(item.manual_daily_rate * item.quantity)}
                 </td>
               </tr>
             );
