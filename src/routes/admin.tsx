@@ -84,6 +84,7 @@ function AdminPage() {
   const [scanCode, setScanCode] = useState("");
   const [viewDoc, setViewDoc] = useState<Invoice | null>(null);
   const [editDoc, setEditDoc] = useState<Invoice | null>(null);
+  const [settleDoc, setSettleDoc] = useState<Invoice | null>(null);
   const [viewOrder, setViewOrder] = useState<RentalOrder | null>(null);
   const [orderOpen, setOrderOpen] = useState(false);
   const [settleId, setSettleId] = useState<number | null>(null);
