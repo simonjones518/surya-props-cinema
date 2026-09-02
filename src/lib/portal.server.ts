@@ -1001,7 +1001,7 @@ export async function recordReturn(input: {
     user_id: quote["user_id"],
     kind: "settlement",
     amount: balance_due,
-    reference: `Final settlement · ${actual_days_used} day(s) used`,
+    reference: `Final settlement · ${actual_days_used} shooting day(s) billed`,
     status: "pending",
   });
 
