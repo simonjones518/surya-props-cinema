@@ -429,6 +429,9 @@ export interface QuoteRequest {
   settled_amount: number;
   /** Difference conceded between the system settlement and the client-issued amount. */
   settlement_waived: number;
+  /** Actual shooting dates — the only days the client is billed for. */
+  shoot_days: ShootDay[];
+
 }
 
 
