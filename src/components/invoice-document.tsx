@@ -147,7 +147,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
               <th className="py-1">Prop Name</th>
               <th className="w-12 py-1 text-center">Qty</th>
               <th className="w-24 py-1 text-right">Rate/Day</th>
-              <th className="w-28 py-1 text-right">Line Total</th>
+              <th className="w-28 py-1 text-right">Line Total / Day</th>
             </tr>
           </thead>
           <tbody>
