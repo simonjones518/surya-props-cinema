@@ -19,6 +19,7 @@ import {
   fetchProductionHouses,
   priceQuoteFn,
   recordReturnFn,
+  saveShootDaysFn,
   rejectQuoteFn,
   saveLabourSheetFn,
   saveMyProfileFn,
@@ -115,8 +116,13 @@ export const portal = {
   ) => saveLabourSheetFn({ data: { id, days } }),
   closeLabourInvoice: (id: number, amount: number) =>
     closeLabourInvoiceFn({ data: { id, amount } }),
-  recordReturn: (id: number, actual_return_date: string) =>
-    recordReturnFn({ data: { id, actual_return_date } }),
+  saveShootDays: (id: number, days: { date: string; note?: string }[]) =>
+    saveShootDaysFn({ data: { id, days } }),
+  recordReturn: (
+    id: number,
+    actual_return_date: string,
+    shoot_days?: { date: string; note?: string }[],
+  ) => recordReturnFn({ data: { id, actual_return_date, ...(shoot_days ? { shoot_days } : {}) } }),
   closeSettlement: (id: number, settled_amount?: number) =>
     closeSettlementFn({
       data: settled_amount == null ? { id } : { id, settled_amount },
