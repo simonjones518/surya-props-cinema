@@ -423,7 +423,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
               <th className="py-2 text-center">Godown / Rack</th>
               <th className="py-2 text-center">Qty</th>
               {priced && <th className="py-2 text-right">Rate/Day</th>}
-              {priced && <th className="py-2 text-right">Line Total</th>}
+              {priced && <th className="py-2 text-right">Line Total / Day</th>}
               {kind === "challan" && <th className="py-2 text-center">Returned ✓</th>}
             </tr>
           </thead>
