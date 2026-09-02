@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { FileText, Plus, Send, Trash2 } from "lucide-react";
+import { CalendarPlus, FileText, Plus, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -38,12 +38,12 @@ const newLine = (): ManualLine => ({
   daily_rate: 0,
 });
 
-function daysBetween(from: string, to: string) {
-  const a = new Date(from).getTime();
-  const b = new Date(to).getTime();
-  if (!Number.isFinite(a) || !Number.isFinite(b)) return 1;
-  return Math.max(1, Math.round((b - a) / 86_400_000) + 1);
-}
+type ShootRow = { key: string; date: string; note: string };
+const newShootRow = (date = today()): ShootRow => ({
+  key: Math.random().toString(36).slice(2, 9),
+  date,
+  note: "",
+});
 
 /**
  * Admin-only manual billing desk: raise a quotation or a final settlement
@@ -73,8 +73,17 @@ export function DirectInvoiceModal({
   const [advance, setAdvance] = useState(0);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<ManualLine[]>([newLine()]);
+  const [shootRows, setShootRows] = useState<ShootRow[]>([newShootRow()]);
 
-  const days = daysBetween(startDate, returnDate);
+  /** Billing runs on logged shooting dates only, never on the custody window. */
+  const shootDates = useMemo(() => {
+    const seen = new Set<string>();
+    return shootRows
+      .filter((r) => /^\d{4}-\d{2}-\d{2}$/.test(r.date) && !seen.has(r.date) && seen.add(r.date) !== null)
+      .map((r) => ({ date: r.date, note: r.note.trim() }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [shootRows]);
+  const days = Math.max(1, shootDates.length);
   const rentTotal = lines.reduce((s, l) => s + l.daily_rate * l.quantity * days, 0);
   const balance = rentTotal + deposit - advance;
 
@@ -136,6 +145,7 @@ export function DirectInvoiceModal({
       labour_invoice_no: null,
       settled_amount: 0,
       settlement_waived: 0,
+      shoot_days: shootDates,
     }),
     [
       house,
@@ -147,6 +157,7 @@ export function DirectInvoiceModal({
       startDate,
       returnDate,
       days,
+      shootDates,
       lines,
       rentTotal,
       deposit,
@@ -188,7 +199,14 @@ export function DirectInvoiceModal({
         advance_received: advance,
         balance_payable: balance,
         payment_status: balance <= 0 ? "Paid" : advance > 0 ? "Partial" : "Pending",
-        notes: notes,
+        notes: [
+          notes,
+          shootDates.length > 0
+            ? `Shooting days billed (${shootDates.length}): ${shootDates.map((d) => d.date).join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
       }),
     onSuccess: (res) => {
       toast.success(`${res.invoice_number} saved to billing records`);
@@ -206,6 +224,7 @@ export function DirectInvoiceModal({
       "",
       `Hi ${contact}, here is your ${label} for *${movie || house || "your shoot"}*.`,
       `*Ref:* ${doc.quote_code}`,
+      `*Shooting Days Billed:* ${shootDates.length} (${shootDates.map((d) => d.date).join(", ")})`,
       `*Rental (${days} day(s)):* ${inr(rentTotal)}`,
       deposit > 0 ? `*Security Deposit:* ${inr(deposit)}` : "",
       advance > 0 ? `*Advance Received:* ${inr(advance)}` : "",
@@ -274,11 +293,11 @@ export function DirectInvoiceModal({
               <Field label="Movie / Project" value={movie} onChange={setMovie} placeholder="Project name" />
               <Field label="Shoot Location" value={location} onChange={setLocation} placeholder="EVP Film City" />
               <div className="space-y-1.5">
-                <Label htmlFor="di-start">Dispatch / Start Date</Label>
+                <Label htmlFor="di-start">Dispatch Date (custody only)</Label>
                 <Input id="di-start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="di-return">Return Date</Label>
+                <Label htmlFor="di-return">Return Date (custody only)</Label>
                 <Input id="di-return" type="date" value={returnDate} onChange={(e) => setReturnDate(e.target.value)} />
               </div>
             </div>
@@ -286,7 +305,61 @@ export function DirectInvoiceModal({
             <div className="space-y-2 rounded-xl border border-primary/20 p-3">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Props billed · {days} day(s)
+                  Shooting days billed · {shootDates.length} day(s)
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShootRows([...shootRows, newShootRow()])}
+                >
+                  <CalendarPlus className="size-4" /> Add shooting day
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Rent is calculated only on these dates — not on the dispatch → return window.
+              </p>
+              {shootRows.map((r, idx) => (
+                <div key={r.key} className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-2">
+                  <span className="w-24 text-xs font-semibold uppercase tracking-wider text-primary">
+                    Day {idx + 1}
+                  </span>
+                  <Input
+                    className="w-44"
+                    type="date"
+                    value={r.date}
+                    onChange={(e) =>
+                      setShootRows((prev) =>
+                        prev.map((x, i) => (i === idx ? { ...x, date: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <Input
+                    className="min-w-40 flex-1"
+                    placeholder="Scene / location note (optional)"
+                    value={r.note}
+                    onChange={(e) =>
+                      setShootRows((prev) =>
+                        prev.map((x, i) => (i === idx ? { ...x, note: e.target.value } : x)),
+                      )
+                    }
+                  />
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Remove shooting day"
+                    onClick={() => setShootRows(shootRows.filter((x) => x.key !== r.key))}
+                    disabled={shootRows.length === 1}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-2 rounded-xl border border-primary/20 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Props billed · {days} shooting day(s)
                 </p>
                 <Button size="sm" variant="outline" onClick={() => setLines([...lines, newLine()])}>
                   <Plus className="size-4" /> Add item
