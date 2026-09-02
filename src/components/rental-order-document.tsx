@@ -16,6 +16,10 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
   const days = settled ? (order.actual_days_used ?? order.estimated_days) : order.estimated_days;
   const total = settled ? order.total_final_amount : order.estimated_total;
   const balance = total - order.advance_received;
+  const perDaySubtotal = order.items.reduce(
+    (sum, item) => sum + item.manual_daily_rate * item.quantity,
+    0,
+  );
 
   return (
     <div
