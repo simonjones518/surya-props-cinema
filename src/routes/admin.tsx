@@ -16,6 +16,8 @@ import { OverviewMobile } from "@/components/admin/overview-mobile";
 import { sectionOf, type AdminSectionKey } from "@/components/admin/admin-nav";
 
 import { api, queryKeys } from "@/lib/api";
+import { InvoiceSettleDialog } from "@/components/invoice-settle-dialog";
+import { isInvoiceLocked, readClientIssued } from "@/lib/invoice-settlement";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
