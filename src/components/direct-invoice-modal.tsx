@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { CalendarPlus, FileText, Plus, Send, Trash2 } from "lucide-react";
@@ -17,7 +17,7 @@ import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { api, queryKeys } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { openWhatsAppTo } from "@/lib/whatsapp";
-import type { QuoteRequest } from "@/lib/types";
+import type { Invoice, QuoteRequest } from "@/lib/types";
 
 type ManualLine = {
   key: string;
@@ -53,9 +53,12 @@ const newShootRow = (date = today()): ShootRow => ({
 export function DirectInvoiceModal({
   open,
   onOpenChange,
+  invoice,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  /** When present the modal edits an already-saved billing record. */
+  invoice?: Invoice | null;
 }) {
   const qc = useQueryClient();
   const [kind, setKind] = useState<QuoteDocKind>("settlement");
@@ -74,6 +77,38 @@ export function DirectInvoiceModal({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<ManualLine[]>([newLine()]);
   const [shootRows, setShootRows] = useState<ShootRow[]>([newShootRow()]);
+
+  /** Editing a saved record: rebuild the form from the stored document. */
+  useEffect(() => {
+    if (!open || !invoice) return;
+    setKind(invoice.doc_type === "QUOTATION" ? "quotation" : "settlement");
+    setPreview(false);
+    setContact(invoice.client_name ?? "");
+    setPhone(invoice.client_phone ?? "");
+    setHouse(invoice.production_house ?? "");
+    setLocation(invoice.shoot_location ?? "");
+    setStartDate(invoice.shoot_start_date ?? today());
+    setReturnDate(invoice.shoot_wrap_date ?? today());
+    setDeposit(invoice.security_deposit ?? 0);
+    setAdvance(invoice.advance_received ?? 0);
+    setLines(
+      (invoice.items ?? []).map((i) => ({
+        key: Math.random().toString(36).slice(2, 9),
+        prop_name: i.prop_name,
+        prop_specs: "",
+        serial_number: i.serial_number ?? "",
+        quantity: i.quantity,
+        daily_rate: i.custom_daily_rate,
+      })),
+    );
+    const lines = (invoice.notes ?? "").split("\n");
+    const dayLine = lines.find((l) => /^Shooting days billed/i.test(l.trim()));
+    const dates = dayLine
+      ? dayLine.slice(dayLine.indexOf(":") + 1).split(",").map((d) => d.trim()).filter(Boolean)
+      : [];
+    setShootRows(dates.length ? dates.map((d) => newShootRow(d)) : [newShootRow(invoice.shoot_start_date)]);
+    setNotes(lines.filter((l) => !/^Shooting days billed/i.test(l.trim())).join("\n").trim());
+  }, [open, invoice]);
 
   /** Billing runs on logged shooting dates only, never on the custody window. */
   const shootDates = useMemo(() => {
@@ -169,8 +204,8 @@ export function DirectInvoiceModal({
   );
 
   const save = useMutation({
-    mutationFn: () =>
-      api.createInvoice({
+    mutationFn: () => {
+      const draft = {
         invoice_number: doc.quote_code.replace("SCP-MAN", kind === "settlement" ? "SCP-INV" : "SCP-QTN"),
         doc_type: kind === "settlement" ? "INVOICE" : "QUOTATION",
         client_id: 0,
@@ -207,9 +242,16 @@ export function DirectInvoiceModal({
         ]
           .filter(Boolean)
           .join("\n"),
-      }),
+      };
+      if (invoice) {
+        return api
+          .updateInvoice(invoice.id, { ...draft, invoice_number: invoice.invoice_number })
+          .then(() => ({ invoice_number: invoice.invoice_number }));
+      }
+      return api.createInvoice(draft);
+    },
     onSuccess: (res) => {
-      toast.success(`${res.invoice_number} saved to billing records`);
+      toast.success(`${res.invoice_number} ${invoice ? "updated" : "saved to billing records"}`);
       void qc.invalidateQueries({ queryKey: queryKeys.invoices });
     },
     onError: (e: Error) => toast.error("Could not save the document", { description: e.message }),
@@ -242,7 +284,7 @@ export function DirectInvoiceModal({
       <DialogContent className="max-h-[94vh] max-w-3xl overflow-y-auto border-primary/25 bg-card">
         <DialogHeader className="print:hidden">
           <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
-            Raise Direct Invoice
+            {invoice ? `Edit ${invoice.invoice_number}` : "Raise Direct Invoice"}
           </DialogTitle>
           <DialogDescription>
             For props already handed over by phone — bill the client without a portal quotation,
@@ -265,7 +307,8 @@ export function DirectInvoiceModal({
                 onClick={() => save.mutate()}
                 disabled={save.isPending}
               >
-                <FileText className="size-4" /> {save.isPending ? "Saving…" : "Save to records"}
+                <FileText className="size-4" />{" "}
+                {save.isPending ? "Saving…" : invoice ? "Update record" : "Save to records"}
               </Button>
             </div>
             <QuoteDocument quote={doc} kind={kind} />
