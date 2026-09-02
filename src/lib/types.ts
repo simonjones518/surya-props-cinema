@@ -368,6 +368,14 @@ export interface LabourDay {
   note: string;
 }
 
+/**
+ * One actual shooting day the props were used on. Rental is billed on these
+ * dates ONLY — never on the dispatch → return window.
+ */
+export interface ShootDay {
+  date: string;
+  note: string;
+}
 
 
 export interface QuoteRequest {
