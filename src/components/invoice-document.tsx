@@ -4,7 +4,7 @@ import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
-import { COMPANY_INFO, RENTAL_TERMS, amountInWords, upiPayload } from "@/lib/company";
+import { COMPANY_INFO, amountInWords, upiPayload } from "@/lib/company";
 import type { Invoice } from "@/lib/types";
 
 export const COMPANY = {
@@ -76,9 +76,9 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
       <article
         id="print-area"
-        className="space-y-5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-3.5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
       >
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-4">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
             <BrandLogo className="h-16" />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
@@ -103,7 +103,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </div>
         </header>
 
-        <section className="grid gap-4 text-sm sm:grid-cols-2">
+        <section className="grid gap-x-4 gap-y-0.5 text-sm sm:grid-cols-2">
           <div>
             <Field label="Production House" value={invoice.production_house || invoice.client_name} />
             <Field label="Attn" value={invoice.client_name} />
@@ -121,7 +121,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
         </section>
 
         {shootDates.length > 0 && (
-          <section className="rounded-lg border border-primary/25 p-3 print:border-black">
+          <section className="rounded-lg border border-primary/25 px-3 py-2 print:border-black">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
               Shooting Days Chargeable ({shootDates.length})
             </p>
