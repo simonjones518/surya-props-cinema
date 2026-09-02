@@ -101,13 +101,13 @@ export function DirectInvoiceModal({
         daily_rate: i.custom_daily_rate,
       })),
     );
-    const lines = (invoice.notes ?? "").split("\n");
-    const dayLine = lines.find((l) => /^Shooting days billed/i.test(l.trim()));
+    const noteLines = (invoice.notes ?? "").split("\n");
+    const dayLine = noteLines.find((l) => /^Shooting days billed/i.test(l.trim()));
     const dates = dayLine
       ? dayLine.slice(dayLine.indexOf(":") + 1).split(",").map((d) => d.trim()).filter(Boolean)
       : [];
     setShootRows(dates.length ? dates.map((d) => newShootRow(d)) : [newShootRow(invoice.shoot_start_date)]);
-    setNotes(lines.filter((l) => !/^Shooting days billed/i.test(l.trim())).join("\n").trim());
+    setNotes(noteLines.filter((l) => !/^Shooting days billed/i.test(l.trim())).join("\n").trim());
   }, [open, invoice]);
 
   /** Billing runs on logged shooting dates only, never on the custody window. */
