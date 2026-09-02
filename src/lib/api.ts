@@ -23,6 +23,7 @@ import {
   createBookingFn,
   createClientFn,
   createInvoiceFn,
+  updateInvoiceFn,
   createPropFn,
   createPropRequestFn,
   createRentalOrderFn,
@@ -76,6 +77,8 @@ export const api = {
   updatePropStatus: (id: number, status: PropStatus) => updatePropStatusFn({ data: { id, status } }),
   createClient: (client: ClientDraft) => createClientFn({ data: client }) as Promise<Client>,
   createInvoice: (draft: InvoiceDraft) => createInvoiceFn({ data: draft }),
+  updateInvoice: (id: number, patch: Partial<InvoiceDraft>) =>
+    updateInvoiceFn({ data: { id, patch } }),
   getPropRequests: () => fetchPropRequests() as Promise<PropRequest[]>,
   getGodowns: () => fetchGodowns() as Promise<Godown[]>,
   getRacks: () => fetchRacks() as Promise<Rack[]>,
