@@ -446,7 +446,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                 {priced && <td className="py-2 text-right">{inr(item.daily_rate)}</td>}
                 {priced && (
                   <td className="py-2 text-right font-semibold">
-                    {inr(item.daily_rate * item.quantity * billedDays)}
+                    {inr(item.daily_rate * item.quantity)}
                   </td>
                 )}
                 {kind === "challan" && (
