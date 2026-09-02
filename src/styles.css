@@ -329,7 +329,24 @@
   #print-area th {
     background-color: #f1f1f1 !important;
   }
+  /* High-density single-page layout: 10-15 line items must stay on one A4 sheet. */
+  #print-area {
+    font-size: 10.5pt !important;
+    line-height: 1.25 !important;
+  }
+  #print-area th,
+  #print-area td {
+    padding-top: 1.5px !important;
+    padding-bottom: 1.5px !important;
+  }
+  #print-area > * + * {
+    margin-top: 5px !important;
+  }
+  #print-area p {
+    margin: 0 !important;
+  }
 }
+
 
 
 

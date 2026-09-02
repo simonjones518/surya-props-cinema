@@ -79,9 +79,9 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
       <article
         id="print-area"
-        className="space-y-5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
       >
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-4">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
             <BrandLogo className="h-16" />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
@@ -108,7 +108,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
           </div>
         </header>
 
-        <section className="grid gap-4 text-sm sm:grid-cols-2">
+        <section className="grid gap-x-4 gap-y-0.5 text-sm sm:grid-cols-2">
           <div>
             <Field label="Movie / Project" value={quote.movie_name || "—"} />
             <Field label="Production House" value={quote.production_house} />
@@ -321,9 +321,9 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
       <article
         id="print-area"
-        className="space-y-5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
       >
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-4">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
             <BrandLogo className="h-16" />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
@@ -350,7 +350,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
           </div>
         </header>
 
-        <section className="grid gap-4 text-sm sm:grid-cols-2">
+        <section className="grid gap-x-4 gap-y-0.5 text-sm sm:grid-cols-2">
           <div>
             <Field label="Movie / Project" value={quote.movie_name || "—"} />
             <Field label="Production House" value={quote.production_house} />
@@ -404,7 +404,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         </section>
 
         {shootDays.length > 0 && (
-          <section className="rounded-lg border border-primary/25 p-3 print:border-black">
+          <section className="rounded-lg border border-primary/25 px-3 py-2 print:border-black">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
               Shooting Days Chargeable ({shootDays.length})
             </p>
@@ -419,43 +419,43 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              <th className="py-2">Prop &amp; Configuration</th>
-              <th className="py-2 text-center">Godown / Rack</th>
-              <th className="py-2 text-center">Qty</th>
-              {priced && <th className="py-2 text-right">Rate/Day</th>}
-              {priced && <th className="py-2 text-right">Line Total / Day</th>}
-              {kind === "challan" && <th className="py-2 text-center">Returned ✓</th>}
+              <th className="w-12 py-1 text-center">S.No</th>
+              <th className="py-1">Prop Name</th>
+              <th className="w-12 py-1 text-center">Qty</th>
+              {priced && <th className="w-24 py-1 text-right">Rate/Day</th>}
+              {priced && <th className="w-28 py-1 text-right">Line Total / Day</th>}
+              {kind === "challan" && <th className="w-20 py-1 text-center">Returned ✓</th>}
             </tr>
           </thead>
           <tbody>
-            {quote.items.map((item) => (
-              <tr key={item.prop_id} className="border-b border-border/60 align-top">
-                <td className="py-2 pr-3">
-                  <span className="font-semibold">{item.prop_name}</span>
-                  {item.prop_specs && (
-                    <span className="text-muted-foreground print:text-black"> ({item.prop_specs})</span>
+            {quote.items.map((item, idx) => (
+              <tr key={item.prop_id}>
+                <td className="py-0.5 text-center font-mono text-[11px]">{idx + 1}</td>
+                <td className="py-0.5 pr-3 font-medium leading-tight">
+                  {item.prop_name}
+                  {item.serial_number && (
+                    <span className="block font-mono text-[10px] text-muted-foreground print:text-black">
+                      {item.serial_number}
+                    </span>
                   )}
-                  <span className="block font-mono text-[10px] text-muted-foreground print:text-black">
-                    {item.serial_number}
-                  </span>
                 </td>
-                <td className="py-2 text-center text-xs text-muted-foreground print:text-black">
-                  {[item.godown_name, item.rack_name].filter(Boolean).join(" · ") || "—"}
-                </td>
-                <td className="py-2 text-center">{item.quantity}</td>
-                {priced && <td className="py-2 text-right">{inr(item.daily_rate)}</td>}
+                <td className="py-0.5 text-center">{item.quantity}</td>
+                {priced && <td className="py-0.5 text-right">{inr(item.daily_rate)}</td>}
                 {priced && (
-                  <td className="py-2 text-right font-semibold">
+                  <td className="py-0.5 text-right font-semibold">
                     {inr(item.daily_rate * item.quantity)}
                   </td>
                 )}
                 {kind === "challan" && (
-                  <td className="py-2 text-center text-muted-foreground print:text-black">☐</td>
+                  <td className="py-0.5 text-center text-muted-foreground print:text-black">☐</td>
                 )}
               </tr>
             ))}
           </tbody>
         </table>
+
+        <div className="border-t border-primary/30 print:border-black" />
+
 
         {priced ? (
           <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
