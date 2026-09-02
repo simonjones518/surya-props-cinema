@@ -145,7 +145,7 @@ function RootComponent() {
       {chrome && (
       <footer className="border-t border-border bg-card pb-16 md:pb-0">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-xs text-muted-foreground sm:px-6">
-          <p>© {new Date().getFullYear()} Surya Cine Special Props · Chennai, India</p>
+          <p>© {new Date().getFullYear()} Surya Cine Special Props · Hyderabad, Telangana, India</p>
           <p className="uppercase tracking-[0.25em]">Where real props bring stories to life</p>
         </div>
       </footer>

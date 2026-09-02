@@ -6,7 +6,7 @@ import type { RentalOrder } from "@/lib/types";
 
 const BUSINESS = {
   name: "Surya Cine Special Props",
-  address: "Warehouse Complex, Chennai — Tamil Nadu, India",
+  address: "Annapurna Studio 7 Acres, Road Number 5, Jubilee Hills, Hyderabad, Telangana 500033",
   phone: "+91 98490 05451",
 };
 

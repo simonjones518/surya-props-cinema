@@ -3,15 +3,19 @@ export const COMPANY_INFO = {
   name: "Surya Cine Special Props",
   tagline: "Where real props bring stories to life",
   warehouse:
-    "Soundstage 4, Warehouse Block C, Poonamallee High Road, Chennai 600056, Tamil Nadu",
+    "Annapurna Studio 7 Acres, Road Number 5, Jawahar Colony, Sri Nagar Colony, Indiranagar Basti, Jubilee Hills, Hyderabad, Telangana 500033",
+  city: "Hyderabad, Telangana",
   phone: "+91 98490 05451",
-  altPhone: "+91 98765 43210",
-  email: "rentals@suryacineprops.in",
-  upiId: "suryacineprops@upi",
-  bankName: "HDFC Bank, Poonamallee High Road Branch",
-  accountName: "Surya Cine Special Props",
-  accountNumber: "50200078451236",
-  ifsc: "HDFC0000452",
+  altPhone: "+91 98490 05451",
+  email: "rentals@suryacineprops.com",
+  upiId: "9849005451@axisbank",
+  upiPhone: "9849005451",
+  bankName: "Axis Bank, Jubilee Hills Branch",
+  branch: "Jubilee Hills",
+  accountName: "SURYA CINE SPECIAL PROPS",
+  accountNumber: "922020053527461",
+  ifsc: "UTIB0000030",
+  pan: "EUSPS9500K",
 } as const;
 
 export const RENTAL_TERMS = [

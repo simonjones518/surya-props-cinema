@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
-import { COMPANY_INFO, amountInWords, upiPayload } from "@/lib/company";
+import { COMPANY_INFO, amountInWords } from "@/lib/company";
+import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
 import { readClientIssued } from "@/lib/invoice-settlement";
 import type { Invoice } from "@/lib/types";
 
@@ -42,7 +42,7 @@ function useUpiQr(amount: number, note: string) {
       return;
     }
     let alive = true;
-    void QRCode.toDataURL(upiPayload(amount, note), { margin: 1, width: 220 })
+    void Promise.resolve(upiQrAsset.url)
       .then((url) => alive && setSrc(url))
       .catch(() => alive && setSrc(null));
     return () => {
@@ -187,6 +187,9 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 <p>
                   A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
                 </p>
+                <p>Branch: {COMPANY_INFO.branch}</p>
+                <p>PhonePe / other UPI apps: {COMPANY_INFO.upiPhone}</p>
+                <p>PAN: {COMPANY_INFO.pan}</p>
                 {invoice.balance_payable > 0 && (
                   <p className="mt-1 font-semibold text-primary print:text-black">
                     Pay {inr(invoice.balance_payable)} and share the UTR / screenshot with us.
