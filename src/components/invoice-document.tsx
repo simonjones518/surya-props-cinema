@@ -164,7 +164,9 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 </td>
                 <td className="py-0.5 text-center">{i.quantity}</td>
                 <td className="py-0.5 text-right">{inr(i.custom_daily_rate)}</td>
-                <td className="py-0.5 text-right font-semibold">{inr(i.total_price)}</td>
+                <td className="py-0.5 text-right font-semibold">
+                  {inr(i.custom_daily_rate * i.quantity)}
+                </td>
               </tr>
             ))}
           </tbody>
