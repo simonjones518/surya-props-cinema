@@ -202,8 +202,19 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 {inr(invoice.balance_payable)}
               </span>
             </div>
+            {issued !== null && (
+              <>
+                <Row label="Client-Issued Amount (Agreed)" value={inr(issued)} />
+                {invoice.balance_payable - issued > 0 && (
+                  <Row
+                    label="Concession Allowed"
+                    value={`− ${inr(invoice.balance_payable - issued)}`}
+                  />
+                )}
+              </>
+            )}
             <p className="text-[11px] italic text-muted-foreground print:text-black">
-              {amountInWords(invoice.balance_payable)}
+              {amountInWords(issued ?? invoice.balance_payable)}
             </p>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
               Non-GST rental document
