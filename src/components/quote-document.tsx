@@ -402,27 +402,10 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
               Shooting Days Chargeable ({shootDays.length})
             </p>
-            <table className="mt-2 w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-                  <th className="py-1">Day</th>
-                  <th className="py-1">Shoot Date</th>
-                  <th className="py-1">Remark</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shootDays.map((d, i) => (
-                  <tr key={d.date} className="border-b border-border/40">
-                    <td className="py-1">Day {i + 1}</td>
-                    <td className="py-1">{prettyDate(d.date)}</td>
-                    <td className="py-1 text-muted-foreground print:text-black">{d.note || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-2 text-[10px] text-muted-foreground print:text-black">
-              Rental is charged on these {shootDays.length} shooting day(s) only. Dispatch and return
-              dates are recorded for custody of the props and are not billed.
+            <p className="mt-1 text-xs leading-relaxed text-foreground print:text-black">
+              Shooting days: {shootDays.map((d) => prettyDate(d.date)).join(", ")}. For these{" "}
+              {shootDays.length} day(s) only we charge it. Dispatch and return dates are recorded
+              for custody of the props and are not billed.
             </p>
           </section>
         )}
