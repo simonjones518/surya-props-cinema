@@ -534,7 +534,7 @@ function QuoteCard({
         )}
         {(quote.status === "settled" || quote.status === "closed") && (
           <Button variant="outline" onClick={() => onView("settlement")}>
-            <Receipt className="size-4" /> Final Settlement Invoice
+            <Receipt className="size-4" /> Props Rental Invoice
           </Button>
         )}
       </div>

@@ -28,7 +28,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
     >
       <div className="flex items-start justify-between gap-4 print:hidden">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-neutral-500">
-          {settled ? "Final Settlement Invoice" : "Estimated Rental Delivery Slip"}
+          {settled ? "Props Rental Invoice" : "Estimated Rental Delivery Slip"}
         </p>
         <div className="flex gap-2">
           <Button size="sm" variant="outline" onClick={() => window.print()}>
@@ -45,7 +45,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
         <p className="text-sm text-neutral-700">{BUSINESS.address}</p>
         <p className="text-sm text-neutral-700">Contact: {BUSINESS.phone}</p>
         <p className="mt-3 text-lg font-bold uppercase">
-          {settled ? "Final Rental Invoice" : "Estimated Rental Delivery Challan"}
+          {settled ? "Props Rental Invoice" : "Estimated Rental Delivery Challan"}
         </p>
       </header>
 

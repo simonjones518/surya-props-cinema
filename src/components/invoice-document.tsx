@@ -54,7 +54,8 @@ function useUpiQr(amount: number, note: string) {
 
 export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClose?: () => void }) {
   const isQuote = invoice.doc_type === "QUOTATION";
-  const title = isQuote ? "Rental Estimate Quotation" : "Final Return & Settlement Invoice";
+  const title = isQuote ? "Rental Estimate Quotation" : "Props Rental Invoice";
+
   const { dates: shootDates, rest: rawNotes } = extractShootDays(invoice.notes);
   const { amount: issued, rest: notes } = readClientIssued(rawNotes);
   const billedDays = shootDates.length > 0 ? shootDates.length : (invoice.items[0]?.number_of_days ?? 0);
