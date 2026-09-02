@@ -58,6 +58,11 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
   const { dates: shootDates, rest: rawNotes } = extractShootDays(invoice.notes);
   const { amount: issued, rest: notes } = readClientIssued(rawNotes);
   const billedDays = shootDates.length > 0 ? shootDates.length : (invoice.items[0]?.number_of_days ?? 0);
+  /** Line totals are per-day only; the duration multiplier lives in the summary. */
+  const perDaySubtotal = invoice.items.reduce(
+    (sum, i) => sum + i.custom_daily_rate * i.quantity,
+    0,
+  );
   const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
 
   return (
