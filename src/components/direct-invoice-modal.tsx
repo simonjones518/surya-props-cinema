@@ -17,6 +17,7 @@ import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { api, queryKeys } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { openWhatsAppTo } from "@/lib/whatsapp";
+import { readClientIssued, writeClientIssued } from "@/lib/invoice-settlement";
 import type { Invoice, InvoiceDraft, QuoteRequest } from "@/lib/types";
 
 type ManualLine = {
@@ -107,7 +108,11 @@ export function DirectInvoiceModal({
       ? dayLine.slice(dayLine.indexOf(":") + 1).split(",").map((d) => d.trim()).filter(Boolean)
       : [];
     setShootRows(dates.length ? dates.map((d) => newShootRow(d)) : [newShootRow(invoice.shoot_start_date)]);
-    setNotes(noteLines.filter((l) => !/^Shooting days billed/i.test(l.trim())).join("\n").trim());
+    setNotes(
+      readClientIssued(
+        noteLines.filter((l) => !/^Shooting days billed/i.test(l.trim())).join("\n"),
+      ).rest,
+    );
   }, [open, invoice]);
 
   /** Billing runs on logged shooting dates only, never on the custody window. */
@@ -234,14 +239,18 @@ export function DirectInvoiceModal({
         advance_received: advance,
         balance_payable: balance,
         payment_status: balance <= 0 ? "Paid" : advance > 0 ? "Partial" : "Pending",
-        notes: [
-          notes,
-          shootDates.length > 0
-            ? `Shooting days billed (${shootDates.length}): ${shootDates.map((d) => d.date).join(", ")}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        notes: writeClientIssued(
+          [
+            notes,
+            shootDates.length > 0
+              ? `Shooting days billed (${shootDates.length}): ${shootDates.map((d) => d.date).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n"),
+          // keep any negotiated client-issued figure already recorded on the record
+          invoice ? readClientIssued(invoice.notes).amount : null,
+        ),
       };
       if (invoice) {
         return api

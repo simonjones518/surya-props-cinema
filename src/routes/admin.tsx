@@ -16,6 +16,8 @@ import { OverviewMobile } from "@/components/admin/overview-mobile";
 import { sectionOf, type AdminSectionKey } from "@/components/admin/admin-nav";
 
 import { api, queryKeys } from "@/lib/api";
+import { InvoiceSettleDialog } from "@/components/invoice-settle-dialog";
+import { isInvoiceLocked, readClientIssued } from "@/lib/invoice-settlement";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -82,6 +84,7 @@ function AdminPage() {
   const [scanCode, setScanCode] = useState("");
   const [viewDoc, setViewDoc] = useState<Invoice | null>(null);
   const [editDoc, setEditDoc] = useState<Invoice | null>(null);
+  const [settleDoc, setSettleDoc] = useState<Invoice | null>(null);
   const [viewOrder, setViewOrder] = useState<RentalOrder | null>(null);
   const [orderOpen, setOrderOpen] = useState(false);
   const [settleId, setSettleId] = useState<number | null>(null);
@@ -457,12 +460,16 @@ function AdminPage() {
                   <Th>Shoot Dates</Th>
                   <Th>Items</Th>
                   <Th>Balance Payable</Th>
+                  <Th>Client Issued</Th>
                   <Th>Payment</Th>
                   <Th>Actions</Th>
                 </tr>
               </thead>
               <tbody>
-                {(invoices.data ?? []).map((v) => (
+                {(invoices.data ?? []).map((v) => {
+                  const locked = isInvoiceLocked(v.payment_status);
+                  const issued = readClientIssued(v.notes).amount;
+                  return (
                   <tr key={v.id} className="border-b border-border/60 last:border-0 hover:bg-secondary/40">
                     <Td className="font-mono text-xs text-primary">{v.invoice_number}</Td>
                     <Td className="text-xs uppercase tracking-wider">{v.doc_type}</Td>
@@ -472,11 +479,19 @@ function AdminPage() {
                     </Td>
                     <Td className="text-xs text-muted-foreground">{v.items.length}</Td>
                     <Td className="whitespace-nowrap font-semibold">{inr(v.balance_payable)}</Td>
+                    <Td className="whitespace-nowrap text-xs">
+                      {issued === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="font-semibold text-primary">{inr(issued)}</span>
+                      )}
+                    </Td>
                     <Td className="text-xs">
                       <select
                         aria-label={`Payment status for ${v.invoice_number}`}
-                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs disabled:opacity-60"
                         value={v.payment_status}
+                        disabled={locked}
                         onChange={(e) =>
                           payMutation.mutate({
                             id: v.id,
@@ -496,13 +511,23 @@ function AdminPage() {
                         <Button size="sm" variant="outline" onClick={() => setViewDoc(v)}>
                           View / Print
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => setEditDoc(v)}>
+                        <Button size="sm" variant="outline" onClick={() => setSettleDoc(v)}>
+                          {locked ? "Closed" : "Client Amount"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={locked}
+                          title={locked ? "Paid records are locked" : undefined}
+                          onClick={() => setEditDoc(v)}
+                        >
                           Edit
                         </Button>
                       </div>
                     </Td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
             {invoices.isLoading && <div className="p-6"><Skeleton className="h-32 w-full" /></div>}
@@ -531,6 +556,11 @@ function AdminPage() {
         open={editDoc !== null}
         onOpenChange={(v) => !v && setEditDoc(null)}
         invoice={editDoc}
+      />
+
+      <InvoiceSettleDialog
+        invoice={settleDoc}
+        onOpenChange={(v) => !v && setSettleDoc(null)}
       />
 
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />

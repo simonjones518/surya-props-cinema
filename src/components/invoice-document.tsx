@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
 import { COMPANY_INFO, amountInWords, upiPayload } from "@/lib/company";
+import { readClientIssued } from "@/lib/invoice-settlement";
 import type { Invoice } from "@/lib/types";
 
 export const COMPANY = {
@@ -54,7 +55,8 @@ function useUpiQr(amount: number, note: string) {
 export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClose?: () => void }) {
   const isQuote = invoice.doc_type === "QUOTATION";
   const title = isQuote ? "Rental Estimate Quotation" : "Final Return & Settlement Invoice";
-  const { dates: shootDates, rest: notes } = extractShootDays(invoice.notes);
+  const { dates: shootDates, rest: rawNotes } = extractShootDays(invoice.notes);
+  const { amount: issued, rest: notes } = readClientIssued(rawNotes);
   const billedDays = shootDates.length > 0 ? shootDates.length : (invoice.items[0]?.number_of_days ?? 0);
   const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
 
@@ -202,8 +204,19 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 {inr(invoice.balance_payable)}
               </span>
             </div>
+            {issued !== null && (
+              <>
+                <Row label="Client-Issued Amount (Agreed)" value={inr(issued)} />
+                {invoice.balance_payable - issued > 0 && (
+                  <Row
+                    label="Concession Allowed"
+                    value={`− ${inr(invoice.balance_payable - issued)}`}
+                  />
+                )}
+              </>
+            )}
             <p className="text-[11px] italic text-muted-foreground print:text-black">
-              {amountInWords(invoice.balance_payable)}
+              {amountInWords(issued ?? invoice.balance_payable)}
             </p>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
               Non-GST rental document
