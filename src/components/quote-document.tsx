@@ -545,13 +545,31 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                 </>
               ) : advanceNote ? (
                 <>
-                  <Row label={`Rental Estimate (${billedDays} day(s))`} value={inr(rentTotal)} />
+                  <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
+                  <Row label="Rental Duration" value={`${billedDays} day(s)`} />
+                  <Row
+                    label={
+                      billedDays > 1
+                        ? `Rental Estimate (${inr(perDaySubtotal)}/day × ${billedDays} days)`
+                        : "Rental Estimate (1 day)"
+                    }
+                    value={inr(rentTotal)}
+                  />
                   <Row label="Security Deposit" value={inr(quote.security_deposit)} />
                   <Total label="Advance Payable Now" value={inr(advanceDue)} />
                 </>
               ) : (
                 <>
-                  <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(rentTotal)} />
+                  <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
+                  <Row label="Rental Duration" value={`${billedDays} day(s)`} />
+                  <Row
+                    label={
+                      billedDays > 1
+                        ? `Rental Subtotal (${inr(perDaySubtotal)}/day × ${billedDays} days)`
+                        : "Rental Subtotal (1 day)"
+                    }
+                    value={inr(rentTotal)}
+                  />
                   <Row label="Security Deposit" value={inr(quote.security_deposit)} />
                   <Row
                     label={settlement ? "Advance Adjusted" : "Advance Required"}
