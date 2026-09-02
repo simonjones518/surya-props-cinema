@@ -123,6 +123,14 @@ export const createInvoiceFn = createServerFn({ method: "POST" })
     return m.createInvoice(data);
   });
 
+export const updateInvoiceFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; patch: Partial<InvoiceDraft> }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.updateInvoice(data.id, data.patch);
+  });
+
 /* ---------- public write: customer rent request ---------- */
 
 export const createBookingFn = createServerFn({ method: "POST" })

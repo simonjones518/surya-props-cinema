@@ -81,6 +81,7 @@ function AdminPage() {
   const [scanOpen, setScanOpen] = useState(false);
   const [scanCode, setScanCode] = useState("");
   const [viewDoc, setViewDoc] = useState<Invoice | null>(null);
+  const [editDoc, setEditDoc] = useState<Invoice | null>(null);
   const [viewOrder, setViewOrder] = useState<RentalOrder | null>(null);
   const [orderOpen, setOrderOpen] = useState(false);
   const [settleId, setSettleId] = useState<number | null>(null);
@@ -123,6 +124,18 @@ function AdminPage() {
       toast.success(`Booking moved to ${vars.status}`);
     },
     onError: (e: Error) => toast.error("Status update failed", { description: e.message }),
+  });
+
+  const payMutation = useMutation({
+    mutationFn: ({ id, payment_status }: { id: number; payment_status: Invoice["payment_status"] }) =>
+      api.updateInvoice(id, { payment_status }),
+    onSuccess: (_res, vars) => {
+      qc.setQueryData<Invoice[]>(queryKeys.invoices, (old) =>
+        (old ?? []).map((v) => (v.id === vars.id ? { ...v, payment_status: vars.payment_status } : v)),
+      );
+      toast.success(`Payment marked ${vars.payment_status}`);
+    },
+    onError: (e: Error) => toast.error("Could not update payment", { description: e.message }),
   });
 
   const refundMutation = useMutation({
@@ -459,11 +472,34 @@ function AdminPage() {
                     </Td>
                     <Td className="text-xs text-muted-foreground">{v.items.length}</Td>
                     <Td className="whitespace-nowrap font-semibold">{inr(v.balance_payable)}</Td>
-                    <Td className="text-xs">{v.payment_status}</Td>
+                    <Td className="text-xs">
+                      <select
+                        aria-label={`Payment status for ${v.invoice_number}`}
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                        value={v.payment_status}
+                        onChange={(e) =>
+                          payMutation.mutate({
+                            id: v.id,
+                            payment_status: e.target.value as Invoice["payment_status"],
+                          })
+                        }
+                      >
+                        {(["Pending", "Partial", "Paid"] as const).map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </Td>
                     <Td>
-                      <Button size="sm" variant="outline" onClick={() => setViewDoc(v)}>
-                        View / Print
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setViewDoc(v)}>
+                          View / Print
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditDoc(v)}>
+                          Edit
+                        </Button>
+                      </div>
                     </Td>
                   </tr>
                 ))}
@@ -490,6 +526,12 @@ function AdminPage() {
       />
 
       <DirectInvoiceModal open={directOpen} onOpenChange={setDirectOpen} />
+
+      <DirectInvoiceModal
+        open={editDoc !== null}
+        onOpenChange={(v) => !v && setEditDoc(null)}
+        invoice={editDoc}
+      />
 
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />
       <RentalOrderModal

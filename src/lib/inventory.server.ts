@@ -505,6 +505,20 @@ export async function createInvoice(draft: InvoiceDraft) {
   return { id: Number(data.id), invoice_number: data.invoice_number as string };
 }
 
+export async function updateInvoice(id: number, patch: Partial<InvoiceDraft>) {
+  const row: Record<string, unknown> = {};
+  const keys = [
+    "invoice_number","doc_type","client_name","client_phone","production_house","shoot_location",
+    "shoot_start_date","shoot_wrap_date","items","subtotal","discount","transport_charges",
+    "gst_percent","gst_amount","security_deposit","advance_received","balance_payable",
+    "payment_status","notes",
+  ] as const;
+  for (const k of keys) if (patch[k] !== undefined) row[k] = patch[k] as unknown;
+  const { error } = await suryaDb.from("invoices").update(row).eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true as const };
+}
+
 /* ---------- customer prop requests ---------- */
 
 const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
