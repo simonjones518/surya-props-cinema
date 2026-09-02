@@ -338,6 +338,8 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     labour_invoice_no: row["labour_invoice_no"] ?? side.labour_invoice_no ?? null,
     settled_amount: num(row["settled_amount"] ?? side.settled_amount),
     settlement_waived: num(row["settlement_waived"] ?? side.settlement_waived),
+    shoot_days: (side.shoot_days ?? []) as QuoteRequest["shoot_days"],
+
   };
 
 
