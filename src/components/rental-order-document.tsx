@@ -76,7 +76,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
             <th className="py-2 pr-2">Qty</th>
             <th className="py-2 pr-2">Days</th>
             <th className="py-2 pr-2">Rate / Day</th>
-            <th className="py-2 text-right">Total</th>
+            <th className="py-2 text-right">Total / Day</th>
           </tr>
         </thead>
         <tbody>
