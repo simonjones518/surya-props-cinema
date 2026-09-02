@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import QRCode from "qrcode";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
-import { COMPANY_INFO, RENTAL_TERMS, amountInWords, docNumber, upiPayload } from "@/lib/company";
+import { COMPANY_INFO, RENTAL_TERMS, amountInWords, docNumber } from "@/lib/company";
+import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
 import type { QuoteRequest } from "@/lib/types";
 
 /** The five standardised rental documents. */
@@ -45,7 +45,7 @@ function useUpiQr(amount: number, note: string, enabled: boolean) {
       return;
     }
     let alive = true;
-    void QRCode.toDataURL(upiPayload(amount, note), { margin: 1, width: 220 })
+    void Promise.resolve(upiQrAsset.url)
       .then((url) => alive && setSrc(url))
       .catch(() => alive && setSrc(null));
     return () => {
