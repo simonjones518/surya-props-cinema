@@ -76,7 +76,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
       <article
         id="print-area"
-        className="space-y-3.5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
@@ -218,7 +218,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </p>
         )}
 
-        <section className="flex items-end justify-between gap-8 pt-6 text-center text-[11px] text-muted-foreground print:text-black">
+        <section className="flex items-end justify-between gap-8 pt-5 text-center text-[11px] text-muted-foreground print:text-black">
           <div className="w-52 border-t border-dashed border-primary/50 pt-1.5 print:border-black">
             Client Signature &amp; Acknowledgement
           </div>
