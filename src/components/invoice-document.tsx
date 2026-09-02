@@ -58,6 +58,11 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
   const { dates: shootDates, rest: rawNotes } = extractShootDays(invoice.notes);
   const { amount: issued, rest: notes } = readClientIssued(rawNotes);
   const billedDays = shootDates.length > 0 ? shootDates.length : (invoice.items[0]?.number_of_days ?? 0);
+  /** Line totals are per-day only; the duration multiplier lives in the summary. */
+  const perDaySubtotal = invoice.items.reduce(
+    (sum, i) => sum + i.custom_daily_rate * i.quantity,
+    0,
+  );
   const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
 
   return (
@@ -142,7 +147,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
               <th className="py-1">Prop Name</th>
               <th className="w-12 py-1 text-center">Qty</th>
               <th className="w-24 py-1 text-right">Rate/Day</th>
-              <th className="w-28 py-1 text-right">Line Total</th>
+              <th className="w-28 py-1 text-right">Line Total / Day</th>
             </tr>
           </thead>
           <tbody>
@@ -159,7 +164,9 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 </td>
                 <td className="py-0.5 text-center">{i.quantity}</td>
                 <td className="py-0.5 text-right">{inr(i.custom_daily_rate)}</td>
-                <td className="py-0.5 text-right font-semibold">{inr(i.total_price)}</td>
+                <td className="py-0.5 text-right font-semibold">
+                  {inr(i.custom_daily_rate * i.quantity)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -200,7 +207,16 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </div>
 
           <div className="space-y-1 text-sm">
-            <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(invoice.subtotal)} />
+            <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
+            <Row label="Rental Duration" value={`${billedDays} day(s)`} />
+            {billedDays > 1 ? (
+              <Row
+                label={`Rental Subtotal (${inr(perDaySubtotal)}/day × ${billedDays} days)`}
+                value={inr(invoice.subtotal)}
+              />
+            ) : (
+              <Row label="Rental Subtotal (1 day)" value={inr(invoice.subtotal)} />
+            )}
             {invoice.discount > 0 && <Row label="Discount" value={`− ${inr(invoice.discount)}`} />}
             {invoice.transport_charges > 0 && (
               <Row label="Transport / Packaging" value={inr(invoice.transport_charges)} />

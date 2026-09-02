@@ -278,6 +278,11 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         ? (quote.actual_days_used ?? quote.estimated_days)
         : quote.estimated_days;
   const rentTotal = settlement ? quote.final_total : quote.estimated_total;
+  /** Line totals show one day only; the duration multiplier is shown in the summary. */
+  const perDaySubtotal = quote.items.reduce(
+    (sum, item) => sum + item.daily_rate * item.quantity,
+    0,
+  );
   const advanceDue = quote.advance_required;
   const advancePaid = quote.advance_paid;
   const balance = settlement
@@ -418,7 +423,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
               <th className="py-2 text-center">Godown / Rack</th>
               <th className="py-2 text-center">Qty</th>
               {priced && <th className="py-2 text-right">Rate/Day</th>}
-              {priced && <th className="py-2 text-right">Line Total</th>}
+              {priced && <th className="py-2 text-right">Line Total / Day</th>}
               {kind === "challan" && <th className="py-2 text-center">Returned ✓</th>}
             </tr>
           </thead>
@@ -441,7 +446,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                 {priced && <td className="py-2 text-right">{inr(item.daily_rate)}</td>}
                 {priced && (
                   <td className="py-2 text-right font-semibold">
-                    {inr(item.daily_rate * item.quantity * billedDays)}
+                    {inr(item.daily_rate * item.quantity)}
                   </td>
                 )}
                 {kind === "challan" && (
@@ -540,13 +545,31 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                 </>
               ) : advanceNote ? (
                 <>
-                  <Row label={`Rental Estimate (${billedDays} day(s))`} value={inr(rentTotal)} />
+                  <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
+                  <Row label="Rental Duration" value={`${billedDays} day(s)`} />
+                  <Row
+                    label={
+                      billedDays > 1
+                        ? `Rental Estimate (${inr(perDaySubtotal)}/day × ${billedDays} days)`
+                        : "Rental Estimate (1 day)"
+                    }
+                    value={inr(rentTotal)}
+                  />
                   <Row label="Security Deposit" value={inr(quote.security_deposit)} />
                   <Total label="Advance Payable Now" value={inr(advanceDue)} />
                 </>
               ) : (
                 <>
-                  <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(rentTotal)} />
+                  <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
+                  <Row label="Rental Duration" value={`${billedDays} day(s)`} />
+                  <Row
+                    label={
+                      billedDays > 1
+                        ? `Rental Subtotal (${inr(perDaySubtotal)}/day × ${billedDays} days)`
+                        : "Rental Subtotal (1 day)"
+                    }
+                    value={inr(rentTotal)}
+                  />
                   <Row label="Security Deposit" value={inr(quote.security_deposit)} />
                   <Row
                     label={settlement ? "Advance Adjusted" : "Advance Required"}

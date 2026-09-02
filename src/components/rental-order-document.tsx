@@ -16,6 +16,10 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
   const days = settled ? (order.actual_days_used ?? order.estimated_days) : order.estimated_days;
   const total = settled ? order.total_final_amount : order.estimated_total;
   const balance = total - order.advance_received;
+  const perDaySubtotal = order.items.reduce(
+    (sum, item) => sum + item.manual_daily_rate * item.quantity,
+    0,
+  );
 
   return (
     <div
@@ -76,7 +80,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
             <th className="py-2 pr-2">Qty</th>
             <th className="py-2 pr-2">Days</th>
             <th className="py-2 pr-2">Rate / Day</th>
-            <th className="py-2 text-right">Total</th>
+            <th className="py-2 text-right">Total / Day</th>
           </tr>
         </thead>
         <tbody>
@@ -96,7 +100,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
                 <td className="py-2 pr-2">{itemDays}</td>
                 <td className="py-2 pr-2">{inr(item.manual_daily_rate)}</td>
                 <td className="py-2 text-right font-semibold">
-                  {inr(item.manual_daily_rate * item.quantity * itemDays)}
+                  {inr(item.manual_daily_rate * item.quantity)}
                 </td>
               </tr>
             );
@@ -105,7 +109,14 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
       </table>
 
       <section className="mt-6 ml-auto w-full max-w-sm space-y-1 border-2 border-black p-4 text-sm">
-        <Row label="Subtotal" value={inr(total)} />
+        <Row label="Per Day Subtotal (1 day)" value={inr(perDaySubtotal)} />
+        <Row label="Rental Duration" value={`${days} day(s)`} />
+        <Row
+          label={
+            days > 1 ? `Rental Subtotal (${inr(perDaySubtotal)}/day × ${days} days)` : "Rental Subtotal"
+          }
+          value={inr(total)}
+        />
         <Row label="Advance Paid" value={`- ${inr(order.advance_received)}`} />
         <Row label="Security Deposit (refundable)" value={inr(order.security_deposit)} />
         <div className="mt-2 border-t-2 border-black pt-2">
