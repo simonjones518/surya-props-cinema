@@ -1,166 +1,246 @@
-import { Printer, QrCode, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import QRCode from "qrcode";
+import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
-import { inr, addDays, prettyDate } from "@/lib/format";
+import { inr, prettyDate } from "@/lib/format";
+import { COMPANY_INFO, RENTAL_TERMS, amountInWords, upiPayload } from "@/lib/company";
 import type { Invoice } from "@/lib/types";
 
 export const COMPANY = {
-  name: "Surya Cine Special Props",
-  tagline: "Where real props bring stories to life",
-  gstin: "33ABCDS1234E1Z9",
-  phone: "+91 98765 43210",
-  email: "rentals@suryacineprops.in",
-  address: "Soundstage 4, Warehouse Block C, Poonamallee High Road, Chennai 600056",
-  upi: "suryacineprops@upi",
-  bank: "Surya Cine Special Props · HDFC Bank · A/C 50200XXXXXX · IFSC HDFC0000XXX",
+  name: COMPANY_INFO.name,
+  tagline: COMPANY_INFO.tagline,
+  phone: COMPANY_INFO.phone,
+  email: COMPANY_INFO.email,
+  address: COMPANY_INFO.warehouse,
+  upi: COMPANY_INFO.upiId,
+  bank: `${COMPANY_INFO.accountName} · ${COMPANY_INFO.bankName} · A/C ${COMPANY_INFO.accountNumber} · IFSC ${COMPANY_INFO.ifsc}`,
 };
 
-const TERMS = [
-  "Props remain the property of Surya Cine Special Props at all times.",
-  "Security deposit is refundable within 7 working days after return inspection.",
-  "Any damage, loss or non-return is chargeable at the declared replacement valuation.",
-  "Rental days are counted from the shoot start date to the wrap date, both inclusive.",
-  "Transport, loading and on-set handling charges are billed separately where applicable.",
-  "Balance payable must be settled before the props leave the warehouse.",
-];
+/** Shooting dates are stored on the saved record's notes line by the direct-invoice flow. */
+function extractShootDays(notes?: string) {
+  if (!notes) return { dates: [] as string[], rest: "" };
+  const lines = notes.split("\n");
+  const idx = lines.findIndex((l) => /^Shooting days billed/i.test(l.trim()));
+  if (idx === -1) return { dates: [], rest: notes.trim() };
+  const line = lines[idx]!;
+  const after = line.slice(line.indexOf(":") + 1);
+  const dates = after
+    .split(",")
+    .map((d) => d.trim())
+    .filter(Boolean);
+  const rest = lines.filter((_, i) => i !== idx).join("\n").trim();
+  return { dates, rest };
+}
+
+function useUpiQr(amount: number, note: string) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    if (amount <= 0) {
+      setSrc(null);
+      return;
+    }
+    let alive = true;
+    void QRCode.toDataURL(upiPayload(amount, note), { margin: 1, width: 220 })
+      .then((url) => alive && setSrc(url))
+      .catch(() => alive && setSrc(null));
+    return () => {
+      alive = false;
+    };
+  }, [amount, note]);
+  return src;
+}
 
 export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClose?: () => void }) {
   const isQuote = invoice.doc_type === "QUOTATION";
-  const netRent = invoice.subtotal - invoice.discount + invoice.transport_charges;
+  const title = isQuote ? "Rental Estimate Quotation" : "Final Return & Settlement Invoice";
+  const { dates: shootDates, rest: notes } = extractShootDays(invoice.notes);
+  const billedDays = shootDates.length > 0 ? shootDates.length : (invoice.items[0]?.number_of_days ?? 0);
+  const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-3 print:hidden">
-        {onClose && (
-          <Button variant="outline" onClick={onClose}>
-            <X className="size-4" /> Close
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{title}</p>
+        <div className="flex gap-2">
+          {onClose && (
+            <Button variant="outline" size="sm" onClick={onClose}>
+              <X className="size-4" /> Close
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="size-4" /> Print / Save PDF
           </Button>
-        )}
-        <Button onClick={() => window.print()}>
-          <Printer className="size-4" /> Print / Save as PDF
-        </Button>
+        </div>
       </div>
 
       <article
         id="print-area"
-        className="mx-auto w-full max-w-4xl rounded-xl border border-primary/25 bg-card p-6 text-foreground sm:p-9 print:border-0 print:bg-white print:text-black"
+        className="mx-auto w-full max-w-4xl space-y-5 rounded-xl border border-primary/25 bg-card p-6 text-foreground print:border-0 print:bg-white print:text-black"
       >
-        <header className="flex flex-wrap items-start justify-between gap-6 border-b border-primary/30 pb-6">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-4">
           <div>
             <BrandLogo className="h-16" />
-            <p className="mt-1 text-xs uppercase tracking-[0.28em] text-primary print:text-black">
-              {COMPANY.tagline}
+            <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
+              {COMPANY_INFO.tagline}
             </p>
-            <p className="mt-3 max-w-xs text-xs leading-relaxed text-muted-foreground print:text-black">
-              {COMPANY.address}
+            <p className="mt-2 max-w-xs text-[11px] leading-relaxed text-muted-foreground print:text-black">
+              {COMPANY_INFO.warehouse}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground print:text-black">
-              GSTIN {COMPANY.gstin} · {COMPANY.phone} · {COMPANY.email}
+            <p className="text-[11px] text-muted-foreground print:text-black">
+              {COMPANY_INFO.phone} · {COMPANY_INFO.email}
             </p>
           </div>
           <div className="text-right">
-            <p className="font-display text-2xl tracking-[0.2em] text-primary print:text-black">
-              {isQuote ? "QUOTATION" : "GST TAX & RENTAL INVOICE"}
+            <p className="font-display text-xl tracking-wide text-primary print:text-black">{title}</p>
+            <p className="font-mono text-xs text-foreground print:text-black">{invoice.invoice_number}</p>
+            <p className="text-xs text-muted-foreground print:text-black">
+              Dated {prettyDate(invoice.created_at)}
             </p>
-            <dl className="mt-3 space-y-1 text-xs">
-              <Meta label={isQuote ? "Quote No" : "Invoice No"} value={invoice.invoice_number} mono />
-              <Meta label="Date" value={prettyDate(invoice.created_at)} />
-              <Meta
-                label={isQuote ? "Valid Until" : "Return Due"}
-                value={prettyDate(isQuote ? addDays(invoice.created_at.slice(0, 10), 15) : invoice.shoot_wrap_date)}
-              />
-              <Meta label="Booking Code" value={invoice.invoice_number.replace(/^SCP-(INV|QT)/, "SCP-BK")} mono />
-            </dl>
+            <p className="font-mono text-[10px] text-muted-foreground print:text-black">
+              Ref {invoice.invoice_number.replace(/^SCP-(INV|QTN|QT)/, "SCP-BK")}
+            </p>
           </div>
         </header>
 
-        <section className="grid gap-6 border-b border-border py-6 sm:grid-cols-2">
+        <section className="grid gap-4 text-sm sm:grid-cols-2">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">Bill To</p>
-            <p className="mt-2 font-semibold">{invoice.production_house || invoice.client_name}</p>
-            <p className="text-sm text-muted-foreground print:text-black">Attn: {invoice.client_name}</p>
-            <p className="text-sm text-muted-foreground print:text-black">{invoice.client_phone}</p>
+            <Field label="Production House" value={invoice.production_house || invoice.client_name} />
+            <Field label="Attn" value={invoice.client_name} />
+            <Field label="Phone" value={invoice.client_phone} />
           </div>
-          <div className="sm:text-right">
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">
-              Shoot Schedule
-            </p>
-            <p className="mt-2 text-sm">
-              {prettyDate(invoice.shoot_start_date)} → {prettyDate(invoice.shoot_wrap_date)}
-            </p>
-            <p className="text-sm text-muted-foreground print:text-black">
-              Location: {invoice.shoot_location || "As advised by production"}
-            </p>
+          <div>
+            <Field label="Shoot Location" value={invoice.shoot_location || "—"} />
+            <Field label="Dispatch / Shoot Start" value={prettyDate(invoice.shoot_start_date)} />
+            <Field
+              label={isQuote ? "Estimated Return" : "Actual Return"}
+              value={prettyDate(invoice.shoot_wrap_date)}
+            />
+            <Field label="Shooting Days Billed" value={`${billedDays} day(s)`} />
           </div>
         </section>
 
-        <section className="overflow-x-auto py-6">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-primary/30 text-left text-[10px] uppercase tracking-[0.18em] text-muted-foreground print:text-black">
-                <th className="py-2 pr-3">Serial No</th>
-                <th className="py-2 pr-3">Prop Description</th>
-                <th className="py-2 pr-3">Condition</th>
-                <th className="py-2 pr-3 text-right">Qty</th>
-                <th className="py-2 pr-3 text-right">Days</th>
-                <th className="py-2 pr-3 text-right">Rate/Day</th>
-                <th className="py-2 text-right">Total</th>
+        {shootDates.length > 0 && (
+          <section className="rounded-lg border border-primary/25 p-3 print:border-black">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
+              Shooting Days Chargeable ({shootDates.length})
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-foreground print:text-black">
+              Shooting days: {shootDates.map((d) => prettyDate(d)).join(", ")}. For these{" "}
+              {shootDates.length} day(s) only we charge it. Dispatch and return dates are recorded for
+              custody of the props and are not billed.
+            </p>
+          </section>
+        )}
+
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+              <th className="py-2">Prop &amp; Serial No</th>
+              <th className="py-2 text-center">Qty</th>
+              <th className="py-2 text-center">Days</th>
+              <th className="py-2 text-right">Rate/Day</th>
+              <th className="py-2 text-right">Line Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoice.items.map((i, idx) => (
+              <tr key={`${i.prop_id}-${idx}`} className="border-b border-border/60 align-top">
+                <td className="py-2 pr-3">
+                  <span className="font-semibold">{i.prop_name}</span>
+                  <span className="block font-mono text-[10px] text-muted-foreground print:text-black">
+                    {i.serial_number || "—"}
+                  </span>
+                </td>
+                <td className="py-2 text-center">{i.quantity}</td>
+                <td className="py-2 text-center">{i.number_of_days}</td>
+                <td className="py-2 text-right">{inr(i.custom_daily_rate)}</td>
+                <td className="py-2 text-right font-semibold">{inr(i.total_price)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {invoice.items.map((i, idx) => (
-                <tr key={`${i.prop_id}-${idx}`} className="border-b border-border/60">
-                  <td className="py-2 pr-3 font-mono text-xs text-primary print:text-black">{i.serial_number || "—"}</td>
-                  <td className="py-2 pr-3">{i.prop_name}</td>
-                  <td className="py-2 pr-3 text-xs text-muted-foreground print:text-black">{i.condition_rating}</td>
-                  <td className="py-2 pr-3 text-right">{i.quantity}</td>
-                  <td className="py-2 pr-3 text-right">{i.number_of_days}</td>
-                  <td className="py-2 pr-3 text-right">{inr(i.custom_daily_rate)}</td>
-                  <td className="py-2 text-right font-semibold">{inr(i.total_price)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+            ))}
+          </tbody>
+        </table>
 
-        <section className="ml-auto max-w-sm space-y-1.5 border-t border-primary/30 pt-5 text-sm">
-          <Row label="Subtotal" value={inr(invoice.subtotal)} />
-          {invoice.discount > 0 && <Row label="Discount" value={`− ${inr(invoice.discount)}`} />}
-          <Row label="Transport / Packaging" value={inr(invoice.transport_charges)} />
-          <Row label={`GST @ ${invoice.gst_percent}%`} value={inr(invoice.gst_amount)} />
-          <Row label="Taxable Rental Value" value={inr(netRent + invoice.gst_amount)} />
-          <Row label="Security Deposit (Held)" value={inr(invoice.security_deposit)} />
-          <Row label="Advance Received" value={`− ${inr(invoice.advance_received)}`} />
-          <div className="mt-3 flex items-center justify-between rounded-lg border border-primary/45 bg-primary/10 px-3 py-2.5 print:border-black print:bg-transparent">
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary print:text-black">
-              Net Balance Payable
-            </span>
-            <span className="font-display text-2xl tracking-wide text-primary print:text-black">
-              {inr(invoice.balance_payable)}
-            </span>
-          </div>
-        </section>
-
-        <section className="mt-8 grid gap-6 border-t border-border pt-6 sm:grid-cols-[1fr_auto]">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">
-              Rental Terms &amp; Conditions
+        <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+          <div className="rounded-lg border border-primary/40 p-3 print:border-black">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
+              Payment Details
             </p>
-            <ol className="mt-2 list-decimal space-y-1 pl-4 text-[11px] leading-relaxed text-muted-foreground print:text-black">
-              {TERMS.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ol>
-            <p className="mt-3 text-[11px] text-muted-foreground print:text-black">{COMPANY.bank}</p>
+            <div className="mt-3 flex items-start gap-4">
+              {qr && (
+                <img
+                  src={qr}
+                  alt="UPI payment QR code"
+                  className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
+                />
+              )}
+              <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
+                <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
+                <p>{COMPANY_INFO.accountName}</p>
+                <p>{COMPANY_INFO.bankName}</p>
+                <p>
+                  A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
+                </p>
+                {invoice.balance_payable > 0 && (
+                  <p className="mt-1 font-semibold text-primary print:text-black">
+                    Pay {inr(invoice.balance_payable)} and share the UTR / screenshot with us.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="mt-3 border-t border-border pt-2 print:border-black">
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">
+                Rental Terms &amp; Conditions
+              </p>
+              <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[9px] leading-relaxed text-muted-foreground print:text-black">
+                {RENTAL_TERMS.map((t) => (
+                  <li key={t}>{t}</li>
+                ))}
+              </ol>
+            </div>
           </div>
-          <div className="flex flex-col items-center gap-4">
-            <div className="grid size-28 place-items-center rounded-lg border border-primary/40 bg-background print:border-black print:bg-white">
-              <QrCode className="size-20 text-primary print:text-black" />
+
+          <div className="space-y-1.5 text-sm">
+            <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(invoice.subtotal)} />
+            {invoice.discount > 0 && <Row label="Discount" value={`− ${inr(invoice.discount)}`} />}
+            {invoice.transport_charges > 0 && (
+              <Row label="Transport / Packaging" value={inr(invoice.transport_charges)} />
+            )}
+            {invoice.gst_amount > 0 && (
+              <Row label={`GST @ ${invoice.gst_percent}%`} value={inr(invoice.gst_amount)} />
+            )}
+            <Row label="Security Deposit" value={inr(invoice.security_deposit)} />
+            <Row label="Advance Adjusted" value={`− ${inr(invoice.advance_received)}`} />
+            <div className="mt-2 flex items-center justify-between rounded-lg border border-primary/45 bg-primary/10 px-3 py-2.5 print:border-black print:bg-transparent">
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary print:text-black">
+                {isQuote ? "Estimated Balance" : "Net Balance Due"}
+              </span>
+              <span className="font-display text-xl tracking-wide text-primary print:text-black">
+                {inr(invoice.balance_payable)}
+              </span>
             </div>
-            <p className="font-mono text-[11px] text-foreground print:text-black">UPI: {COMPANY.upi}</p>
-            <div className="mt-4 w-44 border-t border-dashed border-primary/50 pt-2 text-center text-[11px] text-muted-foreground print:border-black print:text-black">
-              Authorised Signatory
-            </div>
+            <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
+              {amountInWords(invoice.balance_payable)}
+            </p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+              {invoice.gst_amount > 0 ? "GST rental document" : "Non-GST rental document"}
+            </p>
+          </div>
+        </section>
+
+        {notes && (
+          <p className="border-t border-border pt-3 text-xs text-muted-foreground print:text-black">
+            <span className="font-semibold text-foreground print:text-black">Notes: </span>
+            {notes}
+          </p>
+        )}
+
+        <section className="flex flex-wrap justify-end gap-10 border-t border-border pt-6 text-center text-[11px] text-muted-foreground print:text-black">
+          <div className="w-48 border-t border-dashed border-primary/50 pt-2 print:border-black">
+            Client Signature &amp; Acknowledgement
+          </div>
+          <div className="w-48 border-t border-dashed border-primary/50 pt-2 print:border-black">
+            Authorised Signatory · For {COMPANY_INFO.name}
           </div>
         </section>
       </article>
@@ -168,20 +248,20 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
   );
 }
 
-function Meta({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-end gap-3">
-      <dt className="text-muted-foreground print:text-black">{label}</dt>
-      <dd className={mono ? "font-mono text-foreground print:text-black" : "text-foreground print:text-black"}>
-        {value}
-      </dd>
-    </div>
+    <p className="text-sm">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+        {label}:{" "}
+      </span>
+      <span className="font-semibold">{value}</span>
+    </p>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4">
+    <div className="flex items-center justify-between">
       <span className="text-muted-foreground print:text-black">{label}</span>
       <span className="font-medium">{value}</span>
     </div>
