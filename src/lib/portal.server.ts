@@ -210,6 +210,7 @@ type Phase3State = {
   labour_invoice_no: string | null;
   settled_amount: number;
   settlement_waived: number;
+  shoot_days: QuoteRequest["shoot_days"];
 };
 
 async function readSidecar(quoteId: number): Promise<Partial<Phase3State>> {
