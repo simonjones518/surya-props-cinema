@@ -76,7 +76,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
       <article
         id="print-area"
-        className="mx-auto w-full max-w-4xl space-y-5 rounded-xl border border-primary/25 bg-card p-6 text-foreground print:border-0 print:bg-white print:text-black"
+        className="space-y-5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-4">
           <div>
@@ -188,16 +188,6 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
                 )}
               </div>
             </div>
-            <div className="mt-3 border-t border-border pt-2 print:border-black">
-              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">
-                Rental Terms &amp; Conditions
-              </p>
-              <ol className="mt-1 list-decimal space-y-0.5 pl-4 text-[9px] leading-relaxed text-muted-foreground print:text-black">
-                {RENTAL_TERMS.map((t) => (
-                  <li key={t}>{t}</li>
-                ))}
-              </ol>
-            </div>
           </div>
 
           <div className="space-y-1.5 text-sm">
@@ -205,9 +195,6 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
             {invoice.discount > 0 && <Row label="Discount" value={`− ${inr(invoice.discount)}`} />}
             {invoice.transport_charges > 0 && (
               <Row label="Transport / Packaging" value={inr(invoice.transport_charges)} />
-            )}
-            {invoice.gst_amount > 0 && (
-              <Row label={`GST @ ${invoice.gst_percent}%`} value={inr(invoice.gst_amount)} />
             )}
             <Row label="Security Deposit" value={inr(invoice.security_deposit)} />
             <Row label="Advance Adjusted" value={`− ${inr(invoice.advance_received)}`} />
@@ -223,7 +210,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
               {amountInWords(invoice.balance_payable)}
             </p>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              {invoice.gst_amount > 0 ? "GST rental document" : "Non-GST rental document"}
+              Non-GST rental document
             </p>
           </div>
         </section>
@@ -235,12 +222,24 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </p>
         )}
 
-        <section className="flex flex-wrap justify-end gap-10 border-t border-border pt-6 text-center text-[11px] text-muted-foreground print:text-black">
-          <div className="w-48 border-t border-dashed border-primary/50 pt-2 print:border-black">
-            Client Signature &amp; Acknowledgement
+        <section className="grid gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">
+              Rental Terms &amp; Conditions
+            </p>
+            <ol className="mt-2 list-decimal space-y-1 pl-4 text-[10px] leading-relaxed text-muted-foreground print:text-black">
+              {RENTAL_TERMS.map((t) => (
+                <li key={t}>{t}</li>
+              ))}
+            </ol>
           </div>
-          <div className="w-48 border-t border-dashed border-primary/50 pt-2 print:border-black">
-            Authorised Signatory · For {COMPANY_INFO.name}
+          <div className="flex flex-col justify-end gap-6 text-center text-[11px] text-muted-foreground print:text-black">
+            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
+              Client Acknowledgement
+            </div>
+            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
+              For {COMPANY_INFO.name}
+            </div>
           </div>
         </section>
       </article>
