@@ -207,7 +207,16 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </div>
 
           <div className="space-y-1 text-sm">
-            <Row label={`Rental Subtotal (${billedDays} day(s))`} value={inr(invoice.subtotal)} />
+            <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
+            <Row label="Rental Duration" value={`${billedDays} day(s)`} />
+            {billedDays > 1 ? (
+              <Row
+                label={`Rental Subtotal (${inr(perDaySubtotal)}/day × ${billedDays} days)`}
+                value={inr(invoice.subtotal)}
+              />
+            ) : (
+              <Row label="Rental Subtotal (1 day)" value={inr(invoice.subtotal)} />
+            )}
             {invoice.discount > 0 && <Row label="Discount" value={`− ${inr(invoice.discount)}`} />}
             {invoice.transport_charges > 0 && (
               <Row label="Transport / Packaging" value={inr(invoice.transport_charges)} />
