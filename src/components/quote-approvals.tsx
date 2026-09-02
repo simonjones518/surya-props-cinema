@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   BadgeCheck,
+  CalendarPlus,
   FileText,
   HardHat,
   IndianRupee,
@@ -32,7 +33,7 @@ import { addDays, inr, shootDays } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
 import { staffApi, staffKeys } from "@/lib/staff-api";
 import { openWhatsAppTo, quotationReadyMessage } from "@/lib/whatsapp";
-import type { LabourDay, LabourWorker, QuoteRequest } from "@/lib/types";
+import type { LabourDay, LabourWorker, QuoteRequest, ShootDay } from "@/lib/types";
 
 /** Admin: review client quote requests, price them, verify advances, record returns. */
 export function QuoteApprovals() {
@@ -44,6 +45,7 @@ export function QuoteApprovals() {
   });
   const [priceFor, setPriceFor] = useState<QuoteRequest | null>(null);
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
+  const [shootFor, setShootFor] = useState<QuoteRequest | null>(null);
   const [dispatchFor, setDispatchFor] = useState<QuoteRequest | null>(null);
   const [advanceFor, setAdvanceFor] = useState<QuoteRequest | null>(null);
   const [labourFor, setLabourFor] = useState<QuoteRequest | null>(null);
@@ -1398,6 +1400,149 @@ function ReturnDialog({
           </div>
           <Button className="w-full" disabled={record.isPending} onClick={() => record.mutate()}>
             {record.isPending ? "Settling…" : "Recalculate & Issue Settlement"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+/* ---------- shooting-days billing (rent is charged on these dates only) ---------- */
+
+type ShootRow = { key: string; date: string; note: string };
+
+const toShootRows = (list: ShootDay[]): ShootRow[] =>
+  list.length > 0
+    ? list.map((d) => ({ key: `${d.date}-${Math.random().toString(36).slice(2, 6)}`, date: d.date, note: d.note ?? "" }))
+    : [{ key: "s1", date: new Date().toISOString().slice(0, 10), note: "" }];
+
+const cleanShootRows = (rows: ShootRow[]) => {
+  const seen = new Set<string>();
+  const out: { date: string; note: string }[] = [];
+  for (const r of rows) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date) || seen.has(r.date)) continue;
+    seen.add(r.date);
+    out.push({ date: r.date, note: r.note.trim() });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+};
+
+function ShootDayEditor({
+  rows,
+  setRows,
+}: {
+  rows: ShootRow[];
+  setRows: (next: ShootRow[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>Shooting Dates (billed days)</Label>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            setRows([
+              ...rows,
+              {
+                key: Math.random().toString(36).slice(2, 9),
+                date: addDays(rows[rows.length - 1]?.date ?? new Date().toISOString().slice(0, 10), 1),
+                note: "",
+              },
+            ])
+          }
+        >
+          <CalendarPlus className="size-4" /> Add shooting day
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Rent is calculated only on these dates. Dispatch and return dates stay on the document as
+        custody information and are never billed.
+      </p>
+      {rows.map((r, idx) => (
+        <div key={r.key} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-2">
+          <span className="w-16 text-xs font-semibold uppercase tracking-wider text-primary">
+            Day {idx + 1}
+          </span>
+          <Input
+            className="w-40"
+            type="date"
+            value={r.date}
+            onChange={(e) => setRows(rows.map((x, i) => (i === idx ? { ...x, date: e.target.value } : x)))}
+          />
+          <Input
+            className="min-w-36 flex-1"
+            placeholder="Scene / location note"
+            value={r.note}
+            onChange={(e) => setRows(rows.map((x, i) => (i === idx ? { ...x, note: e.target.value } : x)))}
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Remove shooting day"
+            onClick={() => setRows(rows.filter((x) => x.key !== r.key))}
+            disabled={rows.length === 1}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ShootDaysDialog({
+  quote,
+  onOpenChange,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const [rows, setRows] = useState<ShootRow[]>([]);
+
+  useEffect(() => {
+    if (quote) setRows(toShootRows(quote.shoot_days));
+  }, [quote]);
+
+  const save = useMutation({
+    mutationFn: () => portal.saveShootDays(quote!.id, cleanShootRows(rows)),
+    onSuccess: (res) => {
+      toast.success(`${res.billed_days} shooting day(s) saved`, {
+        description:
+          res.final_total == null ? undefined : `Rental recalculated to ${inr(res.final_total)}`,
+      });
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error("Could not save shooting days", { description: e.message }),
+  });
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
+            Shooting Days Sheet
+          </DialogTitle>
+          <DialogDescription>
+            Log every day the props were actually used on set — extended days included. The bill is
+            calculated on this count only.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <ShootDayEditor rows={rows} setRows={setRows} />
+          <p className="text-sm text-muted-foreground">
+            Billable shooting days:{" "}
+            <span className="font-display text-xl text-primary">{cleanShootRows(rows).length}</span>
+          </p>
+          <Button
+            className="w-full"
+            disabled={save.isPending || cleanShootRows(rows).length === 0}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? "Saving…" : "Save Shooting Days & Recalculate"}
           </Button>
         </div>
       </DialogContent>
