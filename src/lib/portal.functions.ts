@@ -128,12 +128,26 @@ export const verifyAdvanceFn = createServerFn({ method: "POST" })
     return (await db()).verifyAdvance(data);
   });
 
+export const saveShootDaysFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; days: { date: string; note?: string }[] }) => data)
+  .handler(async ({ data }) => {
+    await (await admin()).assertAdmin();
+    return (await db()).saveShootDays(data);
+  });
+
 export const recordReturnFn = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: number; actual_return_date: string }) => data)
+  .inputValidator(
+    (data: {
+      id: number;
+      actual_return_date: string;
+      shoot_days?: { date: string; note?: string }[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     await (await admin()).assertAdmin();
     return (await db()).recordReturn(data);
   });
+
 
 export const dispatchQuoteFn = createServerFn({ method: "POST" })
   .inputValidator(
