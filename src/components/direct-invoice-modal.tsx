@@ -17,7 +17,7 @@ import { QuoteDocument, type QuoteDocKind } from "@/components/quote-document";
 import { api, queryKeys } from "@/lib/api";
 import { inr } from "@/lib/format";
 import { openWhatsAppTo } from "@/lib/whatsapp";
-import type { Invoice, QuoteRequest } from "@/lib/types";
+import type { Invoice, InvoiceDraft, QuoteRequest } from "@/lib/types";
 
 type ManualLine = {
   key: string;
@@ -205,7 +205,7 @@ export function DirectInvoiceModal({
 
   const save = useMutation({
     mutationFn: () => {
-      const draft = {
+      const draft: InvoiceDraft = {
         invoice_number: doc.quote_code.replace("SCP-MAN", kind === "settlement" ? "SCP-INV" : "SCP-QTN"),
         doc_type: kind === "settlement" ? "INVOICE" : "QUOTATION",
         client_id: 0,

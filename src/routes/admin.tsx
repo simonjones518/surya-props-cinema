@@ -459,11 +459,34 @@ function AdminPage() {
                     </Td>
                     <Td className="text-xs text-muted-foreground">{v.items.length}</Td>
                     <Td className="whitespace-nowrap font-semibold">{inr(v.balance_payable)}</Td>
-                    <Td className="text-xs">{v.payment_status}</Td>
+                    <Td className="text-xs">
+                      <select
+                        aria-label={`Payment status for ${v.invoice_number}`}
+                        className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                        value={v.payment_status}
+                        onChange={(e) =>
+                          payMutation.mutate({
+                            id: v.id,
+                            payment_status: e.target.value as Invoice["payment_status"],
+                          })
+                        }
+                      >
+                        {(["Pending", "Partial", "Paid", "Refunded"] as const).map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </Td>
                     <Td>
-                      <Button size="sm" variant="outline" onClick={() => setViewDoc(v)}>
-                        View / Print
-                      </Button>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setViewDoc(v)}>
+                          View / Print
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditDoc(v)}>
+                          Edit
+                        </Button>
+                      </div>
                     </Td>
                   </tr>
                 ))}
@@ -490,6 +513,12 @@ function AdminPage() {
       />
 
       <DirectInvoiceModal open={directOpen} onOpenChange={setDirectOpen} />
+
+      <DirectInvoiceModal
+        open={editDoc !== null}
+        onOpenChange={(v) => !v && setEditDoc(null)}
+        invoice={editDoc}
+      />
 
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />
       <RentalOrderModal
