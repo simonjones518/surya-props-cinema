@@ -368,6 +368,14 @@ export interface LabourDay {
   note: string;
 }
 
+/**
+ * One actual shooting day the props were used on. Rental is billed on these
+ * dates ONLY — never on the dispatch → return window.
+ */
+export interface ShootDay {
+  date: string;
+  note: string;
+}
 
 
 export interface QuoteRequest {
@@ -421,6 +429,9 @@ export interface QuoteRequest {
   settled_amount: number;
   /** Difference conceded between the system settlement and the client-issued amount. */
   settlement_waived: number;
+  /** Actual shooting dates — the only days the client is billed for. */
+  shoot_days: ShootDay[];
+
 }
 
 

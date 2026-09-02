@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   BadgeCheck,
+  CalendarPlus,
   FileText,
   HardHat,
   IndianRupee,
@@ -32,7 +33,7 @@ import { addDays, inr, shootDays } from "@/lib/format";
 import { portal, portalKeys, QUOTE_LABEL, QUOTE_TONE } from "@/lib/portal-api";
 import { staffApi, staffKeys } from "@/lib/staff-api";
 import { openWhatsAppTo, quotationReadyMessage } from "@/lib/whatsapp";
-import type { LabourDay, LabourWorker, QuoteRequest } from "@/lib/types";
+import type { LabourDay, LabourWorker, QuoteRequest, ShootDay } from "@/lib/types";
 
 /** Admin: review client quote requests, price them, verify advances, record returns. */
 export function QuoteApprovals() {
@@ -44,6 +45,7 @@ export function QuoteApprovals() {
   });
   const [priceFor, setPriceFor] = useState<QuoteRequest | null>(null);
   const [returnFor, setReturnFor] = useState<QuoteRequest | null>(null);
+  const [shootFor, setShootFor] = useState<QuoteRequest | null>(null);
   const [dispatchFor, setDispatchFor] = useState<QuoteRequest | null>(null);
   const [advanceFor, setAdvanceFor] = useState<QuoteRequest | null>(null);
   const [labourFor, setLabourFor] = useState<QuoteRequest | null>(null);
@@ -168,7 +170,13 @@ export function QuoteApprovals() {
                 <p className="text-xs text-muted-foreground">
                   {quote.shoot_location || "Location TBC"} · {quote.shoot_start_date} →{" "}
                   {quote.actual_return_date ?? quote.estimated_return_date} ·{" "}
-                  {quote.actual_days_used ?? quote.estimated_days} day(s)
+                  {quote.actual_days_used ?? quote.estimated_days} day(s) in custody
+                </p>
+                <p className="text-xs text-primary">
+                  Billed shooting days: {quote.shoot_days.length}
+                  {quote.shoot_days.length > 0
+                    ? ` · ${quote.shoot_days.map((d) => d.date).join(", ")}`
+                    : " — not logged yet"}
                 </p>
               </div>
               <span
@@ -284,6 +292,11 @@ export function QuoteApprovals() {
                   <Send className="size-4" /> Dispatch Props
                 </Button>
               )}
+              {["dispatched", "on_set", "settled"].includes(quote.status) && (
+                <Button size="sm" variant="outline" onClick={() => setShootFor(quote)}>
+                  <CalendarPlus className="size-4" /> Shooting Days ({quote.shoot_days.length})
+                </Button>
+              )}
               {(quote.status === "dispatched" || quote.status === "on_set") && (
                 <Button size="sm" onClick={() => setReturnFor(quote)}>
                   <PackageCheck className="size-4" /> Record Return
@@ -353,6 +366,7 @@ export function QuoteApprovals() {
       />
       <PricingDialog quote={priceFor} onOpenChange={(v) => !v && setPriceFor(null)} />
       <ReturnDialog quote={returnFor} onOpenChange={(v) => !v && setReturnFor(null)} />
+      <ShootDaysDialog quote={shootFor} onOpenChange={(v) => !v && setShootFor(null)} />
       <DispatchDialog
         quote={dispatchFor}
         onOpenChange={(v) => !v && setDispatchFor(null)}
@@ -1353,12 +1367,17 @@ function ReturnDialog({
 }) {
   const qc = useQueryClient();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [rows, setRows] = useState<ShootRow[]>([]);
+
+  useEffect(() => {
+    if (quote) setRows(toShootRows(quote.shoot_days));
+  }, [quote]);
 
   const record = useMutation({
-    mutationFn: () => portal.recordReturn(quote!.id, date),
+    mutationFn: () => portal.recordReturn(quote!.id, date, cleanShootRows(rows)),
     onSuccess: (res) => {
       toast.success("Return recorded & settlement generated", {
-        description: `${res.actual_days_used} day(s) billed · balance ${inr(res.balance_due)}`,
+        description: `${res.actual_days_used} shooting day(s) billed · balance ${inr(res.balance_due)}`,
       });
       void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
       void qc.invalidateQueries({ queryKey: ["props"] });
@@ -1369,23 +1388,175 @@ function ReturnDialog({
 
   return (
     <Dialog open={quote !== null} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md border-primary/25 bg-card">
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
         <DialogHeader>
           <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
             Record Return &amp; Settle
           </DialogTitle>
           <DialogDescription>
-            The final amount is recalculated on actual days used, then the settlement invoice is
-            issued to the client portal.
+            The final amount is calculated on the logged shooting days only — the return date is
+            recorded for custody, not for billing.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="r-date">Actual Return Date</Label>
+            <Label htmlFor="r-date">Actual Return Date (custody only)</Label>
             <Input id="r-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
-          <Button className="w-full" disabled={record.isPending} onClick={() => record.mutate()}>
+          <ShootDayEditor rows={rows} setRows={setRows} />
+          <p className="text-sm text-muted-foreground">
+            Billable shooting days:{" "}
+            <span className="font-display text-xl text-primary">{cleanShootRows(rows).length}</span>
+          </p>
+          <Button
+            className="w-full"
+            disabled={record.isPending || cleanShootRows(rows).length === 0}
+            onClick={() => record.mutate()}
+          >
             {record.isPending ? "Settling…" : "Recalculate & Issue Settlement"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+/* ---------- shooting-days billing (rent is charged on these dates only) ---------- */
+
+type ShootRow = { key: string; date: string; note: string };
+
+const toShootRows = (list: ShootDay[]): ShootRow[] =>
+  list.length > 0
+    ? list.map((d) => ({ key: `${d.date}-${Math.random().toString(36).slice(2, 6)}`, date: d.date, note: d.note ?? "" }))
+    : [{ key: "s1", date: new Date().toISOString().slice(0, 10), note: "" }];
+
+const cleanShootRows = (rows: ShootRow[]) => {
+  const seen = new Set<string>();
+  const out: { date: string; note: string }[] = [];
+  for (const r of rows) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(r.date) || seen.has(r.date)) continue;
+    seen.add(r.date);
+    out.push({ date: r.date, note: r.note.trim() });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+};
+
+function ShootDayEditor({
+  rows,
+  setRows,
+}: {
+  rows: ShootRow[];
+  setRows: (next: ShootRow[]) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <Label>Shooting Dates (billed days)</Label>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            setRows([
+              ...rows,
+              {
+                key: Math.random().toString(36).slice(2, 9),
+                date: addDays(rows[rows.length - 1]?.date ?? new Date().toISOString().slice(0, 10), 1),
+                note: "",
+              },
+            ])
+          }
+        >
+          <CalendarPlus className="size-4" /> Add shooting day
+        </Button>
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Rent is calculated only on these dates. Dispatch and return dates stay on the document as
+        custody information and are never billed.
+      </p>
+      {rows.map((r, idx) => (
+        <div key={r.key} className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 p-2">
+          <span className="w-16 text-xs font-semibold uppercase tracking-wider text-primary">
+            Day {idx + 1}
+          </span>
+          <Input
+            className="w-40"
+            type="date"
+            value={r.date}
+            onChange={(e) => setRows(rows.map((x, i) => (i === idx ? { ...x, date: e.target.value } : x)))}
+          />
+          <Input
+            className="min-w-36 flex-1"
+            placeholder="Scene / location note"
+            value={r.note}
+            onChange={(e) => setRows(rows.map((x, i) => (i === idx ? { ...x, note: e.target.value } : x)))}
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Remove shooting day"
+            onClick={() => setRows(rows.filter((x) => x.key !== r.key))}
+            disabled={rows.length === 1}
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ShootDaysDialog({
+  quote,
+  onOpenChange,
+}: {
+  quote: QuoteRequest | null;
+  onOpenChange: (v: boolean) => void;
+}) {
+  const qc = useQueryClient();
+  const [rows, setRows] = useState<ShootRow[]>([]);
+
+  useEffect(() => {
+    if (quote) setRows(toShootRows(quote.shoot_days));
+  }, [quote]);
+
+  const save = useMutation({
+    mutationFn: () => portal.saveShootDays(quote!.id, cleanShootRows(rows)),
+    onSuccess: (res) => {
+      toast.success(`${res.billed_days} shooting day(s) saved`, {
+        description:
+          res.final_total == null ? undefined : `Rental recalculated to ${inr(res.final_total)}`,
+      });
+      void qc.invalidateQueries({ queryKey: portalKeys.allQuotes });
+      onOpenChange(false);
+    },
+    onError: (e: Error) => toast.error("Could not save shooting days", { description: e.message }),
+  });
+
+  return (
+    <Dialog open={quote !== null} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto border-primary/25 bg-card">
+        <DialogHeader>
+          <DialogTitle className="font-display text-2xl tracking-wide text-gradient-gold">
+            Shooting Days Sheet
+          </DialogTitle>
+          <DialogDescription>
+            Log every day the props were actually used on set — extended days included. The bill is
+            calculated on this count only.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <ShootDayEditor rows={rows} setRows={setRows} />
+          <p className="text-sm text-muted-foreground">
+            Billable shooting days:{" "}
+            <span className="font-display text-xl text-primary">{cleanShootRows(rows).length}</span>
+          </p>
+          <Button
+            className="w-full"
+            disabled={save.isPending || cleanShootRows(rows).length === 0}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? "Saving…" : "Save Shooting Days & Recalculate"}
           </Button>
         </div>
       </DialogContent>

@@ -210,6 +210,7 @@ type Phase3State = {
   labour_invoice_no: string | null;
   settled_amount: number;
   settlement_waived: number;
+  shoot_days: QuoteRequest["shoot_days"];
 };
 
 async function readSidecar(quoteId: number): Promise<Partial<Phase3State>> {
@@ -337,6 +338,8 @@ async function mapQuote(row: Record<string, any>): Promise<QuoteRequest> {
     labour_invoice_no: row["labour_invoice_no"] ?? side.labour_invoice_no ?? null,
     settled_amount: num(row["settled_amount"] ?? side.settled_amount),
     settlement_waived: num(row["settlement_waived"] ?? side.settlement_waived),
+    shoot_days: (side.shoot_days ?? []) as QuoteRequest["shoot_days"],
+
   };
 
 
@@ -889,10 +892,69 @@ export async function closeLabourInvoice(input: { id: number; amount: number }) 
   return { ok: true as const, amount };
 }
 
+/* ---------- shooting-days billing engine ---------- */
 
+function normaliseShootDays(list: { date: string; note?: string }[] | undefined) {
+  const seen = new Set<string>();
+  return (list ?? [])
+    .map((d) => ({ date: String(d.date ?? "").slice(0, 10), note: clean(d.note ?? "", 200) }))
+    .filter((d) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || seen.has(d.date)) return false;
+      seen.add(d.date);
+      return true;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
 
-/** Stage 5 — record return, recompute on actual days used, release inventory. */
-export async function recordReturn(input: { id: number; actual_return_date: string }) {
+/**
+ * Admin logs the actual shooting dates the props were used on. Rental is
+ * billed on the COUNT of these dates — the dispatch → return window is only
+ * printed as custody information.
+ */
+export async function saveShootDays(input: {
+  id: number;
+  days: { date: string; note?: string }[];
+}) {
+  const id = Number(input.id);
+  const shoot_days = normaliseShootDays(input.days);
+  await writeSidecar(id, { shoot_days });
+
+  const { data: quote, error } = await suryaDb
+    .from("quote_requests")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!quote) throw new Error("Quotation not found.");
+
+  const billed = shoot_days.length;
+  if (billed === 0) return { ok: true as const, billed_days: 0, final_total: null };
+
+  const items: QuoteItem[] = ((quote["items"] ?? []) as QuoteItem[]).map((i) => ({
+    ...i,
+    line_total: i.daily_rate * i.quantity * billed,
+  }));
+  const final_total = items.reduce((s, i) => s + i.line_total, 0);
+  const advance_paid = num(quote["advance_paid"]);
+  const settled = quote["status"] === "settled" || quote["status"] === "closed";
+  const patch: Record<string, unknown> = { items: items as unknown as any };
+  if (settled) {
+    patch["actual_days_used"] = billed;
+    patch["final_total"] = final_total;
+    patch["balance_due"] = final_total + num(quote["security_deposit"]) - advance_paid;
+  }
+  const { error: upErr } = await suryaDb.from("quote_requests").update(patch).eq("id", id);
+  if (upErr) throw new Error(upErr.message);
+
+  return { ok: true as const, billed_days: billed, final_total };
+}
+
+/** Stage 5 — record return, recompute on logged shooting days, release inventory. */
+export async function recordReturn(input: {
+  id: number;
+  actual_return_date: string;
+  shoot_days?: { date: string; note?: string }[];
+}) {
   const { data: quote, error } = await suryaDb
     .from("quote_requests")
     .select("*")
@@ -902,8 +964,16 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
   if (!quote) throw new Error("Quotation not found.");
   if (!input.actual_return_date) throw new Error("Actual return date is required.");
 
-  const clockStart = (quote["dispatch_at"] ?? quote["shoot_start_date"]) as string;
-  const actual_days_used = days(String(clockStart).slice(0, 10), input.actual_return_date);
+  const side = await readSidecar(Number(input.id));
+  const shoot_days = input.shoot_days
+    ? normaliseShootDays(input.shoot_days)
+    : normaliseShootDays(side.shoot_days);
+  if (shoot_days.length === 0) {
+    throw new Error("Add at least one shooting date — billing is calculated on shooting days only.");
+  }
+  await writeSidecar(Number(input.id), { shoot_days });
+  const actual_days_used = shoot_days.length;
+
 
   const items: QuoteItem[] = ((quote["items"] ?? []) as QuoteItem[]).map((i) => ({
     ...i,
@@ -931,7 +1001,7 @@ export async function recordReturn(input: { id: number; actual_return_date: stri
     user_id: quote["user_id"],
     kind: "settlement",
     amount: balance_due,
-    reference: `Final settlement · ${actual_days_used} day(s) used`,
+    reference: `Final settlement · ${actual_days_used} shooting day(s) billed`,
     status: "pending",
   });
 

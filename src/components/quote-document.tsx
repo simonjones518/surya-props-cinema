@@ -143,6 +143,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
           </div>
         </section>
 
+
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
@@ -267,7 +268,14 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
   const receipt = kind === "receipt";
   const advanceNote = kind === "advance-request";
 
-  const billedDays = settlement ? (quote.actual_days_used ?? quote.estimated_days) : quote.estimated_days;
+  /** Shooting days are the billing basis; the custody window is informational. */
+  const shootDays = quote.shoot_days ?? [];
+  const billedDays =
+    shootDays.length > 0
+      ? shootDays.length
+      : settlement
+        ? (quote.actual_days_used ?? quote.estimated_days)
+        : quote.estimated_days;
   const rentTotal = settlement ? quote.final_total : quote.estimated_total;
   const advanceDue = quote.advance_required;
   const advancePaid = quote.advance_paid;
@@ -362,7 +370,10 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                 (settlement ? quote.actual_return_date : quote.estimated_return_date) ?? "",
               )}
             />
-            <Field label="Days Billed" value={String(billedDays)} />
+            <Field
+              label="Shooting Days Billed"
+              value={`${billedDays} day(s)${shootDays.length > 0 ? "" : " (estimated)"}`}
+            />
             {kind === "challan" && quote.dispatch_vehicle && (
               <Field label="Vehicle" value={quote.dispatch_vehicle} />
             )}
@@ -385,6 +396,36 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
             {receipt && quote.advance_utr && <Field label="UTR / Ref" value={quote.advance_utr} />}
           </div>
         </section>
+
+        {shootDays.length > 0 && (
+          <section className="rounded-lg border border-primary/25 p-3 print:border-black">
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
+              Shooting Days Chargeable ({shootDays.length})
+            </p>
+            <table className="mt-2 w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-border/60 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
+                  <th className="py-1">Day</th>
+                  <th className="py-1">Shoot Date</th>
+                  <th className="py-1">Remark</th>
+                </tr>
+              </thead>
+              <tbody>
+                {shootDays.map((d, i) => (
+                  <tr key={d.date} className="border-b border-border/40">
+                    <td className="py-1">Day {i + 1}</td>
+                    <td className="py-1">{prettyDate(d.date)}</td>
+                    <td className="py-1 text-muted-foreground print:text-black">{d.note || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-2 text-[10px] text-muted-foreground print:text-black">
+              Rental is charged on these {shootDays.length} shooting day(s) only. Dispatch and return
+              dates are recorded for custody of the props and are not billed.
+            </p>
+          </section>
+        )}
 
         <table className="w-full text-left text-sm">
           <thead>
