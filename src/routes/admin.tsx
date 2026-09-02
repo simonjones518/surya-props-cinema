@@ -558,6 +558,11 @@ function AdminPage() {
         invoice={editDoc}
       />
 
+      <InvoiceSettleDialog
+        invoice={settleDoc}
+        onOpenChange={(v) => !v && setSettleDoc(null)}
+      />
+
       <StockModal open={stockOpen} onOpenChange={setStockOpen} categories={categories.data ?? []} />
       <RentalOrderModal
         open={orderOpen}
