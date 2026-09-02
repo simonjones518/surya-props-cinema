@@ -105,7 +105,14 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
       </table>
 
       <section className="mt-6 ml-auto w-full max-w-sm space-y-1 border-2 border-black p-4 text-sm">
-        <Row label="Subtotal" value={inr(total)} />
+        <Row label="Per Day Subtotal (1 day)" value={inr(perDaySubtotal)} />
+        <Row label="Rental Duration" value={`${days} day(s)`} />
+        <Row
+          label={
+            days > 1 ? `Rental Subtotal (${inr(perDaySubtotal)}/day × ${days} days)` : "Rental Subtotal"
+          }
+          value={inr(total)}
+        />
         <Row label="Advance Paid" value={`- ${inr(order.advance_received)}`} />
         <Row label="Security Deposit (refundable)" value={inr(order.security_deposit)} />
         <div className="mt-2 border-t-2 border-black pt-2">
