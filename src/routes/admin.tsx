@@ -484,7 +484,7 @@ function AdminPage() {
                           })
                         }
                       >
-                        {(["Pending", "Partial", "Paid", "Refunded"] as const).map((s) => (
+                        {(["Pending", "Partial", "Paid"] as const).map((s) => (
                           <option key={s} value={s}>
                             {s}
                           </option>
