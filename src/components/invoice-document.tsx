@@ -138,7 +138,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              <th className="w-28 py-1">Serial No</th>
+              <th className="w-12 py-1 text-center">S.No</th>
               <th className="py-1">Prop Name</th>
               <th className="w-12 py-1 text-center">Qty</th>
               <th className="w-24 py-1 text-right">Rate/Day</th>
@@ -148,8 +148,15 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           <tbody>
             {invoice.items.map((i, idx) => (
               <tr key={`${i.prop_id}-${idx}`}>
-                <td className="py-0.5 pr-2 font-mono text-[11px]">{i.serial_number || "—"}</td>
-                <td className="py-0.5 pr-3 font-medium leading-tight">{i.prop_name}</td>
+                <td className="py-0.5 text-center font-mono text-[11px]">{idx + 1}</td>
+                <td className="py-0.5 pr-3 font-medium leading-tight">
+                  {i.prop_name}
+                  {i.serial_number && (
+                    <span className="block font-mono text-[10px] text-muted-foreground print:text-black">
+                      {i.serial_number}
+                    </span>
+                  )}
+                </td>
                 <td className="py-0.5 text-center">{i.quantity}</td>
                 <td className="py-0.5 text-right">{inr(i.custom_daily_rate)}</td>
                 <td className="py-0.5 text-right font-semibold">{inr(i.total_price)}</td>
@@ -158,6 +165,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </tbody>
         </table>
 
+        <div className="border-t border-primary/30 print:border-black" />
 
         <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
           <div className="rounded-lg border border-primary/40 p-3 print:border-black">
