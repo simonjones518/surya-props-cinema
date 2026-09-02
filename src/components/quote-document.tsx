@@ -278,6 +278,11 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         ? (quote.actual_days_used ?? quote.estimated_days)
         : quote.estimated_days;
   const rentTotal = settlement ? quote.final_total : quote.estimated_total;
+  /** Line totals show one day only; the duration multiplier is shown in the summary. */
+  const perDaySubtotal = quote.items.reduce(
+    (sum, item) => sum + item.daily_rate * item.quantity,
+    0,
+  );
   const advanceDue = quote.advance_required;
   const advancePaid = quote.advance_paid;
   const balance = settlement
