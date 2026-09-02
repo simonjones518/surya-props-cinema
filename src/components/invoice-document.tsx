@@ -76,7 +76,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
       <article
         id="print-area"
-        className="space-y-3.5 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
@@ -136,32 +136,26 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
         <table className="w-full text-left text-sm">
           <thead>
             <tr className="border-b border-primary/30 text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              <th className="w-10 py-1.5">S.No</th>
-              <th className="py-1.5">Prop Name</th>
-              <th className="py-1.5 text-center">Qty</th>
-              <th className="py-1.5 text-right">Rate/Day</th>
-              <th className="py-1.5 text-right">Line Total</th>
+              <th className="w-28 py-1">Serial No</th>
+              <th className="py-1">Prop Name</th>
+              <th className="w-12 py-1 text-center">Qty</th>
+              <th className="w-24 py-1 text-right">Rate/Day</th>
+              <th className="w-28 py-1 text-right">Line Total</th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((i, idx) => (
-              <tr key={`${i.prop_id}-${idx}`} className="align-top">
-                <td className="py-1 pr-2 font-mono text-xs">{idx + 1}</td>
-                <td className="py-1 pr-3">
-                  <span className="font-semibold">{i.prop_name}</span>
-                  {i.serial_number && (
-                    <span className="ml-2 font-mono text-[10px] text-muted-foreground print:text-black">
-                      {i.serial_number}
-                    </span>
-                  )}
-                </td>
-                <td className="py-1 text-center">{i.quantity}</td>
-                <td className="py-1 text-right">{inr(i.custom_daily_rate)}</td>
-                <td className="py-1 text-right font-semibold">{inr(i.total_price)}</td>
+              <tr key={`${i.prop_id}-${idx}`}>
+                <td className="py-0.5 pr-2 font-mono text-[11px]">{i.serial_number || "—"}</td>
+                <td className="py-0.5 pr-3 font-medium leading-tight">{i.prop_name}</td>
+                <td className="py-0.5 text-center">{i.quantity}</td>
+                <td className="py-0.5 text-right">{inr(i.custom_daily_rate)}</td>
+                <td className="py-0.5 text-right font-semibold">{inr(i.total_price)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+
 
         <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
           <div className="rounded-lg border border-primary/40 p-3 print:border-black">
@@ -224,7 +218,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </p>
         )}
 
-        <section className="flex items-end justify-between gap-8 pt-6 text-center text-[11px] text-muted-foreground print:text-black">
+        <section className="flex items-end justify-between gap-8 pt-5 text-center text-[11px] text-muted-foreground print:text-black">
           <div className="w-52 border-t border-dashed border-primary/50 pt-1.5 print:border-black">
             Client Signature &amp; Acknowledgement
           </div>
