@@ -146,11 +146,11 @@ function BankRow({ label, value }: { label: string; value: string }) {
 
 export function TermsCard({ text }: { text?: string }) {
   return (
-    <section className="rounded-xl border border-primary/35 p-2.5 print:border-black">
+    <section className="rounded-lg border border-primary/35 p-2 print:border-black">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:text-black">
         Terms &amp; Conditions
       </p>
-      <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground print:text-black">
+      <p className="mt-px text-[11px] leading-snug text-muted-foreground print:text-black">
         {text ??
           `The production team assumes full financial responsibility for any repair, loss, or total destruction of rented props during the tenure, based on the full replacement or market restoration value determined by ${COMPANY_INFO.name}.`}
       </p>
@@ -160,9 +160,9 @@ export function TermsCard({ text }: { text?: string }) {
 
 export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLabel?: string }) {
   return (
-    <section className="grid gap-8 pt-2 sm:grid-cols-2">
+    <section className="grid gap-4 pt-1 sm:grid-cols-2">
       <div className="text-center">
-        <div className="h-10" />
+        <div className="h-8" />
         <div className="border-t border-dashed border-primary/50 pt-1 print:border-black">
           <p className="text-[11px] font-bold text-foreground print:text-black">{clientLabel}</p>
           <p className="text-[10px] text-muted-foreground print:text-black">
@@ -174,7 +174,7 @@ export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLab
         <img
           src={signatureAsset.url}
           alt="Authorised signature"
-          className="mx-auto h-10 object-contain"
+          className="mx-auto h-8 object-contain"
         />
         <div className="border-t border-dashed border-primary/50 pt-1 print:border-black">
           <p className="text-[11px] font-bold uppercase text-foreground print:text-black">
