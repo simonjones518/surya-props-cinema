@@ -304,6 +304,14 @@
   #print-area *::after {
     border-color: #999 !important;
   }
+  /* Net payable bar keeps the brand red fill with white text on paper. */
+  #print-area .net-payable-bar,
+  #print-area .net-payable-bar * {
+    background-color: #e10600 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   #print-area img,
   #print-area svg,
   #print-area canvas {
