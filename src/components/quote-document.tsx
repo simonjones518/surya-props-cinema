@@ -420,10 +420,8 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
           </tbody>
         </table>
 
-        <div className="border-t border-primary/30 print:border-black" />
-
         {priced ? (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {receipt ? (
               <SummaryCard
                 rows={[
