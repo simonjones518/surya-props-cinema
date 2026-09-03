@@ -27,40 +27,40 @@ export function SummaryCard({
 }) {
   return (
     <section className="overflow-hidden rounded-xl border border-primary/35 print:border-black">
-      <div className="divide-y divide-primary/20 print:divide-black/30">
+      <div>
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-4 px-4 py-1.5 text-sm">
+          <div key={r.label} className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm">
             <span className="text-muted-foreground print:text-black">{r.label}</span>
             <span className="font-semibold">{r.value}</span>
           </div>
         ))}
         {grand && (
-          <div className="flex items-center justify-between gap-4 px-4 py-2">
-            <span className="text-base font-bold uppercase tracking-wide text-foreground print:text-black">
+          <div className="flex items-center justify-between gap-4 px-3 py-1">
+            <span className="text-sm font-bold uppercase tracking-wide text-foreground print:text-black">
               {grand.label}
             </span>
-            <span className="font-display text-xl tracking-wide text-foreground print:text-black">
+            <span className="font-display text-lg tracking-wide text-foreground print:text-black">
               {grand.value}
             </span>
           </div>
         )}
         {deductions.map((d) => (
-          <div key={d.label} className="flex items-center justify-between gap-4 px-4 py-1.5 text-sm">
+          <div key={d.label} className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm">
             <span className="text-muted-foreground print:text-black">{d.label}</span>
             <span className="font-semibold">{d.value}</span>
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between gap-4 bg-primary px-4 py-2.5 text-primary-foreground print:bg-black print:text-white">
+      <div className="flex items-center justify-between gap-4 bg-primary px-3 py-1 text-primary-foreground print:bg-black print:text-white">
         <span className="text-xs font-bold uppercase tracking-[0.2em]">{netLabel}</span>
-        <span className="font-display text-xl tracking-wide">{netValue}</span>
+        <span className="font-display text-lg tracking-wide">{netValue}</span>
       </div>
       {postRows.length > 0 && (
-        <div className="divide-y divide-primary/20 print:divide-black/30">
+        <div>
           {postRows.map((r) => (
             <div
               key={r.label}
-              className="flex items-center justify-between gap-4 px-4 py-1.5 text-sm"
+              className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm"
             >
               <span className="text-muted-foreground print:text-black">{r.label}</span>
               <span className="font-semibold">{r.value}</span>
@@ -69,7 +69,7 @@ export function SummaryCard({
         </div>
       )}
       {words && (
-        <p className="px-4 py-1.5 text-[11px] italic text-muted-foreground print:text-black">
+        <p className="px-3 py-0.5 text-[10px] italic leading-tight text-muted-foreground print:text-black">
           {words} · Non-GST rental document
         </p>
       )}
