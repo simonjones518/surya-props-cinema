@@ -26,41 +26,44 @@ export function SummaryCard({
   words?: string;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-primary/35 print:border-black">
+    <section className="overflow-hidden rounded-lg border border-primary/35 print:border-black">
       <div>
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm">
+          <div key={r.label} className="flex items-center justify-between gap-3 px-2.5 py-px text-[13px] leading-tight">
             <span className="text-muted-foreground print:text-black">{r.label}</span>
             <span className="font-semibold">{r.value}</span>
           </div>
         ))}
         {grand && (
-          <div className="flex items-center justify-between gap-4 px-3 py-1">
-            <span className="text-sm font-bold uppercase tracking-wide text-foreground print:text-black">
+          <div className="flex items-center justify-between gap-3 px-2.5 py-0.5 leading-tight">
+            <span className="text-[13px] font-bold uppercase tracking-wide text-foreground print:text-black">
               {grand.label}
             </span>
-            <span className="font-display text-lg tracking-wide text-foreground print:text-black">
+            <span className="font-display text-base tracking-wide text-foreground print:text-black">
               {grand.value}
             </span>
           </div>
         )}
         {deductions.map((d) => (
-          <div key={d.label} className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm">
+          <div key={d.label} className="flex items-center justify-between gap-3 px-2.5 py-px text-[13px] leading-tight">
             <span className="text-muted-foreground print:text-black">{d.label}</span>
             <span className="font-semibold">{d.value}</span>
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between gap-4 bg-primary px-3 py-1 text-primary-foreground print:bg-black print:text-white">
-        <span className="text-xs font-bold uppercase tracking-[0.2em]">{netLabel}</span>
-        <span className="font-display text-lg tracking-wide">{netValue}</span>
+      <div
+        className="flex items-center justify-between gap-3 bg-primary px-2.5 py-0.5 text-primary-foreground"
+        style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
+      >
+        <span className="text-[11px] font-bold uppercase tracking-[0.2em]">{netLabel}</span>
+        <span className="font-display text-base tracking-wide">{netValue}</span>
       </div>
       {postRows.length > 0 && (
         <div>
           {postRows.map((r) => (
             <div
               key={r.label}
-              className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm"
+              className="flex items-center justify-between gap-3 px-2.5 py-px text-[13px] leading-tight"
             >
               <span className="text-muted-foreground print:text-black">{r.label}</span>
               <span className="font-semibold">{r.value}</span>
@@ -69,7 +72,7 @@ export function SummaryCard({
         </div>
       )}
       {words && (
-        <p className="px-3 py-0.5 text-[10px] italic leading-tight text-muted-foreground print:text-black">
+        <p className="px-2.5 py-px text-[10px] italic leading-tight text-muted-foreground print:text-black">
           {words} · Non-GST rental document
         </p>
       )}
