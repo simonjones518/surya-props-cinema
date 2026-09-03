@@ -82,7 +82,7 @@ export function PaymentCards({
   payLine,
 }: {
   showQr?: boolean;
-  payLine?: string;
+  payLine?: string | undefined;
 }) {
   return (
     <section className="grid gap-3 sm:grid-cols-2">
