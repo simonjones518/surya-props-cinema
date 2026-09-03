@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
 import { COMPANY_INFO, amountInWords } from "@/lib/company";
-import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
+import {
+  PaymentCards,
+  SignatureStrip,
+  SummaryCard,
+  TermsCard,
+} from "@/components/document-blocks";
 import { readClientIssued } from "@/lib/invoice-settlement";
 import type { Invoice } from "@/lib/types";
 
@@ -34,24 +39,6 @@ function extractShootDays(notes?: string) {
   return { dates, rest };
 }
 
-function useUpiQr(amount: number, note: string) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    if (amount <= 0) {
-      setSrc(null);
-      return;
-    }
-    let alive = true;
-    void Promise.resolve(upiQrAsset.url)
-      .then((url) => alive && setSrc(url))
-      .catch(() => alive && setSrc(null));
-    return () => {
-      alive = false;
-    };
-  }, [amount, note]);
-  return src;
-}
-
 export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClose?: () => void }) {
   const isQuote = invoice.doc_type === "QUOTATION";
   const title = isQuote ? "Rental Estimate Quotation" : "Props Rental Invoice";
@@ -64,7 +51,6 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
     (sum, i) => sum + i.custom_daily_rate * i.quantity,
     0,
   );
-  const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
   const [showShootDays, setShowShootDays] = useState(true);
 
   return (
@@ -187,82 +173,54 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
         <div className="border-t border-primary/30 print:border-black" />
 
-        <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-          <div className="rounded-lg border border-primary/40 p-3 print:border-black">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
-              Payment Details
-            </p>
-            <div className="mt-2 flex items-start gap-3">
-              {qr && (
-                <img
-                  src={qr}
-                  alt="UPI payment QR code"
-                  className="size-20 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
-                />
-              )}
-              <div className="text-[11px] leading-snug text-muted-foreground print:text-black">
-                <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
-                <p>{COMPANY_INFO.accountName}</p>
-                <p>{COMPANY_INFO.bankName}</p>
-                <p>
-                  A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
-                </p>
-                <p>Branch: {COMPANY_INFO.branch}</p>
-                <p>PhonePe / other UPI apps: {COMPANY_INFO.upiPhone}</p>
-                <p>PAN: {COMPANY_INFO.pan}</p>
-                {invoice.balance_payable > 0 && (
-                  <p className="mt-1 font-semibold text-primary print:text-black">
-                    Pay {inr(invoice.balance_payable)} and share the UTR / screenshot with us.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
+        <div className="space-y-3">
+          <SummaryCard
+            rows={[
+              { label: "Per Day Total:", value: inr(perDaySubtotal) },
+              { label: "Total Days:", value: `${billedDays} Days` },
+            ]}
+            grand={{
+              label: `Grand Total (${inr(perDaySubtotal)} × ${billedDays} Days)`,
+              value: inr(invoice.subtotal),
+            }}
+            deductions={[
+              ...(invoice.discount > 0
+                ? [{ label: "(-) Discount:", value: inr(invoice.discount) }]
+                : []),
+              ...(invoice.transport_charges > 0
+                ? [{ label: "(+) Transport / Packaging:", value: inr(invoice.transport_charges) }]
+                : []),
+              { label: "(+) Security Deposit:", value: inr(invoice.security_deposit) },
+              { label: "(-) Advance Amount:", value: inr(invoice.advance_received) },
+            ]}
+            netLabel={isQuote ? "Estimated Balance" : "Net Payable Amount"}
+            netValue={inr(invoice.balance_payable)}
+            postRows={
+              issued !== null
+                ? [
+                    { label: "Client-Issued Amount (Agreed):", value: inr(issued) },
+                    ...(invoice.balance_payable - issued > 0
+                      ? [
+                          {
+                            label: "Concession Allowed:",
+                            value: `− ${inr(invoice.balance_payable - issued)}`,
+                          },
+                        ]
+                      : []),
+                  ]
+                : []
+            }
+            words={amountInWords(issued ?? invoice.balance_payable)}
+          />
 
-          <div className="space-y-1 text-sm">
-            <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
-            <Row label="Rental Duration" value={`${billedDays} day(s)`} />
-            {billedDays > 1 ? (
-              <Row
-                label={`Rental Subtotal (${inr(perDaySubtotal)}/day × ${billedDays} days)`}
-                value={inr(invoice.subtotal)}
-              />
-            ) : (
-              <Row label="Rental Subtotal (1 day)" value={inr(invoice.subtotal)} />
-            )}
-            {invoice.discount > 0 && <Row label="Discount" value={`− ${inr(invoice.discount)}`} />}
-            {invoice.transport_charges > 0 && (
-              <Row label="Transport / Packaging" value={inr(invoice.transport_charges)} />
-            )}
-            <Row label="Security Deposit" value={inr(invoice.security_deposit)} />
-            <Row label="Advance Adjusted" value={`− ${inr(invoice.advance_received)}`} />
-            <div className="mt-1.5 flex items-center justify-between rounded-lg border border-primary/45 bg-primary/10 px-3 py-2 print:border-black print:bg-transparent">
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary print:text-black">
-                {isQuote ? "Estimated Balance" : "Net Balance Due"}
-              </span>
-              <span className="font-display text-xl tracking-wide text-primary print:text-black">
-                {inr(invoice.balance_payable)}
-              </span>
-            </div>
-            {issued !== null && (
-              <>
-                <Row label="Client-Issued Amount (Agreed)" value={inr(issued)} />
-                {invoice.balance_payable - issued > 0 && (
-                  <Row
-                    label="Concession Allowed"
-                    value={`− ${inr(invoice.balance_payable - issued)}`}
-                  />
-                )}
-              </>
-            )}
-            <p className="text-[11px] italic text-muted-foreground print:text-black">
-              {amountInWords(issued ?? invoice.balance_payable)}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              Non-GST rental document
-            </p>
-          </div>
-        </section>
+          <PaymentCards
+            payLine={
+              invoice.balance_payable > 0
+                ? `Pay ${inr(invoice.balance_payable)} and share the UTR / screenshot.`
+                : undefined
+            }
+          />
+        </div>
 
         {notes && (
           <p className="text-xs text-muted-foreground print:text-black">
@@ -271,14 +229,8 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </p>
         )}
 
-        <section className="flex items-end justify-between gap-8 pt-5 text-center text-[11px] text-muted-foreground print:text-black">
-          <div className="w-52 border-t border-dashed border-primary/50 pt-1.5 print:border-black">
-            Client Signature &amp; Acknowledgement
-          </div>
-          <div className="w-52 border-t border-dashed border-primary/50 pt-1.5 print:border-black">
-            Authorised Signatory · For {COMPANY_INFO.name}
-          </div>
-        </section>
+        <TermsCard />
+        <SignatureStrip />
 
       </article>
     </div>

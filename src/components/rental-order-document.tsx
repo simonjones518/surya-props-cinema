@@ -2,6 +2,13 @@ import { Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
+import { amountInWords } from "@/lib/company";
+import {
+  PaymentCards,
+  SignatureStrip,
+  SummaryCard,
+  TermsCard,
+} from "@/components/document-blocks";
 import type { RentalOrder } from "@/lib/types";
 
 const BUSINESS = {
@@ -108,25 +115,30 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
         </tbody>
       </table>
 
-      <section className="mt-6 ml-auto w-full max-w-sm space-y-1 border-2 border-black p-4 text-sm">
-        <Row label="Per Day Subtotal (1 day)" value={inr(perDaySubtotal)} />
-        <Row label="Rental Duration" value={`${days} day(s)`} />
-        <Row
-          label={
-            days > 1 ? `Rental Subtotal (${inr(perDaySubtotal)}/day × ${days} days)` : "Rental Subtotal"
-          }
-          value={inr(total)}
+      <div className="mt-6 space-y-3">
+        <SummaryCard
+          rows={[
+            { label: "Per Day Total:", value: inr(perDaySubtotal) },
+            { label: "Total Days:", value: `${days} Days` },
+          ]}
+          grand={{
+            label: `Grand Total (${inr(perDaySubtotal)} × ${days} Days)`,
+            value: inr(total),
+          }}
+          deductions={[
+            { label: "(+) Security Deposit (refundable):", value: inr(order.security_deposit) },
+            { label: "(-) Advance Paid:", value: inr(order.advance_received) },
+          ]}
+          netLabel={balance >= 0 ? "Net Payable Amount" : "Refundable To Client"}
+          netValue={inr(Math.abs(balance))}
+          words={amountInWords(balance)}
         />
-        <Row label="Advance Paid" value={`- ${inr(order.advance_received)}`} />
-        <Row label="Security Deposit (refundable)" value={inr(order.security_deposit)} />
-        <div className="mt-2 border-t-2 border-black pt-2">
-          <Row
-            bold
-            label={balance >= 0 ? "Net Balance Payable" : "Refundable to Client"}
-            value={inr(Math.abs(balance))}
-          />
-        </div>
-      </section>
+        <PaymentCards
+          payLine={balance > 0 ? `Pay ${inr(balance)} and share the UTR / screenshot.` : undefined}
+        />
+        <TermsCard />
+        <SignatureStrip />
+      </div>
 
       {order.notes && <p className="mt-4 text-xs text-neutral-600">Notes: {order.notes}</p>}
       <p className="mt-6 text-center text-[11px] text-neutral-500">
@@ -136,11 +148,3 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className={`flex justify-between gap-4 ${bold ? "text-base font-black" : ""}`}>
-      <span>{label}</span>
-      <span>{value}</span>
-    </div>
-  );
-}

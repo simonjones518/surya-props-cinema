@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
-import { COMPANY_INFO, RENTAL_TERMS, amountInWords, docNumber } from "@/lib/company";
-import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
+import { COMPANY_INFO, amountInWords, docNumber } from "@/lib/company";
+import {
+  PaymentCards,
+  SignatureStrip,
+  SummaryCard,
+  TermsCard,
+} from "@/components/document-blocks";
 import type { QuoteRequest } from "@/lib/types";
 
 /** The five standardised rental documents. */
@@ -37,24 +42,6 @@ export const DOC_LABEL: Record<QuoteDocKind, string> = {
   labour: "Labour Invoice",
 };
 
-function useUpiQr(amount: number, note: string, enabled: boolean) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    if (!enabled || amount <= 0) {
-      setSrc(null);
-      return;
-    }
-    let alive = true;
-    void Promise.resolve(upiQrAsset.url)
-      .then((url) => alive && setSrc(url))
-      .catch(() => alive && setSrc(null));
-    return () => {
-      alive = false;
-    };
-  }, [amount, note, enabled]);
-  return src;
-}
-
 /**
  * Crew daily labour invoice — billed completely separately from the prop
  * rental invoice, day one to closing day, with a per-day worker rate.
@@ -62,7 +49,6 @@ function useUpiQr(amount: number, note: string, enabled: boolean) {
 function LabourInvoice({ quote }: { quote: QuoteRequest }) {
   const closed = quote.labour_status === "closed";
   const payable = closed ? quote.labour_settled_amount : quote.labour_total;
-  const qr = useUpiQr(payable, `${quote.quote_code} Labour`, true);
   const docNo =
     quote.labour_invoice_no ?? docNumber("LAB", quote.id, quote.dispatch_at ?? quote.created_at);
 
@@ -196,64 +182,30 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
 
 
-        <section className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">
-          <div className="space-y-1.5 text-sm">
-            <Row label="Labour Charges Raised" value={inr(quote.labour_total)} />
-            {closed && (
-              <>
-                <Row label="Production Approved" value={inr(quote.labour_settled_amount)} />
-                <Row
-                  label="Concession Allowed"
-                  value={`− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`}
-                />
-              </>
-            )}
-            <Total label={closed ? "Amount Settled" : "Labour Payable"} value={inr(payable)} />
-            <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
-              {amountInWords(payable)}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              Labour / manpower charges only — prop rental billed separately
-            </p>
-          </div>
-
-          <div className="flex items-start gap-4 rounded-lg border border-primary/40 p-3 print:border-black">
-            {qr && (
-              <img
-                src={qr}
-                alt="UPI payment QR code"
-                className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
-              />
-            )}
-            <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-primary print:text-black">
-                Payment Details
-              </p>
-              <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
-              <p>{COMPANY_INFO.accountName}</p>
-              <p>
-                {COMPANY_INFO.bankName} · A/C {COMPANY_INFO.accountNumber} · IFSC{" "}
-                {COMPANY_INFO.ifsc}
-              </p>
-              <p>PhonePe / other UPI apps: {COMPANY_INFO.upiPhone} · PAN: {COMPANY_INFO.pan}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-4 grid items-end gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
-          <p className="text-[10px] leading-relaxed text-muted-foreground print:text-black">
-            Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew
-            for the dates listed above. Overtime beyond 12 hours a day is chargeable separately.
-          </p>
-          <div className="flex gap-8 text-center text-[11px] text-muted-foreground print:text-black">
-            <div className="w-40 border-t border-dashed border-primary/50 pt-2 print:border-black">
-              Client Acknowledgement
-            </div>
-            <div className="w-40 border-t border-dashed border-primary/50 pt-2 print:border-black">
-              For {COMPANY_INFO.name}
-            </div>
-          </div>
-        </section>
+        <div className="mt-4 space-y-3 border-t border-border pt-4">
+          <SummaryCard
+            rows={[
+              { label: "Labour Charges Raised:", value: inr(quote.labour_total) },
+              ...(closed
+                ? [
+                    { label: "Production Approved:", value: inr(quote.labour_settled_amount) },
+                    {
+                      label: "Concession Allowed:",
+                      value: `− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`,
+                    },
+                  ]
+                : []),
+            ]}
+            netLabel={closed ? "Amount Settled" : "Labour Payable"}
+            netValue={inr(payable)}
+            words={amountInWords(payable)}
+          />
+          <PaymentCards
+            payLine={payable > 0 ? `Pay ${inr(payable)} and share the UTR / screenshot.` : undefined}
+          />
+          <TermsCard text="Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew for the dates listed above. Overtime beyond 12 hours a day is chargeable separately. Prop rental is billed separately." />
+          <SignatureStrip clientLabel="Client Signature" />
+        </div>
 
       </article>
     </div>
@@ -292,7 +244,6 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
   const payNow = advanceNote ? advanceDue : settlement ? quote.balance_due : 0;
   const qrAmount = payNow > 0 ? payNow : balance;
   /** A receipt acknowledges money already received — it must never ask for payment. */
-  const qr = useUpiQr(qrAmount, `${quote.quote_code} ${DOC_LABEL[kind]}`, priced && !receipt);
 
 
 
@@ -471,158 +422,87 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
         <div className="border-t border-primary/30 print:border-black" />
 
-
         {priced ? (
-          <section className="grid gap-6 sm:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+          <div className="space-y-3">
             {receipt ? (
-              <div className="rounded-lg border border-primary/40 p-3 print:border-black">
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
-                  Received With Thanks
-                </p>
-                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground print:text-black">
-                  We acknowledge receipt of the advance amount noted alongside, towards the above
-                  rental order. This receipt is issued against a verified payment — no further
-                  advance is due.
-                </p>
-                <div className="mt-3 space-y-1 text-[11px] text-muted-foreground print:text-black">
-                  <p>
-                    <span className="font-semibold text-foreground print:text-black">Mode: </span>
-                    {quote.advance_mode ?? "UPI"}
-                  </p>
-                  {quote.advance_utr && (
-                    <p className="font-mono">
-                      <span className="font-semibold text-foreground print:text-black">
-                        UTR / Ref:{" "}
-                      </span>
-                      {quote.advance_utr}
-                    </p>
-                  )}
-                  <p>
-                    <span className="font-semibold text-foreground print:text-black">
-                      Verified on:{" "}
-                    </span>
-                    {prettyDate(quote.advance_verified_at ?? quote.created_at)}
-                  </p>
-                </div>
-                <p className="mt-3 inline-block rounded border border-primary/50 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:border-black print:text-black">
-                  Advance Paid
-                </p>
-              </div>
+              <SummaryCard
+                rows={[
+                  { label: "Rental Estimate:", value: inr(rentTotal) },
+                  { label: "Security Deposit:", value: inr(quote.security_deposit) },
+                  { label: "Balance Payable Later:", value: inr(balance) },
+                ]}
+                netLabel="Advance Received"
+                netValue={inr(advancePaid)}
+                words={amountInWords(advancePaid)}
+              />
+            ) : advanceNote ? (
+              <SummaryCard
+                rows={[
+                  { label: "Per Day Total:", value: inr(perDaySubtotal) },
+                  { label: "Total Days:", value: `${billedDays} Days` },
+                ]}
+                grand={{
+                  label: `Grand Total (${inr(perDaySubtotal)} × ${billedDays} Days)`,
+                  value: inr(rentTotal),
+                }}
+                deductions={[
+                  { label: "(+) Security Deposit:", value: inr(quote.security_deposit) },
+                ]}
+                netLabel="Advance Payable Now"
+                netValue={inr(advanceDue)}
+                words={amountInWords(advanceDue)}
+              />
             ) : (
-              <div className="rounded-lg border border-primary/40 p-3 print:border-black">
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-primary print:text-black">
-                  Payment Details
-                </p>
-                {advanceNote && (
-                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground print:text-black">
-                    This is a request for the advance payment shown alongside. Props are blocked for
-                    your shoot dates once the advance is received; an Advance Money Receipt is issued
-                    automatically after we verify the payment.
-                  </p>
-                )}
-                <div className="mt-3 flex items-start gap-4">
-                  {qr && (
-                    <img
-                      src={qr}
-                      alt="UPI payment QR code"
-                      className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
-                    />
-                  )}
-                  <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
-                    <p className="font-mono text-foreground print:text-black">
-                      UPI: {COMPANY_INFO.upiId}
-                    </p>
-                    <p>{COMPANY_INFO.accountName}</p>
-                    <p>{COMPANY_INFO.bankName}</p>
-                    <p>
-                      A/C {COMPANY_INFO.accountNumber} · IFSC {COMPANY_INFO.ifsc}
-                    </p>
-                    <p>Branch: {COMPANY_INFO.branch}</p>
-                    <p>
-                      PhonePe / other UPI apps: {COMPANY_INFO.upiPhone} · PAN: {COMPANY_INFO.pan}
-                    </p>
-                    <p className="mt-1 font-semibold text-primary print:text-black">
-                      Pay {inr(qrAmount)} and share the UTR / screenshot in your portal.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <SummaryCard
+                rows={[
+                  { label: "Per Day Total:", value: inr(perDaySubtotal) },
+                  { label: "Total Days:", value: `${billedDays} Days` },
+                ]}
+                grand={{
+                  label: `Grand Total (${inr(perDaySubtotal)} × ${billedDays} Days)`,
+                  value: inr(rentTotal),
+                }}
+                deductions={[
+                  { label: "(+) Security Deposit:", value: inr(quote.security_deposit) },
+                  {
+                    label: settlement ? "(-) Advance Amount:" : "(-) Advance Required:",
+                    value: inr(settlement ? advancePaid : advanceDue),
+                  },
+                ]}
+                netLabel={settlement ? "Net Payable Amount" : "Estimated Balance"}
+                netValue={inr(balance)}
+                postRows={
+                  settlement && quote.status === "closed"
+                    ? [
+                        { label: "Client-Issued Amount:", value: inr(quote.settled_amount) },
+                        {
+                          label: "Concession Allowed:",
+                          value: `− ${inr(quote.settlement_waived)}`,
+                        },
+                      ]
+                    : []
+                }
+                words={amountInWords(balance)}
+              />
             )}
 
-
-            <div className="space-y-1.5 text-sm">
-              {receipt ? (
-                <>
-                  <Row label="Rental Estimate" value={inr(rentTotal)} />
-                  <Row label="Security Deposit" value={inr(quote.security_deposit)} />
-                  <Total label="Advance Received" value={inr(advancePaid)} />
-                  <Row label="Balance Payable Later" value={inr(balance)} />
-                </>
-              ) : advanceNote ? (
-                <>
-                  <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
-                  <Row label="Rental Duration" value={`${billedDays} day(s)`} />
-                  <Row
-                    label={
-                      billedDays > 1
-                        ? `Rental Estimate (${inr(perDaySubtotal)}/day × ${billedDays} days)`
-                        : "Rental Estimate (1 day)"
-                    }
-                    value={inr(rentTotal)}
-                  />
-                  <Row label="Security Deposit" value={inr(quote.security_deposit)} />
-                  <Total label="Advance Payable Now" value={inr(advanceDue)} />
-                </>
-              ) : (
-                <>
-                  <Row label="Per Day Subtotal (all items · 1 day)" value={inr(perDaySubtotal)} />
-                  <Row label="Rental Duration" value={`${billedDays} day(s)`} />
-                  <Row
-                    label={
-                      billedDays > 1
-                        ? `Rental Subtotal (${inr(perDaySubtotal)}/day × ${billedDays} days)`
-                        : "Rental Subtotal (1 day)"
-                    }
-                    value={inr(rentTotal)}
-                  />
-                  <Row label="Security Deposit" value={inr(quote.security_deposit)} />
-                  <Row
-                    label={settlement ? "Advance Adjusted" : "Advance Required"}
-                    value={`− ${inr(settlement ? advancePaid : advanceDue)}`}
-                  />
-                  <Total
-                    label={settlement ? "Net Balance Due" : "Estimated Balance"}
-                    value={inr(balance)}
-                  />
-                  {settlement && quote.status === "closed" && (
-                    <>
-                      <Row label="Client-Issued Amount" value={inr(quote.settled_amount)} />
-                      <Row
-                        label="Concession Allowed"
-                        value={`− ${inr(quote.settlement_waived)}`}
-                      />
-                      <Total label="Amount Settled & Closed" value={inr(quote.settled_amount)} />
-                    </>
-                  )}
-                </>
-              )}
-              <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
-                {amountInWords(receipt ? advancePaid : advanceNote ? advanceDue : balance)}
-              </p>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-                Non-GST rental document
-              </p>
-            </div>
-          </section>
+            <PaymentCards
+              showQr={!receipt}
+              payLine={
+                !receipt && qrAmount > 0
+                  ? `Pay ${inr(qrAmount)} and share the UTR / screenshot.`
+                  : undefined
+              }
+            />
+          </div>
         ) : (
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground print:text-black">
             Set copy — pricing intentionally omitted. Verify every item on dispatch and return.
           </p>
         )}
 
-
         {quote.admin_notes && (
-          <p className="border-t border-border pt-3 text-xs text-muted-foreground print:text-black">
+          <p className="text-xs text-muted-foreground print:text-black">
             <span className="font-semibold text-foreground print:text-black">Notes: </span>
             {quote.admin_notes}
           </p>
@@ -634,26 +514,11 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
           </p>
         )}
 
-        <section className="grid gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary print:text-black">
-              Rental Terms &amp; Conditions
-            </p>
-            <ol className="mt-2 list-decimal space-y-1 pl-4 text-[10px] leading-relaxed text-muted-foreground print:text-black">
-              {RENTAL_TERMS.map((t) => (
-                <li key={t}>{t}</li>
-              ))}
-            </ol>
-          </div>
-          <div className="flex flex-col justify-end gap-6 text-center text-[11px] text-muted-foreground print:text-black">
-            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
-              {kind === "challan" ? "Received By (Production)" : "Client Acknowledgement"}
-            </div>
-            <div className="w-44 border-t border-dashed border-primary/50 pt-2 print:border-black">
-              For {COMPANY_INFO.name}
-            </div>
-          </div>
-        </section>
+        <TermsCard />
+        <SignatureStrip
+          clientLabel={kind === "challan" ? "Received By (Production)" : "Client Signature"}
+        />
+
       </article>
     </div>
   );
