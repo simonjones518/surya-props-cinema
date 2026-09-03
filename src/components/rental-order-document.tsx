@@ -140,8 +140,8 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
         <SignatureStrip />
       </div>
 
-      {order.notes && <p className="mt-4 text-xs text-neutral-600">Notes: {order.notes}</p>}
-      <p className="mt-6 text-center text-[11px] text-neutral-500">
+      {order.notes && <p className="mt-2 text-xs text-neutral-600">Notes: {order.notes}</p>}
+      <p className="mt-3 text-center text-[11px] text-neutral-500">
         Non-GST rental bill · Props remain the property of {BUSINESS.name} until returned and inspected.
       </p>
     </div>
