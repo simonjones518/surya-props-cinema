@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
@@ -10,7 +10,6 @@ import {
   SummaryCard,
   TermsCard,
 } from "@/components/document-blocks";
-import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
 import type { QuoteRequest } from "@/lib/types";
 
 /** The five standardised rental documents. */
@@ -43,24 +42,6 @@ export const DOC_LABEL: Record<QuoteDocKind, string> = {
   labour: "Labour Invoice",
 };
 
-function useUpiQr(amount: number, note: string, enabled: boolean) {
-  const [src, setSrc] = useState<string | null>(null);
-  useEffect(() => {
-    if (!enabled || amount <= 0) {
-      setSrc(null);
-      return;
-    }
-    let alive = true;
-    void Promise.resolve(upiQrAsset.url)
-      .then((url) => alive && setSrc(url))
-      .catch(() => alive && setSrc(null));
-    return () => {
-      alive = false;
-    };
-  }, [amount, note, enabled]);
-  return src;
-}
-
 /**
  * Crew daily labour invoice — billed completely separately from the prop
  * rental invoice, day one to closing day, with a per-day worker rate.
@@ -68,7 +49,6 @@ function useUpiQr(amount: number, note: string, enabled: boolean) {
 function LabourInvoice({ quote }: { quote: QuoteRequest }) {
   const closed = quote.labour_status === "closed";
   const payable = closed ? quote.labour_settled_amount : quote.labour_total;
-  const qr = useUpiQr(payable, `${quote.quote_code} Labour`, true);
   const docNo =
     quote.labour_invoice_no ?? docNumber("LAB", quote.id, quote.dispatch_at ?? quote.created_at);
 
@@ -264,7 +244,6 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
   const payNow = advanceNote ? advanceDue : settlement ? quote.balance_due : 0;
   const qrAmount = payNow > 0 ? payNow : balance;
   /** A receipt acknowledges money already received — it must never ask for payment. */
-  const qr = useUpiQr(qrAmount, `${quote.quote_code} ${DOC_LABEL[kind]}`, priced && !receipt);
 
 
 
