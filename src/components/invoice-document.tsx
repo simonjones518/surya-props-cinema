@@ -82,15 +82,15 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
       <article
         id="print-area"
-        className="space-y-2 rounded-xl border border-primary/25 bg-card p-4 print:border-0 print:bg-white print:text-black"
+        className="space-y-1.5 rounded-xl border border-primary/25 bg-card p-3 print:border-0 print:bg-white print:p-2 print:text-black"
       >
-        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
+        <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-2">
           <div>
-            <BrandLogo className="h-16" />
+            <BrandLogo className="h-12" />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
               {COMPANY_INFO.tagline}
             </p>
-            <p className="mt-2 max-w-xs text-[11px] leading-relaxed text-muted-foreground print:text-black">
+            <p className="mt-1 max-w-xs text-[11px] leading-snug text-muted-foreground print:text-black">
               {COMPANY_INFO.warehouse}
             </p>
             <p className="text-[11px] text-muted-foreground print:text-black">
@@ -171,9 +171,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </tbody>
         </table>
 
-        <div className="border-t border-primary/30 print:border-black" />
-
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <SummaryCard
             rows={[
               { label: "Per Day Total:", value: inr(perDaySubtotal) },

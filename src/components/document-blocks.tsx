@@ -26,41 +26,44 @@ export function SummaryCard({
   words?: string;
 }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-primary/35 print:border-black">
+    <section className="overflow-hidden rounded-lg border border-primary/35 print:border-black">
       <div>
         {rows.map((r) => (
-          <div key={r.label} className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm">
+          <div key={r.label} className="flex items-center justify-between gap-3 px-2.5 py-px text-[13px] leading-tight">
             <span className="text-muted-foreground print:text-black">{r.label}</span>
             <span className="font-semibold">{r.value}</span>
           </div>
         ))}
         {grand && (
-          <div className="flex items-center justify-between gap-4 px-3 py-1">
-            <span className="text-sm font-bold uppercase tracking-wide text-foreground print:text-black">
+          <div className="flex items-center justify-between gap-3 px-2.5 py-0.5 leading-tight">
+            <span className="text-[13px] font-bold uppercase tracking-wide text-foreground print:text-black">
               {grand.label}
             </span>
-            <span className="font-display text-lg tracking-wide text-foreground print:text-black">
+            <span className="font-display text-base tracking-wide text-foreground print:text-black">
               {grand.value}
             </span>
           </div>
         )}
         {deductions.map((d) => (
-          <div key={d.label} className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm">
+          <div key={d.label} className="flex items-center justify-between gap-3 px-2.5 py-px text-[13px] leading-tight">
             <span className="text-muted-foreground print:text-black">{d.label}</span>
             <span className="font-semibold">{d.value}</span>
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between gap-4 bg-primary px-3 py-1 text-primary-foreground print:bg-black print:text-white">
-        <span className="text-xs font-bold uppercase tracking-[0.2em]">{netLabel}</span>
-        <span className="font-display text-lg tracking-wide">{netValue}</span>
+      <div
+        className="flex items-center justify-between gap-3 bg-primary px-2.5 py-0.5 text-primary-foreground"
+        style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
+      >
+        <span className="text-[11px] font-bold uppercase tracking-[0.2em]">{netLabel}</span>
+        <span className="font-display text-base tracking-wide">{netValue}</span>
       </div>
       {postRows.length > 0 && (
         <div>
           {postRows.map((r) => (
             <div
               key={r.label}
-              className="flex items-center justify-between gap-4 px-3 py-0.5 text-sm"
+              className="flex items-center justify-between gap-3 px-2.5 py-px text-[13px] leading-tight"
             >
               <span className="text-muted-foreground print:text-black">{r.label}</span>
               <span className="font-semibold">{r.value}</span>
@@ -69,7 +72,7 @@ export function SummaryCard({
         </div>
       )}
       {words && (
-        <p className="px-3 py-0.5 text-[10px] italic leading-tight text-muted-foreground print:text-black">
+        <p className="px-2.5 py-px text-[10px] italic leading-tight text-muted-foreground print:text-black">
           {words} · Non-GST rental document
         </p>
       )}
@@ -85,12 +88,12 @@ export function PaymentCards({
   payLine?: string | undefined;
 }) {
   return (
-    <section className="grid gap-2 sm:grid-cols-2">
-      <div className="rounded-xl border border-primary/35 p-2.5 print:border-black">
-        <p className="border-b border-primary/25 pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
+    <section className="grid gap-1.5 sm:grid-cols-2">
+      <div className="rounded-lg border border-primary/35 p-2 print:border-black">
+        <p className="border-b border-primary/25 pb-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
           Bank Details
         </p>
-        <dl className="mt-1 space-y-px text-[11px] leading-tight text-muted-foreground print:text-black">
+        <dl className="mt-0.5 space-y-px text-[11px] leading-tight text-muted-foreground print:text-black">
           <BankRow label="Bank Name" value="AXIS BANK" />
           <BankRow label="Account Name" value={COMPANY_INFO.accountName} />
           <BankRow label="Account No" value={COMPANY_INFO.accountNumber} />
@@ -99,11 +102,11 @@ export function PaymentCards({
           <BankRow label="PAN No" value={COMPANY_INFO.pan} />
         </dl>
       </div>
-      <div className="rounded-xl border border-primary/35 p-2.5 print:border-black">
-        <p className="border-b border-primary/25 pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
+      <div className="rounded-lg border border-primary/35 p-2 print:border-black">
+        <p className="border-b border-primary/25 pb-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
           UPI &amp; Quick Payment
         </p>
-        <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="mt-0.5 flex items-center justify-between gap-2">
           <div className="text-[11px] leading-tight text-muted-foreground print:text-black">
             <p className="font-mono">
               <span className="font-bold text-foreground print:text-black">UPI ID: </span>
@@ -114,14 +117,14 @@ export function PaymentCards({
               {COMPANY_INFO.upiPhone}
             </p>
             {payLine && (
-              <p className="mt-0.5 font-semibold text-primary print:text-black">{payLine}</p>
+              <p className="mt-px font-semibold text-primary print:text-black">{payLine}</p>
             )}
           </div>
           {showQr && (
             <img
               src={upiQrAsset.url}
               alt="UPI payment QR code"
-              className="size-20 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
+              className="size-16 shrink-0 rounded-md border border-primary/40 bg-white p-0.5 print:border-black"
             />
           )}
         </div>
@@ -143,11 +146,11 @@ function BankRow({ label, value }: { label: string; value: string }) {
 
 export function TermsCard({ text }: { text?: string }) {
   return (
-    <section className="rounded-xl border border-primary/35 p-2.5 print:border-black">
+    <section className="rounded-lg border border-primary/35 p-2 print:border-black">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:text-black">
         Terms &amp; Conditions
       </p>
-      <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground print:text-black">
+      <p className="mt-px text-[11px] leading-snug text-muted-foreground print:text-black">
         {text ??
           `The production team assumes full financial responsibility for any repair, loss, or total destruction of rented props during the tenure, based on the full replacement or market restoration value determined by ${COMPANY_INFO.name}.`}
       </p>
@@ -157,9 +160,9 @@ export function TermsCard({ text }: { text?: string }) {
 
 export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLabel?: string }) {
   return (
-    <section className="grid gap-8 pt-2 sm:grid-cols-2">
+    <section className="grid gap-4 pt-1 sm:grid-cols-2">
       <div className="text-center">
-        <div className="h-10" />
+        <div className="h-8" />
         <div className="border-t border-dashed border-primary/50 pt-1 print:border-black">
           <p className="text-[11px] font-bold text-foreground print:text-black">{clientLabel}</p>
           <p className="text-[10px] text-muted-foreground print:text-black">
@@ -171,7 +174,7 @@ export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLab
         <img
           src={signatureAsset.url}
           alt="Authorised signature"
-          className="mx-auto h-10 object-contain"
+          className="mx-auto h-8 object-contain"
         />
         <div className="border-t border-dashed border-primary/50 pt-1 print:border-black">
           <p className="text-[11px] font-bold uppercase text-foreground print:text-black">
