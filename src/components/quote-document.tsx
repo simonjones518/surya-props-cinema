@@ -182,7 +182,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
 
 
-        <div className="mt-4 space-y-3 border-t border-border pt-4">
+        <div className="mt-2 space-y-2 border-t border-border pt-2">
           <SummaryCard
             rows={[
               { label: "Labour Charges Raised:", value: inr(quote.labour_total) },
@@ -423,7 +423,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         <div className="border-t border-primary/30 print:border-black" />
 
         {priced ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {receipt ? (
               <SummaryCard
                 rows={[

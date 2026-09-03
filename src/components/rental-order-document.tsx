@@ -115,7 +115,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
         </tbody>
       </table>
 
-      <div className="mt-6 space-y-3">
+      <div className="mt-2 space-y-2">
         <SummaryCard
           rows={[
             { label: "Per Day Total:", value: inr(perDaySubtotal) },
