@@ -3,7 +3,13 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
-import { COMPANY_INFO, RENTAL_TERMS, amountInWords, docNumber } from "@/lib/company";
+import { COMPANY_INFO, amountInWords, docNumber } from "@/lib/company";
+import {
+  PaymentCards,
+  SignatureStrip,
+  SummaryCard,
+  TermsCard,
+} from "@/components/document-blocks";
 import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
 import type { QuoteRequest } from "@/lib/types";
 
@@ -196,64 +202,30 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
 
 
-        <section className="mt-4 grid gap-5 border-t border-border pt-4 sm:grid-cols-2">
-          <div className="space-y-1.5 text-sm">
-            <Row label="Labour Charges Raised" value={inr(quote.labour_total)} />
-            {closed && (
-              <>
-                <Row label="Production Approved" value={inr(quote.labour_settled_amount)} />
-                <Row
-                  label="Concession Allowed"
-                  value={`− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`}
-                />
-              </>
-            )}
-            <Total label={closed ? "Amount Settled" : "Labour Payable"} value={inr(payable)} />
-            <p className="pt-1 text-[11px] italic text-muted-foreground print:text-black">
-              {amountInWords(payable)}
-            </p>
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground print:text-black">
-              Labour / manpower charges only — prop rental billed separately
-            </p>
-          </div>
-
-          <div className="flex items-start gap-4 rounded-lg border border-primary/40 p-3 print:border-black">
-            {qr && (
-              <img
-                src={qr}
-                alt="UPI payment QR code"
-                className="size-24 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
-              />
-            )}
-            <div className="text-[11px] leading-relaxed text-muted-foreground print:text-black">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-primary print:text-black">
-                Payment Details
-              </p>
-              <p className="font-mono text-foreground print:text-black">UPI: {COMPANY_INFO.upiId}</p>
-              <p>{COMPANY_INFO.accountName}</p>
-              <p>
-                {COMPANY_INFO.bankName} · A/C {COMPANY_INFO.accountNumber} · IFSC{" "}
-                {COMPANY_INFO.ifsc}
-              </p>
-              <p>PhonePe / other UPI apps: {COMPANY_INFO.upiPhone} · PAN: {COMPANY_INFO.pan}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="mt-4 grid items-end gap-6 border-t border-border pt-4 sm:grid-cols-[1fr_auto]">
-          <p className="text-[10px] leading-relaxed text-muted-foreground print:text-black">
-            Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew
-            for the dates listed above. Overtime beyond 12 hours a day is chargeable separately.
-          </p>
-          <div className="flex gap-8 text-center text-[11px] text-muted-foreground print:text-black">
-            <div className="w-40 border-t border-dashed border-primary/50 pt-2 print:border-black">
-              Client Acknowledgement
-            </div>
-            <div className="w-40 border-t border-dashed border-primary/50 pt-2 print:border-black">
-              For {COMPANY_INFO.name}
-            </div>
-          </div>
-        </section>
+        <div className="mt-4 space-y-3 border-t border-border pt-4">
+          <SummaryCard
+            rows={[
+              { label: "Labour Charges Raised:", value: inr(quote.labour_total) },
+              ...(closed
+                ? [
+                    { label: "Production Approved:", value: inr(quote.labour_settled_amount) },
+                    {
+                      label: "Concession Allowed:",
+                      value: `− ${inr(Math.max(0, quote.labour_total - quote.labour_settled_amount))}`,
+                    },
+                  ]
+                : []),
+            ]}
+            netLabel={closed ? "Amount Settled" : "Labour Payable"}
+            netValue={inr(payable)}
+            words={amountInWords(payable)}
+          />
+          <PaymentCards
+            payLine={payable > 0 ? `Pay ${inr(payable)} and share the UTR / screenshot.` : undefined}
+          />
+          <TermsCard text="Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew for the dates listed above. Overtime beyond 12 hours a day is chargeable separately. Prop rental is billed separately." />
+          <SignatureStrip clientLabel="Client Signature" />
+        </div>
 
       </article>
     </div>
