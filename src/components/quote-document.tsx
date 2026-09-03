@@ -296,6 +296,8 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
 
 
+  const [showShootDays, setShowShootDays] = useState(true);
+
   const docNo =
     receipt && quote.advance_receipt_no
       ? quote.advance_receipt_no
