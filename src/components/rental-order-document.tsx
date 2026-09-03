@@ -56,7 +56,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
         </p>
       </header>
 
-      <section className="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+      <section className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
         <div>
           <p className="font-bold uppercase text-neutral-500">Client</p>
           <p className="font-semibold">{order.production_house || order.client_name}</p>
