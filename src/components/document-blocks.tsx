@@ -15,10 +15,12 @@ export function SummaryCard({
   netLabel,
   netValue,
   words,
+  postRows = [],
 }: {
   rows: { label: string; value: string }[];
   grand?: { label: string; value: string };
   deductions?: { label: string; value: string }[];
+  postRows?: { label: string; value: string }[];
   netLabel: string;
   netValue: string;
   words?: string;
@@ -44,7 +46,7 @@ export function SummaryCard({
         )}
         {deductions.map((d) => (
           <div key={d.label} className="flex items-center justify-between gap-4 px-4 py-1.5 text-sm">
-            <span className="text-muted-foreground print:text-black">(-) {d.label}</span>
+            <span className="text-muted-foreground print:text-black">{d.label}</span>
             <span className="font-semibold">{d.value}</span>
           </div>
         ))}
@@ -53,6 +55,19 @@ export function SummaryCard({
         <span className="text-xs font-bold uppercase tracking-[0.2em]">{netLabel}</span>
         <span className="font-display text-xl tracking-wide">{netValue}</span>
       </div>
+      {postRows.length > 0 && (
+        <div className="divide-y divide-primary/20 print:divide-black/30">
+          {postRows.map((r) => (
+            <div
+              key={r.label}
+              className="flex items-center justify-between gap-4 px-4 py-1.5 text-sm"
+            >
+              <span className="text-muted-foreground print:text-black">{r.label}</span>
+              <span className="font-semibold">{r.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
       {words && (
         <p className="px-4 py-1.5 text-[11px] italic text-muted-foreground print:text-black">
           {words} · Non-GST rental document
