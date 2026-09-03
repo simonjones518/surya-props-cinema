@@ -88,12 +88,12 @@ export function PaymentCards({
   payLine?: string | undefined;
 }) {
   return (
-    <section className="grid gap-2 sm:grid-cols-2">
-      <div className="rounded-xl border border-primary/35 p-2.5 print:border-black">
-        <p className="border-b border-primary/25 pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
+    <section className="grid gap-1.5 sm:grid-cols-2">
+      <div className="rounded-lg border border-primary/35 p-2 print:border-black">
+        <p className="border-b border-primary/25 pb-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
           Bank Details
         </p>
-        <dl className="mt-1 space-y-px text-[11px] leading-tight text-muted-foreground print:text-black">
+        <dl className="mt-0.5 space-y-px text-[11px] leading-tight text-muted-foreground print:text-black">
           <BankRow label="Bank Name" value="AXIS BANK" />
           <BankRow label="Account Name" value={COMPANY_INFO.accountName} />
           <BankRow label="Account No" value={COMPANY_INFO.accountNumber} />
@@ -102,11 +102,11 @@ export function PaymentCards({
           <BankRow label="PAN No" value={COMPANY_INFO.pan} />
         </dl>
       </div>
-      <div className="rounded-xl border border-primary/35 p-2.5 print:border-black">
-        <p className="border-b border-primary/25 pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
+      <div className="rounded-lg border border-primary/35 p-2 print:border-black">
+        <p className="border-b border-primary/25 pb-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:border-black print:text-black">
           UPI &amp; Quick Payment
         </p>
-        <div className="mt-1 flex items-center justify-between gap-2">
+        <div className="mt-0.5 flex items-center justify-between gap-2">
           <div className="text-[11px] leading-tight text-muted-foreground print:text-black">
             <p className="font-mono">
               <span className="font-bold text-foreground print:text-black">UPI ID: </span>
@@ -117,14 +117,14 @@ export function PaymentCards({
               {COMPANY_INFO.upiPhone}
             </p>
             {payLine && (
-              <p className="mt-0.5 font-semibold text-primary print:text-black">{payLine}</p>
+              <p className="mt-px font-semibold text-primary print:text-black">{payLine}</p>
             )}
           </div>
           {showQr && (
             <img
               src={upiQrAsset.url}
               alt="UPI payment QR code"
-              className="size-20 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
+              className="size-16 shrink-0 rounded-md border border-primary/40 bg-white p-0.5 print:border-black"
             />
           )}
         </div>
