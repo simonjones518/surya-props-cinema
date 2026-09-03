@@ -467,7 +467,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
                     value: inr(settlement ? advancePaid : advanceDue),
                   },
                 ]}
-                netLabel={settlement ? "Net Payable Amount" : "Estimated Balance"}
+                netLabel={settlement ? "N E T PAYA B L E A M O U N T" : "Estimated Balance"}
                 netValue={inr(balance)}
                 postRows={
                   settlement && quote.status === "closed"
