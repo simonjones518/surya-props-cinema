@@ -314,9 +314,22 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{meta.title}</p>
-        <Button variant="outline" size="sm" onClick={() => window.print()}>
-          <Printer className="size-4" /> Print / Save PDF
-        </Button>
+        <div className="flex flex-wrap items-center gap-3">
+          {shootDays.length > 0 && (
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showShootDays}
+                onChange={(e) => setShowShootDays(e.target.checked)}
+                className="size-4 accent-primary"
+              />
+              Show Shoot Days Chargeable
+            </label>
+          )}
+          <Button variant="outline" size="sm" onClick={() => window.print()}>
+            <Printer className="size-4" /> Print / Save PDF
+          </Button>
+        </div>
       </div>
 
       <article
