@@ -65,7 +65,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
       <article
         id="print-area"
-        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-2 rounded-xl border border-primary/25 bg-card p-4 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
@@ -287,7 +287,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
       <article
         id="print-area"
-        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-2 rounded-xl border border-primary/25 bg-card p-4 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
