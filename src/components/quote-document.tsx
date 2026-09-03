@@ -65,7 +65,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
       <article
         id="print-area"
-        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-2 rounded-xl border border-primary/25 bg-card p-4 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
@@ -182,7 +182,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
 
 
 
-        <div className="mt-4 space-y-3 border-t border-border pt-4">
+        <div className="mt-2 space-y-2 border-t border-border pt-2">
           <SummaryCard
             rows={[
               { label: "Labour Charges Raised:", value: inr(quote.labour_total) },
@@ -287,7 +287,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
 
       <article
         id="print-area"
-        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-2 rounded-xl border border-primary/25 bg-card p-4 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
@@ -423,7 +423,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
         <div className="border-t border-primary/30 print:border-black" />
 
         {priced ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {receipt ? (
               <SummaryCard
                 rows={[

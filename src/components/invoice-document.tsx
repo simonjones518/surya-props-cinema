@@ -82,7 +82,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
       <article
         id="print-area"
-        className="space-y-3 rounded-xl border border-primary/25 bg-card p-6 print:border-0 print:bg-white print:text-black"
+        className="space-y-2 rounded-xl border border-primary/25 bg-card p-4 print:border-0 print:bg-white print:text-black"
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
@@ -173,7 +173,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
 
         <div className="border-t border-primary/30 print:border-black" />
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <SummaryCard
             rows={[
               { label: "Per Day Total:", value: inr(perDaySubtotal) },
