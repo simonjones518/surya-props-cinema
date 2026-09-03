@@ -31,7 +31,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
   return (
     <div
       id="print-area"
-      className="mx-auto max-w-3xl rounded-xl border border-primary/25 bg-white p-8 text-black shadow-cine print:border-0 print:shadow-none"
+      className="mx-auto max-w-3xl rounded-xl border border-primary/25 bg-white p-4 text-black shadow-cine print:border-0 print:p-2 print:shadow-none"
     >
       <div className="flex items-start justify-between gap-4 print:hidden">
         <p className="text-xs font-bold uppercase tracking-[0.3em] text-neutral-500">
@@ -47,11 +47,11 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
         </div>
       </div>
 
-      <header className="mt-6 border-b-2 border-black pb-4">
-        <BrandLogo className="h-16" />
+      <header className="mt-4 border-b-2 border-black pb-2">
+        <BrandLogo className="h-12" />
         <p className="text-sm text-neutral-700">{BUSINESS.address}</p>
         <p className="text-sm text-neutral-700">Contact: {BUSINESS.phone}</p>
-        <p className="mt-3 text-lg font-bold uppercase">
+        <p className="mt-2 text-lg font-bold uppercase">
           {settled ? "Props Rental Invoice" : "Estimated Rental Delivery Challan"}
         </p>
       </header>
