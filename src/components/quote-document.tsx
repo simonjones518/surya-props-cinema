@@ -418,7 +418,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
           </div>
         </section>
 
-        {shootDays.length > 0 && (
+        {showShootDays && shootDays.length > 0 && (
           <section className="rounded-lg border border-primary/25 px-3 py-2 print:border-black">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
               Shooting Days Chargeable ({shootDays.length})
