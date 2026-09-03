@@ -129,7 +129,7 @@ export function RentalOrderDocument({ order, onClose }: { order: RentalOrder; on
             { label: "(+) Security Deposit (refundable):", value: inr(order.security_deposit) },
             { label: "(-) Advance Paid:", value: inr(order.advance_received) },
           ]}
-          netLabel={balance >= 0 ? "Net Payable Amount" : "Refundable To Client"}
+          netLabel={balance >= 0 ? "N E T PAYA B L E A M O U N T" : "Refundable To Client"}
           netValue={inr(Math.abs(balance))}
           words={amountInWords(balance)}
         />

@@ -52,7 +52,7 @@ export function SummaryCard({
         ))}
       </div>
       <div
-        className="flex items-center justify-between gap-3 bg-primary px-2.5 py-0.5 text-primary-foreground"
+        className="flex items-center justify-between gap-3 bg-primary px-2.5 py-0.5 text-primary-foreground print:bg-primary print:text-primary-foreground"
         style={{ printColorAdjust: "exact", WebkitPrintColorAdjust: "exact" }}
       >
         <span className="text-[11px] font-bold uppercase tracking-[0.2em]">{netLabel}</span>

@@ -191,7 +191,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
               { label: "(+) Security Deposit:", value: inr(invoice.security_deposit) },
               { label: "(-) Advance Amount:", value: inr(invoice.advance_received) },
             ]}
-            netLabel={isQuote ? "Estimated Balance" : "Net Payable Amount"}
+            netLabel={isQuote ? "Estimated Balance" : "N E T PAYA B L E A M O U N T"}
             netValue={inr(invoice.balance_payable)}
             postRows={
               issued !== null
