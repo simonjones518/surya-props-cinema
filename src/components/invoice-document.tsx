@@ -65,12 +65,24 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
     0,
   );
   const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
+  const [showShootDays, setShowShootDays] = useState(true);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{title}</p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          {shootDates.length > 0 && (
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={showShootDays}
+                onChange={(e) => setShowShootDays(e.target.checked)}
+                className="size-4 accent-primary"
+              />
+              Show Shoot Days Chargeable
+            </label>
+          )}
           {onClose && (
             <Button variant="outline" size="sm" onClick={onClose}>
               <X className="size-4" /> Close
@@ -128,7 +140,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </div>
         </section>
 
-        {shootDates.length > 0 && (
+        {showShootDays && shootDates.length > 0 && (
           <section className="rounded-lg border border-primary/25 px-3 py-2 print:border-black">
             <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-primary print:text-black">
               Shooting Days Chargeable ({shootDates.length})
