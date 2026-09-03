@@ -65,6 +65,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
     0,
   );
   const qr = useUpiQr(invoice.balance_payable, `${invoice.invoice_number} ${title}`);
+  const [showShootDays, setShowShootDays] = useState(true);
 
   return (
     <div className="space-y-5">
