@@ -171,9 +171,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </tbody>
         </table>
 
-        <div className="border-t border-primary/30 print:border-black" />
-
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <SummaryCard
             rows={[
               { label: "Per Day Total:", value: inr(perDaySubtotal) },
