@@ -87,10 +87,12 @@ export function SummaryCard({
 
 export function PaymentCards({
   showQr = true,
-  payLine,
+  profile = DEFAULT_COMPANY_PROFILE,
 }: {
   showQr?: boolean;
+  /** Ignored — kept so existing callers keep compiling. */
   payLine?: string | undefined;
+  profile?: CompanyProfile;
 }) {
   return (
     <section className="grid gap-1.5 sm:grid-cols-2">
@@ -99,12 +101,13 @@ export function PaymentCards({
           Bank Details
         </p>
         <dl className="mt-0.5 space-y-px text-[11px] leading-tight text-muted-foreground print:text-black">
-          <BankRow label="Bank Name" value="AXIS BANK" />
-          <BankRow label="Account Name" value={COMPANY_INFO.accountName} />
-          <BankRow label="Account No" value={COMPANY_INFO.accountNumber} />
-          <BankRow label="IFSC Code" value={COMPANY_INFO.ifsc} />
-          <BankRow label="Branch" value="JUBILEEHILLS" />
-          <BankRow label="PAN No" value={COMPANY_INFO.pan} />
+          <BankRow label="Bank Name" value={profile.bank_name} />
+          <BankRow label="Account Name" value={profile.account_name} />
+          <BankRow label="Account No" value={profile.account_number} />
+          <BankRow label="IFSC Code" value={profile.ifsc} />
+          <BankRow label="Branch" value={profile.branch} />
+          {profile.pan && <BankRow label="PAN No" value={profile.pan} />}
+          {profile.gstin && <BankRow label="GSTIN" value={profile.gstin} />}
         </dl>
       </div>
       <div className="rounded-lg border border-primary/35 p-2 print:border-black">
@@ -115,21 +118,18 @@ export function PaymentCards({
           <div className="text-[11px] leading-tight text-muted-foreground print:text-black">
             <p className="font-mono">
               <span className="font-bold text-foreground print:text-black">UPI ID: </span>
-              {COMPANY_INFO.upiId}
+              {profile.upi_id}
             </p>
             <p>
               <span className="font-bold text-foreground print:text-black">GPay / PhonePe: </span>
-              {COMPANY_INFO.upiPhone}
+              {profile.upi_phone}
             </p>
-            {payLine && (
-              <p className="mt-px font-semibold text-primary print:text-black">{payLine}</p>
-            )}
           </div>
-          {showQr && (
+          {showQr && profile.qr_url && (
             <img
-              src={upiQrAsset.url}
+              src={profile.qr_url}
               alt="UPI payment QR code"
-              className="size-16 shrink-0 rounded-md border border-primary/40 bg-white p-0.5 print:border-black"
+              className="size-28 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
             />
           )}
         </div>
@@ -137,6 +137,7 @@ export function PaymentCards({
     </section>
   );
 }
+
 
 function BankRow({ label, value }: { label: string; value: string }) {
   return (
