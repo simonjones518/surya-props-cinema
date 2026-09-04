@@ -96,6 +96,16 @@ export const api = {
   getPropRequests: () => fetchPropRequests() as Promise<PropRequest[]>,
   getGodowns: () => fetchGodowns() as Promise<Godown[]>,
   getRacks: () => fetchRacks() as Promise<Rack[]>,
+  saveGodown: (input: { name: string; location_code?: string }) =>
+    saveGodownFn({ data: input }) as Promise<Godown>,
+  updateGodown: (id: number, patch: { name?: string; location_code?: string }) =>
+    updateGodownFn({ data: { id, patch } }) as Promise<Godown>,
+  deleteGodown: (id: number) => deleteGodownFn({ data: { id } }),
+  saveRack: (input: { godown_id: number; rack_name: string }) =>
+    saveRackFn({ data: input }) as Promise<Rack>,
+  updateRack: (id: number, rack_name: string) =>
+    updateRackFn({ data: { id, rack_name } }) as Promise<Rack>,
+  deleteRack: (id: number) => deleteRackFn({ data: { id } }),
   getRentalOrders: () => fetchRentalOrders() as Promise<RentalOrder[]>,
   createRentalOrder: (draft: RentalOrderDraft) =>
     createRentalOrderFn({ data: draft }) as Promise<RentalOrder>,
