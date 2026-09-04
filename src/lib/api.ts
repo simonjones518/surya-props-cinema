@@ -28,6 +28,9 @@ import {
   createPropRequestFn,
   createRentalOrderFn,
   deletePropFn,
+  saveCategoryFn,
+  updateCategoryFn,
+  deleteCategoryFn,
   fetchBookings,
   fetchCategories,
   fetchClients,
@@ -62,6 +65,11 @@ async function toBase64(file: File) {
  */
 export const api = {
   getCategories: () => fetchCategories() as Promise<Category[]>,
+  saveCategory: (input: { name: string; icon?: string; slug?: string }) =>
+    saveCategoryFn({ data: input }) as Promise<Category>,
+  updateCategory: (id: number, patch: { name?: string; icon?: string }) =>
+    updateCategoryFn({ data: { id, patch } }) as Promise<Category>,
+  deleteCategory: (id: number) => deleteCategoryFn({ data: { id } }),
   getProps: () => fetchProps() as Promise<Prop[]>,
   getClients: () => fetchClients() as Promise<Client[]>,
   getBookings: () => fetchBookings() as Promise<RentalBooking[]>,

@@ -756,3 +756,69 @@ export async function cancelRentalOrder(id: number) {
   if (propIds.length) await suryaDb.from("props").update({ status: "In-Stock" }).in("id", propIds);
   return { ok: true as const };
 }
+
+/* ---------- categories (admin only) ---------- */
+
+const slugify = (v: string) =>
+  v
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+export async function saveCategory(input: { name: string; icon?: string; slug?: string }) {
+  const name = input.name.trim();
+  if (!name) throw new Error("Category name is required.");
+  const slug = (input.slug?.trim() ? slugify(input.slug) : slugify(name)) || "category";
+  const { data: existing } = await suryaDb
+    .from("categories")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (existing) throw new Error("A category with this name already exists.");
+  const { data: top } = await suryaDb
+    .from("categories")
+    .select("id")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const nextId = top ? Number(top.id) + 1 : 1;
+  const { data, error } = await suryaDb
+    .from("categories")
+    .insert({ id: nextId, name, slug, icon: input.icon?.trim() || "Boxes" })
+    .select("id, name, slug, icon")
+    .single();
+  if (error) throw new Error(error.message);
+  return { ...data, id: Number(data.id) } as Category;
+}
+
+export async function updateCategory(
+  id: number,
+  patch: { name?: string; icon?: string },
+): Promise<Category> {
+  const body = {
+    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+    ...(patch.icon !== undefined ? { icon: patch.icon.trim() || "Boxes" } : {}),
+  };
+  const { data, error } = await suryaDb
+    .from("categories")
+    .update(body)
+    .eq("id", id)
+    .select("id, name, slug, icon")
+    .single();
+  if (error) throw new Error(error.message);
+  return { ...data, id: Number(data.id) } as Category;
+}
+
+export async function deleteCategory(id: number) {
+  const { count, error: countError } = await suryaDb
+    .from("props")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", id);
+  if (countError) throw new Error(countError.message);
+  if ((count ?? 0) > 0)
+    throw new Error(`Cannot delete — ${count} prop(s) are still tagged to this category.`);
+  const { error } = await suryaDb.from("categories").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true as const };
+}

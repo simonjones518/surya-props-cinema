@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, QrCode, RefreshCw, X } from "lucide-react";
@@ -37,8 +37,8 @@ export function StockModal({
   categories: Category[];
 }) {
   const [title, setTitle] = useState("");
-  const [categorySlug, setCategorySlug] = useState(categories[0]?.slug ?? "weapons");
-  const [serial, setSerial] = useState(() => nextSerial("weapons"));
+  const [categorySlug, setCategorySlug] = useState(categories[0]?.slug ?? "");
+  const [serial, setSerial] = useState(() => nextSerial(categories[0]?.slug ?? "prop"));
   const [dailyRate, setDailyRate] = useState(3500);
   const [replacement, setReplacement] = useState(150000);
   const [condition, setCondition] = useState<PropCondition>("Mint");
@@ -50,6 +50,13 @@ export function StockModal({
   const [uploading, setUploading] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
+  // Categories are managed in Settings → Prop Categories and load asynchronously.
+  useEffect(() => {
+    if (!categorySlug && categories.length) {
+      setCategorySlug(categories[0]!.slug);
+      setSerial(nextSerial(categories[0]!.slug));
+    }
+  }, [categories, categorySlug]);
   const godowns = useQuery({ queryKey: queryKeys.godowns, queryFn: api.getGodowns });
   const racks = useQuery({ queryKey: queryKeys.racks, queryFn: api.getRacks });
   const godownRacks = useMemo(
@@ -131,7 +138,7 @@ export function StockModal({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map((c) => (
@@ -141,6 +148,11 @@ export function StockModal({
                   ))}
                 </SelectContent>
               </Select>
+              {categories.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  No categories yet — add them in Settings → Prop Categories.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Condition</Label>
@@ -280,7 +292,7 @@ export function StockModal({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button disabled={!title || !specs.trim() || isPending} onClick={() => mutate()}>
+          <Button disabled={!title || !categorySlug || !specs.trim() || isPending} onClick={() => mutate()}>
             {isPending ? "Saving…" : "Save Prop"}
           </Button>
         </DialogFooter>

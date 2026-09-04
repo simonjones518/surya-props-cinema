@@ -206,3 +206,29 @@ export const cancelRentalOrderFn = createServerFn({ method: "POST" })
     await m.assertAdmin();
     return m.cancelRentalOrder(data.id);
   });
+
+/* ---------- categories (admin) ---------- */
+
+export const saveCategoryFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { name: string; icon?: string; slug?: string }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.saveCategory(data);
+  });
+
+export const updateCategoryFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; patch: { name?: string; icon?: string } }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.updateCategory(data.id, data.patch);
+  });
+
+export const deleteCategoryFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.deleteCategory(data.id);
+  });

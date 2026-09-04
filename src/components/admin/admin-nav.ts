@@ -136,11 +136,11 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   },
   {
     key: "settings",
-    label: "Company Profiles",
+    label: "Settings",
     short: "Settings",
     icon: Settings,
     group: "Settings",
-    hint: "Sister concerns, letterheads, bank and UPI details",
+    hint: "Company profiles, prop categories, bank and UPI details",
   },
 ];
 
