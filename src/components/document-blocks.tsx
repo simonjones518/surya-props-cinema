@@ -191,7 +191,7 @@ export function SignatureStrip({
       </div>
       <div className="text-center">
         <img
-          src={signatureAsset.url}
+          src={profile.signature_url || signatureAsset.url}
           alt="Authorised signature"
           className="mx-auto h-8 object-contain"
         />
