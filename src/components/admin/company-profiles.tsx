@@ -78,7 +78,7 @@ export function CompanyProfiles() {
     onError: (e: Error) => toast.error("Could not update default", { description: e.message }),
   });
 
-  const upload = async (file: File, field: "logo_url" | "qr_url") => {
+  const upload = async (file: File, field: "logo_url" | "qr_url" | "signature_url") => {
     try {
       const res = await uploadCompanyAssetFn({
         data: {
@@ -136,6 +136,13 @@ export function CompanyProfiles() {
               <div className="flex shrink-0 flex-col items-end gap-2">
                 {p.logo_url && (
                   <img src={p.logo_url} alt={`${p.name} logo`} className="h-10 w-auto object-contain" />
+                )}
+                {p.signature_url && (
+                  <img
+                    src={p.signature_url}
+                    alt="Authorised signature"
+                    className="h-8 w-auto object-contain"
+                  />
                 )}
                 {p.qr_url && (
                   <img src={p.qr_url} alt="UPI QR" className="size-12 rounded bg-white object-contain p-0.5" />
@@ -276,6 +283,14 @@ export function CompanyProfiles() {
                   value={editing.draft.qr_url}
                   onUrl={(v) => setEditing({ ...editing, draft: { ...editing.draft, qr_url: v } })}
                   onFile={(f) => void upload(f, "qr_url")}
+                />
+                <AssetField
+                  label="Authorised Signature"
+                  value={editing.draft.signature_url}
+                  onUrl={(v) =>
+                    setEditing({ ...editing, draft: { ...editing.draft, signature_url: v } })
+                  }
+                  onFile={(f) => void upload(f, "signature_url")}
                 />
               </div>
               <label className="sm:col-span-2 flex items-center gap-2 text-sm">
