@@ -46,6 +46,7 @@ import { FieldOpsLog } from "@/components/field-ops-log";
 import { FinanceLedger } from "@/components/finance-ledger";
 import { ClientsDirectory } from "@/components/admin/clients-directory";
 import { CompanyProfiles } from "@/components/admin/company-profiles";
+import { CategoryManager } from "@/components/admin/category-manager";
 
 import { inr, inrCompact, prettyDate } from "@/lib/format";
 import type { Invoice, Prop, RentalBooking, RentalOrder, RentalStatus } from "@/lib/types";
@@ -268,7 +269,12 @@ function AdminPage() {
       {tab === "field" && <FieldOpsLog />}
 
       {tab === "finance" && <FinanceLedger />}
-      {tab === "settings" && <CompanyProfiles />}
+      {tab === "settings" && (
+        <div className="space-y-8">
+          <CompanyProfiles />
+          <CategoryManager />
+        </div>
+      )}
 
 
       {tab === "orders" && (
