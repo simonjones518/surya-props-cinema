@@ -11,6 +11,10 @@ import {
   TermsCard,
 } from "@/components/document-blocks";
 import { readClientIssued } from "@/lib/invoice-settlement";
+import {
+  CompanyProfileSwitcher,
+  useDocumentProfile,
+} from "@/components/company-profile-switcher";
 import type { Invoice } from "@/lib/types";
 
 export const COMPANY = {
@@ -52,12 +56,18 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
     0,
   );
   const [showShootDays, setShowShootDays] = useState(true);
+  const { profile, profiles, selectProfile } = useDocumentProfile(invoice.invoice_number);
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{title}</p>
         <div className="flex flex-wrap items-center gap-3">
+          <CompanyProfileSwitcher
+            profiles={profiles}
+            value={profile.id}
+            onChange={selectProfile}
+          />
           {shootDates.length > 0 && (
             <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
               <input
@@ -86,15 +96,16 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-2">
           <div>
-            <BrandLogo className="h-12" />
+            <BrandLogo className="h-20" src={profile.logo_url} alt={`${profile.name} logo`} />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
-              {COMPANY_INFO.tagline}
+              {profile.tagline || profile.name}
             </p>
             <p className="mt-1 max-w-xs text-[11px] leading-snug text-muted-foreground print:text-black">
-              {COMPANY_INFO.warehouse}
+              {profile.address}
             </p>
             <p className="text-[11px] text-muted-foreground print:text-black">
-              {COMPANY_INFO.phone} · {COMPANY_INFO.email}
+              {profile.phone} · {profile.email}
+              {profile.gstin ? ` · GSTIN ${profile.gstin}` : ""}
             </p>
           </div>
           <div className="text-right">
@@ -211,13 +222,7 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
             words={amountInWords(issued ?? invoice.balance_payable)}
           />
 
-          <PaymentCards
-            payLine={
-              invoice.balance_payable > 0
-                ? `Pay ${inr(invoice.balance_payable)} and share the UTR / screenshot.`
-                : undefined
-            }
-          />
+          <PaymentCards profile={profile} />
         </div>
 
         {notes && (
@@ -227,8 +232,8 @@ export function InvoiceDocument({ invoice, onClose }: { invoice: Invoice; onClos
           </p>
         )}
 
-        <TermsCard />
-        <SignatureStrip />
+        <TermsCard profile={profile} />
+        <SignatureStrip profile={profile} />
 
       </article>
     </div>

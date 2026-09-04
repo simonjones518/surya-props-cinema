@@ -6,6 +6,7 @@ import {
   Gauge,
   HardHat,
   Inbox,
+  Settings,
   Truck,
   UserRound,
   Users,
@@ -24,14 +25,15 @@ export type AdminSectionKey =
   | "clients"
   | "staff"
   | "field"
-  | "finance";
+  | "finance"
+  | "settings";
 
 export type AdminSection = {
   key: AdminSectionKey;
   label: string;
   short: string;
   icon: typeof Gauge;
-  group: "Command" | "Operations" | "Warehouse" | "Finance" | "People";
+  group: "Command" | "Operations" | "Warehouse" | "Finance" | "People" | "Settings";
   hint: string;
 };
 
@@ -132,9 +134,24 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     group: "People",
     hint: "Dispatch logs and damage reports",
   },
+  {
+    key: "settings",
+    label: "Company Profiles",
+    short: "Settings",
+    icon: Settings,
+    group: "Settings",
+    hint: "Sister concerns, letterheads, bank and UPI details",
+  },
 ];
 
-export const ADMIN_GROUPS = ["Command", "Operations", "Warehouse", "Finance", "People"] as const;
+export const ADMIN_GROUPS = [
+  "Command",
+  "Operations",
+  "Warehouse",
+  "Finance",
+  "People",
+  "Settings",
+] as const;
 
 export const sectionOf = (key: AdminSectionKey) =>
   ADMIN_SECTIONS.find((s) => s.key === key) ?? ADMIN_SECTIONS[0]!;

@@ -1,6 +1,7 @@
 import { COMPANY_INFO } from "@/lib/company";
-import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
+import { DEFAULT_COMPANY_PROFILE, type CompanyProfile } from "@/lib/company-profiles";
 import signatureAsset from "@/assets/signature.png.asset.json";
+
 
 /**
  * Shared printable building blocks so every invoice, quotation, receipt and
@@ -87,10 +88,12 @@ export function SummaryCard({
 
 export function PaymentCards({
   showQr = true,
-  payLine,
+  profile = DEFAULT_COMPANY_PROFILE,
 }: {
   showQr?: boolean;
+  /** Ignored — kept so existing callers keep compiling. */
   payLine?: string | undefined;
+  profile?: CompanyProfile;
 }) {
   return (
     <section className="grid gap-1.5 sm:grid-cols-2">
@@ -99,12 +102,13 @@ export function PaymentCards({
           Bank Details
         </p>
         <dl className="mt-0.5 space-y-px text-[11px] leading-tight text-muted-foreground print:text-black">
-          <BankRow label="Bank Name" value="AXIS BANK" />
-          <BankRow label="Account Name" value={COMPANY_INFO.accountName} />
-          <BankRow label="Account No" value={COMPANY_INFO.accountNumber} />
-          <BankRow label="IFSC Code" value={COMPANY_INFO.ifsc} />
-          <BankRow label="Branch" value="JUBILEEHILLS" />
-          <BankRow label="PAN No" value={COMPANY_INFO.pan} />
+          <BankRow label="Bank Name" value={profile.bank_name} />
+          <BankRow label="Account Name" value={profile.account_name} />
+          <BankRow label="Account No" value={profile.account_number} />
+          <BankRow label="IFSC Code" value={profile.ifsc} />
+          <BankRow label="Branch" value={profile.branch} />
+          {profile.pan && <BankRow label="PAN No" value={profile.pan} />}
+          {profile.gstin && <BankRow label="GSTIN" value={profile.gstin} />}
         </dl>
       </div>
       <div className="rounded-lg border border-primary/35 p-2 print:border-black">
@@ -115,21 +119,18 @@ export function PaymentCards({
           <div className="text-[11px] leading-tight text-muted-foreground print:text-black">
             <p className="font-mono">
               <span className="font-bold text-foreground print:text-black">UPI ID: </span>
-              {COMPANY_INFO.upiId}
+              {profile.upi_id}
             </p>
             <p>
               <span className="font-bold text-foreground print:text-black">GPay / PhonePe: </span>
-              {COMPANY_INFO.upiPhone}
+              {profile.upi_phone}
             </p>
-            {payLine && (
-              <p className="mt-px font-semibold text-primary print:text-black">{payLine}</p>
-            )}
           </div>
-          {showQr && (
+          {showQr && profile.qr_url && (
             <img
-              src={upiQrAsset.url}
+              src={profile.qr_url}
               alt="UPI payment QR code"
-              className="size-16 shrink-0 rounded-md border border-primary/40 bg-white p-0.5 print:border-black"
+              className="size-28 shrink-0 rounded-md border border-primary/40 bg-white p-1 print:border-black"
             />
           )}
         </div>
@@ -137,6 +138,7 @@ export function PaymentCards({
     </section>
   );
 }
+
 
 function BankRow({ label, value }: { label: string; value: string }) {
   return (
@@ -149,7 +151,13 @@ function BankRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function TermsCard({ text }: { text?: string }) {
+export function TermsCard({
+  text,
+  profile = DEFAULT_COMPANY_PROFILE,
+}: {
+  text?: string;
+  profile?: CompanyProfile;
+}) {
   return (
     <section className="rounded-lg border border-primary/35 p-2 print:border-black">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary print:text-black">
@@ -157,13 +165,19 @@ export function TermsCard({ text }: { text?: string }) {
       </p>
       <p className="mt-px text-[11px] leading-snug text-muted-foreground print:text-black">
         {text ??
-          `The production team assumes full financial responsibility for any repair, loss, or total destruction of rented props during the tenure, based on the full replacement or market restoration value determined by ${COMPANY_INFO.name}.`}
+          `The production team assumes full financial responsibility for any repair, loss, or total destruction of rented props during the tenure, based on the full replacement or market restoration value determined by ${profile.name || COMPANY_INFO.name}.`}
       </p>
     </section>
   );
 }
 
-export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLabel?: string }) {
+export function SignatureStrip({
+  clientLabel = "Client Signature",
+  profile = DEFAULT_COMPANY_PROFILE,
+}: {
+  clientLabel?: string;
+  profile?: CompanyProfile;
+}) {
   return (
     <section className="grid gap-4 pt-1 sm:grid-cols-2">
       <div className="text-center">
@@ -183,7 +197,7 @@ export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLab
         />
         <div className="border-t border-dashed border-primary/50 pt-1 print:border-black">
           <p className="text-[11px] font-bold uppercase text-foreground print:text-black">
-            For {COMPANY_INFO.name}
+            For {profile.name || COMPANY_INFO.name}
           </p>
           <p className="text-[10px] text-muted-foreground print:text-black">
             Authorized Signature
@@ -193,3 +207,4 @@ export function SignatureStrip({ clientLabel = "Client Signature" }: { clientLab
     </section>
   );
 }
+

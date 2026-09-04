@@ -3,13 +3,17 @@ import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand-logo";
 import { inr, prettyDate } from "@/lib/format";
-import { COMPANY_INFO, amountInWords, docNumber } from "@/lib/company";
+import { amountInWords, docNumber } from "@/lib/company";
 import {
   PaymentCards,
   SignatureStrip,
   SummaryCard,
   TermsCard,
 } from "@/components/document-blocks";
+import {
+  CompanyProfileSwitcher,
+  useDocumentProfile,
+} from "@/components/company-profile-switcher";
 import type { QuoteRequest } from "@/lib/types";
 
 /** The five standardised rental documents. */
@@ -49,6 +53,7 @@ export const DOC_LABEL: Record<QuoteDocKind, string> = {
 function LabourInvoice({ quote }: { quote: QuoteRequest }) {
   const closed = quote.labour_status === "closed";
   const payable = closed ? quote.labour_settled_amount : quote.labour_total;
+  const { profile, profiles, selectProfile } = useDocumentProfile(quote.quote_code);
   const docNo =
     quote.labour_invoice_no ?? docNumber("LAB", quote.id, quote.dispatch_at ?? quote.created_at);
 
@@ -58,6 +63,7 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">
           Crew Daily Labour Invoice
         </p>
+        <CompanyProfileSwitcher profiles={profiles} value={profile.id} onChange={selectProfile} />
         <Button variant="outline" size="sm" onClick={() => window.print()}>
           <Printer className="size-4" /> Print / Save PDF
         </Button>
@@ -69,15 +75,15 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-2">
           <div>
-            <BrandLogo className="h-12" />
+            <BrandLogo className="h-20" src={profile.logo_url} alt={`${profile.name} logo`} />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
-              {COMPANY_INFO.tagline}
+              {profile.tagline || profile.name}
             </p>
             <p className="mt-1 max-w-xs text-[11px] leading-snug text-muted-foreground print:text-black">
-              {COMPANY_INFO.warehouse}
+              {profile.address}
             </p>
             <p className="text-[11px] text-muted-foreground print:text-black">
-              {COMPANY_INFO.phone} · {COMPANY_INFO.email}
+              {profile.phone} · {profile.email}
             </p>
           </div>
           <div className="text-right">
@@ -200,11 +206,9 @@ function LabourInvoice({ quote }: { quote: QuoteRequest }) {
             netValue={inr(payable)}
             words={amountInWords(payable)}
           />
-          <PaymentCards
-            payLine={payable > 0 ? `Pay ${inr(payable)} and share the UTR / screenshot.` : undefined}
-          />
+          <PaymentCards profile={profile} />
           <TermsCard text="Labour charges cover on-set handling, loading, unloading and set-up by the deployed crew for the dates listed above. Overtime beyond 12 hours a day is chargeable separately. Prop rental is billed separately." />
-          <SignatureStrip clientLabel="Client Signature" />
+          <SignatureStrip clientLabel="Client Signature" profile={profile} />
         </div>
 
       </article>
@@ -241,13 +245,12 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
     ? quote.balance_due
     : rentTotal + quote.security_deposit - (advancePaid || advanceDue);
 
-  const payNow = advanceNote ? advanceDue : settlement ? quote.balance_due : 0;
-  const qrAmount = payNow > 0 ? payNow : balance;
   /** A receipt acknowledges money already received — it must never ask for payment. */
 
 
 
   const [showShootDays, setShowShootDays] = useState(true);
+  const { profile, profiles, selectProfile } = useDocumentProfile(quote.quote_code);
 
   const docNo =
     receipt && quote.advance_receipt_no
@@ -268,6 +271,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <p className="text-xs uppercase tracking-[0.28em] text-muted-foreground">{meta.title}</p>
         <div className="flex flex-wrap items-center gap-3">
+          <CompanyProfileSwitcher profiles={profiles} value={profile.id} onChange={selectProfile} />
           {shootDays.length > 0 && (
             <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
               <input
@@ -291,15 +295,15 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
       >
         <header className="flex flex-wrap items-start justify-between gap-4 border-b border-primary/30 pb-3">
           <div>
-            <BrandLogo className="h-16" />
+            <BrandLogo className="h-24" src={profile.logo_url} alt={`${profile.name} logo`} />
             <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-primary print:text-black">
-              {COMPANY_INFO.tagline}
+              {profile.tagline || profile.name}
             </p>
             <p className="mt-2 max-w-xs text-[11px] leading-relaxed text-muted-foreground print:text-black">
-              {COMPANY_INFO.warehouse}
+              {profile.address}
             </p>
             <p className="text-[11px] text-muted-foreground print:text-black">
-              {COMPANY_INFO.phone} · {COMPANY_INFO.email}
+              {profile.phone} · {profile.email}
             </p>
           </div>
           <div className="text-right">
@@ -484,14 +488,7 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
               />
             )}
 
-            <PaymentCards
-              showQr={!receipt}
-              payLine={
-                !receipt && qrAmount > 0
-                  ? `Pay ${inr(qrAmount)} and share the UTR / screenshot.`
-                  : undefined
-              }
-            />
+            <PaymentCards showQr={!receipt} profile={profile} />
           </div>
         ) : (
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground print:text-black">
@@ -512,8 +509,9 @@ export function QuoteDocument({ quote, kind }: { quote: QuoteRequest; kind: Quot
           </p>
         )}
 
-        <TermsCard />
+        <TermsCard profile={profile} />
         <SignatureStrip
+          profile={profile}
           clientLabel={kind === "challan" ? "Received By (Production)" : "Client Signature"}
         />
 
