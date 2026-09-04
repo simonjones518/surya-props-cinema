@@ -822,3 +822,96 @@ export async function deleteCategory(id: number) {
   if (error) throw new Error(error.message);
   return { ok: true as const };
 }
+
+/* ---------- warehouse: godown & rack management ---------- */
+
+async function nextIdFor(table: string) {
+  const { data } = await suryaDb
+    .from(table)
+    .select("id")
+    .order("id", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data ? Number((data as Record<string, any>)['id']) + 1 : 1;
+}
+
+export async function saveGodown(input: { name: string; location_code?: string }): Promise<Godown> {
+  const name = input.name.trim();
+  if (!name) throw new Error("Godown name is required.");
+  const id = await nextIdFor("godowns");
+  const location_code = input.location_code?.trim() || `GD-${String(id).padStart(2, "0")}`;
+  const { data, error } = await suryaDb
+    .from("godowns")
+    .insert({ id, name, location_code })
+    .select("id, name, location_code")
+    .single();
+  if (error) throw new Error(error.message);
+  return { ...data, id: Number(data.id) } as Godown;
+}
+
+export async function updateGodown(
+  id: number,
+  patch: { name?: string; location_code?: string },
+): Promise<Godown> {
+  const body = {
+    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+    ...(patch.location_code !== undefined ? { location_code: patch.location_code.trim() } : {}),
+  };
+  const { data, error } = await suryaDb
+    .from("godowns")
+    .update(body)
+    .eq("id", id)
+    .select("id, name, location_code")
+    .single();
+  if (error) throw new Error(error.message);
+  return { ...data, id: Number(data.id) } as Godown;
+}
+
+export async function deleteGodown(id: number) {
+  const { count } = await suryaDb
+    .from("props")
+    .select("id", { count: "exact", head: true })
+    .eq("godown_id", id);
+  if ((count ?? 0) > 0)
+    throw new Error("This godown still has props assigned. Move them before deleting.");
+  await suryaDb.from("racks").delete().eq("godown_id", id);
+  const { error } = await suryaDb.from("godowns").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+export async function saveRack(input: { godown_id: number; rack_name: string }): Promise<Rack> {
+  const rack_name = input.rack_name.trim();
+  if (!rack_name) throw new Error("Rack name is required.");
+  const id = await nextIdFor("racks");
+  const { data, error } = await suryaDb
+    .from("racks")
+    .insert({ id, godown_id: input.godown_id, rack_name })
+    .select("id, godown_id, rack_name")
+    .single();
+  if (error) throw new Error(error.message);
+  return { ...data, id: Number(data.id), godown_id: Number(data.godown_id) } as Rack;
+}
+
+export async function updateRack(id: number, patch: { rack_name: string }): Promise<Rack> {
+  const { data, error } = await suryaDb
+    .from("racks")
+    .update({ rack_name: patch.rack_name.trim() })
+    .eq("id", id)
+    .select("id, godown_id, rack_name")
+    .single();
+  if (error) throw new Error(error.message);
+  return { ...data, id: Number(data.id), godown_id: Number(data.godown_id) } as Rack;
+}
+
+export async function deleteRack(id: number) {
+  const { count } = await suryaDb
+    .from("props")
+    .select("id", { count: "exact", head: true })
+    .eq("rack_id", id);
+  if ((count ?? 0) > 0)
+    throw new Error("This rack still has props assigned. Move them before deleting.");
+  const { error } = await suryaDb.from("racks").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
