@@ -1,11 +1,19 @@
 import logoAsset from "@/assets/surya-logo.png.asset.json";
 
-/** Official Surya Cine Special Props logo mark. */
-export function BrandLogo({ className = "h-10" }: { className?: string }) {
+/** Company logo mark — defaults to Surya, overridable per company profile. */
+export function BrandLogo({
+  className = "h-10",
+  src,
+  alt = "Surya Cine Special Props logo",
+}: {
+  className?: string;
+  src?: string;
+  alt?: string;
+}) {
   return (
     <img
-      src={logoAsset.url}
-      alt="Surya Cine Special Props logo"
+      src={src || logoAsset.url}
+      alt={alt}
       className={`w-auto object-contain ${className}`}
     />
   );
