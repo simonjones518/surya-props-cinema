@@ -25,6 +25,7 @@ export type CompanyProfile = {
   upi_id: string;
   upi_phone: string;
   qr_url: string;
+  signature_url: string;
   is_default: boolean;
 };
 
