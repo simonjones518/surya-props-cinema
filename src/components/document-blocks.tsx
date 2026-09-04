@@ -1,6 +1,7 @@
 import { COMPANY_INFO } from "@/lib/company";
-import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
+import { DEFAULT_COMPANY_PROFILE, type CompanyProfile } from "@/lib/company-profiles";
 import signatureAsset from "@/assets/signature.png.asset.json";
+
 
 /**
  * Shared printable building blocks so every invoice, quotation, receipt and
