@@ -51,6 +51,7 @@ export async function listCompanyProfiles(): Promise<CompanyProfile[]> {
       ...r,
       logo_url: await signOne(r.logo_url),
       qr_url: await signOne(r.qr_url),
+      signature_url: await signOne(r.signature_url),
     })),
   );
   if (!profiles.some((p) => p.is_default) && profiles[0]) profiles[0].is_default = true;
