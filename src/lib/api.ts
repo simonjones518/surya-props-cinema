@@ -49,6 +49,12 @@ import {
   updateRequestStatusFn,
   uploadPropImageFn,
   uploadRequestImageFn,
+  saveGodownFn,
+  updateGodownFn,
+  deleteGodownFn,
+  saveRackFn,
+  updateRackFn,
+  deleteRackFn,
 } from "./inventory.functions";
 
 async function toBase64(file: File) {
