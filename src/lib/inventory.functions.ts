@@ -232,3 +232,53 @@ export const deleteCategoryFn = createServerFn({ method: "POST" })
     await m.assertAdmin();
     return m.deleteCategory(data.id);
   });
+
+/* ---------- warehouse management (admin) ---------- */
+
+export const saveGodownFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { name: string; location_code?: string }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.saveGodown(data);
+  });
+
+export const updateGodownFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; patch: { name?: string; location_code?: string } }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.updateGodown(data.id, data.patch);
+  });
+
+export const deleteGodownFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.deleteGodown(data.id);
+  });
+
+export const saveRackFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { godown_id: number; rack_name: string }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.saveRack(data);
+  });
+
+export const updateRackFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number; rack_name: string }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.updateRack(data.id, { rack_name: data.rack_name });
+  });
+
+export const deleteRackFn = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: number }) => data)
+  .handler(async ({ data }) => {
+    const m = await db();
+    await m.assertAdmin();
+    return m.deleteRack(data.id);
+  });
