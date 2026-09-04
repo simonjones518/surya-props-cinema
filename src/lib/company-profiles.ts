@@ -1,6 +1,7 @@
 import { COMPANY_INFO } from "@/lib/company";
 import logoAsset from "@/assets/surya-logo.png.asset.json";
 import upiQrAsset from "@/assets/upi-qr.jpeg.asset.json";
+import signatureAsset from "@/assets/signature.png.asset.json";
 
 /**
  * A sister-concern letterhead. Every invoice / quotation / challan renders
@@ -50,6 +51,7 @@ export const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   upi_id: COMPANY_INFO.upiId,
   upi_phone: COMPANY_INFO.upiPhone,
   qr_url: upiQrAsset.url,
+  signature_url: signatureAsset.url,
   is_default: true,
 };
 
@@ -70,6 +72,7 @@ export const EMPTY_PROFILE_DRAFT: CompanyProfileDraft = {
   upi_id: "",
   upi_phone: "",
   qr_url: "",
+  signature_url: "",
   is_default: false,
 };
 
